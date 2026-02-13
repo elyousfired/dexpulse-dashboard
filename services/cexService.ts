@@ -1,0 +1,341 @@
+
+import { CexTicker } from '../types';
+
+// Binance Public API
+const BINANCE_REST_API = 'https://api.binance.com/api/v3/ticker/24hr';
+const BINANCE_WS_URL = 'wss://stream.binance.com:9443/ws/!ticker@arr';
+
+// KuCoin Public API (Fallback/Alternative)
+const KUCOIN_API = 'https://api.kucoin.com/api/v1/market/allTickers';
+
+let cache: { data: CexTicker[]; ts: number } | null = null;
+const CACHE_TTL = 30_000; // 30 seconds for REST fallback
+
+let ws: WebSocket | null = null;
+let listeners: ((tickers: CexTicker[]) => void)[] = [];
+let tickerSubscriptions: Map<string, ((update: CexTicker) => void)[]> = new Map();
+
+export async function fetchCexTickers(): Promise<CexTicker[]> {
+    if (cache && Date.now() - cache.ts < CACHE_TTL) return cache.data;
+
+    try {
+        // Fetch from Binance REST API first (24hr ticker for all symbols)
+        const res = await fetch(BINANCE_REST_API);
+        if (!res.ok) throw new Error(`Binance API ${res.status}`);
+
+        const data = await res.json();
+
+        // Filter for USDT pairs and sort by volume
+        const tickers: CexTicker[] = data
+            .filter((t: any) => t.symbol.endsWith('USDT'))
+            .map((t: any) => {
+                const baseSymbol = t.symbol.replace('USDT', '');
+                return {
+                    id: t.symbol,
+                    symbol: baseSymbol,
+                    pair: `${baseSymbol}/USDT`,
+                    priceUsd: parseFloat(t.lastPrice),
+                    priceChange24h: parseFloat(t.priceChange),
+                    priceChangePercent24h: parseFloat(t.priceChangePercent),
+                    high24h: parseFloat(t.highPrice),
+                    low24h: parseFloat(t.lowPrice),
+                    volume24h: parseFloat(t.quoteVolume), // This is USDT volume
+                    exchange: 'Binance',
+                };
+            })
+            .sort((a: CexTicker, b: CexTicker) => b.volume24h - a.volume24h)
+            .slice(0, 250); // Top 250 by volume
+
+        cache = { data: tickers, ts: Date.now() };
+        return tickers;
+    } catch (err) {
+        console.error('CEX fetch error (Binance):', err);
+        // Fallback to KuCoin if Binance fails
+        return fetchKuCoinTickers();
+    }
+}
+
+async function fetchKuCoinTickers(): Promise<CexTicker[]> {
+    try {
+        const res = await fetch(KUCOIN_API);
+        if (!res.ok) throw new Error(`KuCoin API ${res.status}`);
+
+        const json = await res.json();
+        if (json.code !== '200000') throw new Error(`KuCoin error: ${json.msg}`);
+
+        const all = json.data.ticker;
+        const tickers: CexTicker[] = all
+            .filter((t: any) => t.symbol.endsWith('-USDT'))
+            .map((t: any) => {
+                const symbol = t.symbol.split('-')[0];
+                return {
+                    id: t.symbol,
+                    symbol,
+                    pair: `${symbol}/USDT`,
+                    priceUsd: parseFloat(t.last),
+                    priceChange24h: parseFloat(t.changePrice),
+                    priceChangePercent24h: parseFloat(t.changeRate) * 100,
+                    high24h: parseFloat(t.high),
+                    low24h: parseFloat(t.low),
+                    volume24h: parseFloat(t.volValue),
+                    exchange: 'KuCoin',
+                };
+            })
+            .sort((a: CexTicker, b: CexTicker) => b.volume24h - a.volume24h)
+            .slice(0, 250);
+
+        cache = { data: tickers, ts: Date.now() };
+        return tickers;
+    } catch (err) {
+        console.error('CEX fetch error (KuCoin):', err);
+        return cache?.data || [];
+    }
+}
+
+/**
+ * Initialize WebSocket for real-time updates.
+ * This will use Binance's !ticker@arr stream which provides updates for all symbols.
+ */
+export function initCexWebSocket(onUpdate: (tickers: CexTicker[]) => void) {
+    if (!listeners.includes(onUpdate)) {
+        listeners.push(onUpdate);
+    }
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        return () => {
+            listeners = listeners.filter(l => l !== onUpdate);
+        };
+    }
+
+    if (ws) ws.close();
+
+    ws = new WebSocket(BINANCE_WS_URL);
+
+    ws.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            if (!Array.isArray(data)) return;
+
+            const updates: CexTicker[] = data
+                .filter((t: any) => t.s.endsWith('USDT'))
+                .map((t: any) => ({
+                    id: t.s,
+                    symbol: t.s.replace('USDT', ''),
+                    pair: `${t.s.replace('USDT', '')}/USDT`,
+                    priceUsd: parseFloat(t.c),
+                    priceChange24h: parseFloat(t.p),
+                    priceChangePercent24h: parseFloat(t.P),
+                    high24h: parseFloat(t.h),
+                    low24h: parseFloat(t.l),
+                    volume24h: parseFloat(t.q),
+                    exchange: 'Binance',
+                }));
+
+            // Notify general listeners
+            listeners.forEach(callback => callback(updates));
+
+            // Notify specific ticker subscribers
+            updates.forEach(update => {
+                const subs = tickerSubscriptions.get(update.id);
+                if (subs) {
+                    subs.forEach(cb => cb(update));
+                }
+            });
+
+        } catch (err) {
+            console.error('WS Message parsing error:', err);
+        }
+    };
+
+    ws.onerror = (err) => {
+        console.error('CEX WS Error:', err);
+    };
+
+    ws.onclose = () => {
+        console.log('CEX WS Closed. Reconnecting in 5s...');
+        ws = null;
+        setTimeout(() => {
+            if (listeners.length > 0 || tickerSubscriptions.size > 0) {
+                // Trigger reconnection by re-initializing with any active listener
+                const firstListener = listeners[0];
+                if (firstListener) initCexWebSocket(firstListener);
+            }
+        }, 5000);
+    };
+
+    return () => {
+        listeners = listeners.filter(l => l !== onUpdate);
+        if (listeners.length === 0 && tickerSubscriptions.size === 0 && ws) {
+            ws.close();
+            ws = null;
+        }
+    };
+}
+
+/**
+ * Subscribe to real-time updates for a single ticker.
+ */
+export function subscribeToTicker(tickerId: string, onUpdate: (update: CexTicker) => void) {
+    const subs = tickerSubscriptions.get(tickerId) || [];
+    if (!subs.includes(onUpdate)) {
+        subs.push(onUpdate);
+        tickerSubscriptions.set(tickerId, subs);
+    }
+
+    // Ensure WS is running
+    if (!ws) {
+        initCexWebSocket(() => { });
+    }
+
+    return () => {
+        const currentSubs = tickerSubscriptions.get(tickerId) || [];
+        const nextSubs = currentSubs.filter(s => s !== onUpdate);
+        if (nextSubs.length === 0) {
+            tickerSubscriptions.delete(tickerId);
+        } else {
+            tickerSubscriptions.set(tickerId, nextSubs);
+        }
+
+        if (listeners.length === 0 && tickerSubscriptions.size === 0 && ws) {
+            ws.close();
+            ws = null;
+        }
+    };
+}
+
+/**
+ * Subscribe to real-time OHLC kline data for a specific symbol and interval.
+ */
+export function subscribeToKlines(
+    symbol: string,
+    interval: string,
+    onUpdate: (candle: any) => void
+) {
+    const pair = symbol.toLowerCase().endsWith('usdt') ? symbol.toLowerCase() : `${symbol.toLowerCase()}usdt`;
+    const intervalMap: Record<string, string> = {
+        '1m': '1m', '5m': '5m', '15m': '15m', '1h': '1h', '4h': '4h', '1d': '1d'
+    };
+    const bInterval = intervalMap[interval] || interval;
+    const url = `wss://stream.binance.com:9443/ws/${pair}@kline_${bInterval}`;
+
+    const klineWs = new WebSocket(url);
+
+    klineWs.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.e !== 'kline') return;
+
+            const k = data.k;
+            onUpdate({
+                time: Math.floor(k.t / 1000),
+                open: parseFloat(k.o),
+                high: parseFloat(k.h),
+                low: parseFloat(k.l),
+                close: parseFloat(k.c),
+                volume: parseFloat(k.v),
+                isFinal: k.x
+            });
+        } catch (err) {
+            console.error('Kline WS parsing error:', err);
+        }
+    };
+
+    klineWs.onerror = (err) => console.error(`Kline WS Error (${pair}):`, err);
+
+    return () => {
+        if (klineWs.readyState === WebSocket.OPEN || klineWs.readyState === WebSocket.CONNECTING) {
+            klineWs.close();
+        }
+    };
+}
+
+/**
+ * Subscribe to real-time order book (depth) data.
+ */
+export function subscribeToOrderBook(
+    symbol: string,
+    onUpdate: (data: { bids: [string, string][], asks: [string, string][] }) => void
+) {
+    const pair = symbol.toLowerCase().endsWith('usdt') ? symbol.toLowerCase() : `${symbol.toLowerCase()}usdt`;
+    const url = `wss://stream.binance.com:9443/ws/${pair}@depth20@100ms`;
+
+    const depthWs = new WebSocket(url);
+
+    depthWs.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            onUpdate({
+                bids: data.bids,
+                asks: data.asks
+            });
+        } catch (err) {
+            console.error('OrderBook WS parsing error:', err);
+        }
+    };
+
+    depthWs.onerror = (err) => console.error(`OrderBook WS Error (${pair}):`, err);
+
+    return () => {
+        if (depthWs.readyState === WebSocket.OPEN || depthWs.readyState === WebSocket.CONNECTING) {
+            depthWs.close();
+        }
+    };
+}
+
+
+/**
+ * Fetch historical OHLCV data from Binance for charting.
+ */
+export async function fetchBinanceKlines(
+    symbol: string,
+    interval: string = '15m',
+    limit: number = 100
+): Promise<any[]> {
+    // Map application intervals to Binance intervals
+    const intervalMap: Record<string, string> = {
+        '1m': '1m',
+        '5m': '5m',
+        '15m': '15m',
+        '1h': '1h',
+        '4h': '4h',
+        '1d': '1d',
+    };
+
+    const binanceInterval = intervalMap[interval] || interval;
+    const pair = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
+    const url = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${binanceInterval}&limit=${limit}`;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Binance Klines API ${res.status}`);
+
+        const data = await res.json();
+
+        // Binance format: [openTime, open, high, low, close, volume, closeTime, quoteAssetVolume, ...]
+        return data.map((d: any) => ({
+            time: Math.floor(d[0] / 1000),
+            open: parseFloat(d[1]),
+            high: parseFloat(d[2]),
+            low: parseFloat(d[3]),
+            close: parseFloat(d[4]),
+            volume: parseFloat(d[7]), // Quote asset volume (USDT)
+        }));
+    } catch (err) {
+        console.error('Binance Klines fetch error:', err);
+        return [];
+    }
+}
+
+export function formatLargeNumber(n: number): string {
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return n.toFixed(2);
+}
+
+export function formatPrice(price: number): string {
+    if (price >= 1000) return price.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    if (price >= 1) return price.toFixed(2);
+    if (price >= 0.001) return price.toFixed(4);
+    return price.toFixed(8);
+}
