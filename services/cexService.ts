@@ -232,7 +232,8 @@ export function subscribeToKlines(
                 high: parseFloat(k.h),
                 low: parseFloat(k.l),
                 close: parseFloat(k.c),
-                volume: parseFloat(k.v),
+                volume: parseFloat(k.q), // Quote volume (USDT)
+                buyVolume: parseFloat(k.Q), // Taker buy quote volume (USDT)
                 isFinal: k.x
             });
         } catch (err) {
@@ -318,7 +319,8 @@ export async function fetchBinanceKlines(
             high: parseFloat(d[2]),
             low: parseFloat(d[3]),
             close: parseFloat(d[4]),
-            volume: parseFloat(d[7]), // Quote asset volume (USDT)
+            volume: parseFloat(d[7]), // Quote volume (USDT)
+            buyVolume: parseFloat(d[10]) // Taker buy quote volume (USDT)
         }));
     } catch (err) {
         console.error('Binance Klines fetch error:', err);
