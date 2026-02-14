@@ -1,15 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, ISeriesApi } from 'lightweight-charts';
 
-import { fetchGeckoOHLCV } from '../services/geckoService';
 import { fetchBinanceKlines, subscribeToKlines } from '../services/cexService';
 import { executeIndicatorScript, OHLCV } from '../services/scriptEngine';
-import { RefreshCcw, AlertCircle, BarChart2, TrendingUp } from 'lucide-react';
+import { RefreshCcw, Activity } from 'lucide-react';
 
 interface TokenChartProps {
     address: string;
-    pairAddress?: string;
-    chainId?: string;
     symbol: string;
     isCex?: boolean;
     customScript?: string | null;
@@ -27,7 +24,7 @@ const INTERVALS = [
 ];
 
 export const TokenChart: React.FC<TokenChartProps> = ({
-    address, pairAddress, chainId, symbol, isCex, customScript, activeView = 'price', onDivergenceDetected
+    address, symbol, isCex = true, customScript, activeView = 'price', onDivergenceDetected
 }) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -187,12 +184,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                 }
 
                 let data: OHLCV[] = [];
-                if (isCex) {
-                    data = await fetchBinanceKlines(symbol, interval);
-                } else {
-                    if (!pairAddress || !chainId) throw new Error("Pair details missing");
-                    data = await fetchGeckoOHLCV(chainId, pairAddress, timeframe, aggregate);
-                }
+                data = await fetchBinanceKlines(symbol, interval);
 
                 setProcessedData(data);
 

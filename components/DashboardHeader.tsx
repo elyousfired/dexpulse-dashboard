@@ -5,8 +5,6 @@ import { Search, Zap, Shield, Activity } from 'lucide-react';
 interface DashboardHeaderProps {
     searchTerm: string;
     onSearchChange: (term: string) => void;
-    tokensScanned: number;
-    threatsFound: number;
     isScanning: boolean;
     lastUpdated: Date;
 }
@@ -14,8 +12,6 @@ interface DashboardHeaderProps {
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     searchTerm,
     onSearchChange,
-    tokensScanned,
-    threatsFound,
     isScanning,
     lastUpdated,
 }) => {
@@ -48,18 +44,10 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 {/* Stats */}
                 <div className="header-stats">
                     <div className="stat-item">
-                        <Shield className="stat-icon stat-icon-blue" />
+                        <Activity className="stat-icon stat-icon-blue" />
                         <div>
-                            <span className="stat-value">{tokensScanned}</span>
-                            <span className="stat-label">Scanned</span>
-                        </div>
-                    </div>
-                    <div className="stat-divider" />
-                    <div className="stat-item">
-                        <Activity className="stat-icon stat-icon-red" />
-                        <div>
-                            <span className="stat-value stat-value-danger">{threatsFound}</span>
-                            <span className="stat-label">Threats</span>
+                            <span className="stat-value">{lastUpdated.toLocaleTimeString()}</span>
+                            <span className="stat-label">Last Sync</span>
                         </div>
                     </div>
                 </div>
