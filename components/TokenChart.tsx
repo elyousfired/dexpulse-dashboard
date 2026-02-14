@@ -14,6 +14,7 @@ interface TokenChartProps {
     isCex?: boolean;
     customScript?: string | null;
     activeView?: 'price' | 'flow';
+    onDivergenceDetected?: (type: 'absorption' | 'trend' | 'none') => void;
 }
 
 const INTERVALS = [
@@ -26,7 +27,7 @@ const INTERVALS = [
 ];
 
 export const TokenChart: React.FC<TokenChartProps> = ({
-    address, pairAddress, chainId, symbol, isCex, customScript, activeView = 'price'
+    address, pairAddress, chainId, symbol, isCex, customScript, activeView = 'price', onDivergenceDetected
 }) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -36,6 +37,8 @@ export const TokenChart: React.FC<TokenChartProps> = ({
     const volumeCurveSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const customSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const netFlowSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+    const cvdSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const flowZoneSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
 
     const [interval, setInterval] = useState('15m');
     const [showVwap, setShowVwap] = useState(true);
@@ -114,11 +117,28 @@ export const TokenChart: React.FC<TokenChartProps> = ({
             title: 'Net Flow',
         });
 
+        cvdSeriesRef.current = chart.addLineSeries({
+            color: '#facc15', // yellow-400
+            lineWidth: 2,
+            title: 'CVD',
+        });
+
+        flowZoneSeriesRef.current = chart.addAreaSeries({
+            topColor: 'rgba(34, 197, 94, 0.12)',
+            bottomColor: 'rgba(239, 68, 68, 0.12)',
+            lineVisible: false,
+            priceScaleId: '',
+            title: 'Flow Zones',
+        });
+
         volumeSeriesRef.current.priceScale().applyOptions({
             scaleMargins: { top: 0.8, bottom: 0 },
         });
         volumeCurveSeriesRef.current.priceScale().applyOptions({
             scaleMargins: { top: 0.8, bottom: 0 },
+        });
+        flowZoneSeriesRef.current.priceScale().applyOptions({
+            scaleMargins: { top: 0, bottom: 0 },
         });
 
         chartRef.current = chart;
@@ -222,19 +242,58 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                     }
 
                     // 5. Net Flow (Visible only in Flow mode)
-                    if (netFlowSeriesRef.current) {
-                        if (isFlowMode) {
-                            netFlowSeriesRef.current.setData(data.map(d => {
-                                const buy = d.buyVolume || 0;
-                                const sell = d.volume - buy;
-                                const net = buy - sell;
-                                return {
-                                    time: d.time as any,
-                                    value: net,
-                                    color: net >= 0 ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)'
-                                };
-                            }));
-                        } else netFlowSeriesRef.current.setData([]);
+                    if (isFlowMode) {
+                        let cumulativeDelta = 0;
+                        const netFlowData: any[] = [];
+                        const cvdData: any[] = [];
+                        const zoneData: any[] = [];
+
+                        data.forEach(d => {
+                            const buy = d.buyVolume || 0;
+                            const sell = d.volume - buy;
+                            const delta = buy - sell;
+                            cumulativeDelta += delta;
+
+                            netFlowData.push({
+                                time: d.time as any,
+                                value: delta,
+                                color: delta >= 0 ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)'
+                            });
+
+                            cvdData.push({ time: d.time as any, value: cumulativeDelta });
+
+                            zoneData.push({
+                                time: d.time as any,
+                                value: d.volume * 10, // Anchor far above
+                                color: delta >= 0 ? 'rgba(34, 197, 94, 0.05)' : delta < 0 ? 'rgba(239, 68, 68, 0.05)' : 'rgba(156, 163, 175, 0.05)'
+                            });
+                        });
+
+                        netFlowSeriesRef.current?.setData(netFlowData);
+                        cvdSeriesRef.current?.setData(cvdData);
+                        flowZoneSeriesRef.current?.setData(zoneData);
+
+                        // Decision Engine: Absorption detection
+                        if (onDivergenceDetected && data.length >= 2) {
+                            const last = data[data.length - 1];
+                            const prev = data[data.length - 2];
+                            const lastBuy = last.buyVolume || 0;
+                            const lastSell = last.volume - lastBuy;
+                            const lastDelta = lastBuy - lastSell;
+
+                            // Absorption Detection: Volume is selling (delta < 0) but price did not drop below previous low
+                            if (lastDelta < - (last.volume * 0.25) && last.close >= prev.low) {
+                                onDivergenceDetected('absorption');
+                            } else if (lastDelta > (last.volume * 0.25) && last.close > prev.high) {
+                                onDivergenceDetected('trend');
+                            } else {
+                                onDivergenceDetected('none');
+                            }
+                        }
+                    } else {
+                        netFlowSeriesRef.current?.setData([]);
+                        cvdSeriesRef.current?.setData([]);
+                        flowZoneSeriesRef.current?.setData([]);
                     }
 
                     chartRef.current.timeScale().fitContent();
@@ -317,7 +376,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
             </div>
 
             {/* View Stats Overlay */}
-            <div className="flex items-center gap-6 px-4 py-2 border-t border-gray-800 bg-[#1a1e26]/30">
+            <div className="flex items-center px-4 py-2 border-t border-gray-800 bg-[#1a1e26]/30">
                 <div className="flex items-center gap-4">
                     <button onClick={() => setShowVwap(!showVwap)} className={`flex items-center gap-1 text-[10px] font-bold ${showVwap ? 'text-blue-400' : 'text-gray-600'}`}>
                         <div className={`w-2 h-2 rounded-full ${showVwap ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-gray-700'}`} />
@@ -328,6 +387,19 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                         VOLUME AVG
                     </button>
                 </div>
+                {activeView === 'flow' && (
+                    <div className="flex items-center gap-4 ml-6 border-l border-gray-700 pl-6">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-yellow-500">
+                            <div className="w-2.5 h-0.5 bg-yellow-400 rounded-full shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
+                            CUMULATIVE DELTA (CVD)
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-green-500">
+                            <div className="w-2.5 h-2.5 rounded bg-green-500/20 border border-green-500/30" />
+                            FLOW ZONES
+                        </div>
+                    </div>
+                )}
+                <div className="flex-1" />
                 {customScript && (
                     <div className="flex items-center gap-1 text-[10px] font-bold text-purple-400">
                         <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />

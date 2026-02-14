@@ -29,10 +29,17 @@ export function executeIndicatorScript(
     try {
         // Create a function from the user script
         // We provide 'data' and specific shortcut arrays for convenience
-        const engine = new Function('data', 'open', 'high', 'low', 'close', 'volume', 'buyVolume', 'sellVolume', 'netFlow', script);
+        // Calculate and inject Cumulative Delta
+        let cum = 0;
+        const cumDeltaArr = data.map(d => {
+            const delta = (d.buyVolume || 0) - (d.volume - (d.buyVolume || 0));
+            cum += delta;
+            return cum;
+        });
+
+        const engine = new Function('data', 'open', 'high', 'low', 'close', 'volume', 'buyVolume', 'sellVolume', 'netFlow', 'cumDelta', script);
 
         // Execute script
-        // Expected script format: "return data.map(...)" or raw logic
         const result = engine(
             data,
             data.map(d => d.open),
@@ -42,7 +49,8 @@ export function executeIndicatorScript(
             data.map(d => d.volume),
             data.map(d => d.buyVolume || 0),
             data.map(d => (d.volume - (d.buyVolume || 0))),
-            data.map(d => (d.buyVolume || 0) - (d.volume - (d.buyVolume || 0))) // netFlow
+            data.map(d => (d.buyVolume || 0) - (d.volume - (d.buyVolume || 0))),
+            cumDeltaArr
         );
 
         if (!Array.isArray(result)) {

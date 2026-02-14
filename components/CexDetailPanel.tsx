@@ -17,6 +17,7 @@ export const CexDetailPanel: React.FC<CexDetailPanelProps> = ({ ticker, onClose 
     const [activeTab, setActiveTab] = useState<'price' | 'flow'>('price');
     const [customScript, setCustomScript] = useState<string | null>(null);
     const [showEditor, setShowEditor] = useState(false);
+    const [divergence, setDivergence] = useState<'absorption' | 'trend' | 'none'>('none');
 
     // Prevent background scroll when open
     useEffect(() => {
@@ -118,7 +119,23 @@ export const CexDetailPanel: React.FC<CexDetailPanelProps> = ({ ticker, onClose 
                                             address={ticker.id}
                                             activeView={activeTab}
                                             customScript={customScript}
+                                            onDivergenceDetected={(type) => setDivergence(type)}
                                         />
+
+                                        {/* Floating Decision Engine Badge */}
+                                        {divergence !== 'none' && (
+                                            <div className="absolute top-16 left-4 z-20 animate-in fade-in zoom-in duration-500">
+                                                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-xl backdrop-blur-md ${divergence === 'absorption'
+                                                        ? 'bg-yellow-500/20 border-yellow-500 text-yellow-500'
+                                                        : 'bg-green-500/20 border-green-500 text-green-500'
+                                                    }`}>
+                                                    <div className={`w-2 h-2 rounded-full animate-pulse ${divergence === 'absorption' ? 'bg-yellow-500' : 'bg-green-500'}`} />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">
+                                                        {divergence === 'absorption' ? 'Absorption Detected' : 'Strong Buying Trend'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     {showEditor && (
                                         <div className="w-1/3 border-l border-gray-800 animate-in slide-in-from-right duration-300">
