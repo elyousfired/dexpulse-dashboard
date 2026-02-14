@@ -328,6 +328,53 @@ export async function fetchBinanceKlines(
     }
 }
 
+
+/**
+ * Fetch historical 1D klines for the last 14 days and calculate the Weekly Max VWAP.
+ * Weekly Max in the Pine Script: Track the max 1D VWAP since the start of the week.
+ */
+const vwapCache: Map<string, { weeklyMax: number, expires: number }> = new Map();
+const VWAP_CACHE_TTL = 1000 * 60 * 60; // 1 hour
+
+export async function fetchWeeklyVwapMax(symbol: string): Promise<number | null> {
+    const cached = vwapCache.get(symbol);
+    if (cached && cached.expires > Date.now()) return cached.weeklyMax;
+
+    // Fetch 14 days of 1D klines to ensure we cover the current week
+    const klines = await fetchBinanceKlines(symbol, '1d', 14);
+    if (klines.length === 0) return null;
+
+    // Determine the start of the current week (Monday)
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 is Sunday
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const monday = new Date(now);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(now.getDate() - diffToMonday);
+    const mondayTs = Math.floor(monday.getTime() / 1000);
+
+    // Calculate Daily VWAP for each day and track max since Monday
+    let weeklyMax = -1;
+
+    klines.forEach(k => {
+        if (k.time >= mondayTs) {
+            // Simplified VWAP for a daily bar: (High + Low + Close) / 3
+            // In the script: request.security(..., "D", ta.vwap(hlc3))
+            const dailyVwap = (k.high + k.low + k.close) / 3;
+            if (dailyVwap > weeklyMax) {
+                weeklyMax = dailyVwap;
+            }
+        }
+    });
+
+    if (weeklyMax > 0) {
+        vwapCache.set(symbol, { weeklyMax, expires: Date.now() + VWAP_CACHE_TTL });
+        return weeklyMax;
+    }
+
+    return null;
+}
+
 export function formatLargeNumber(n: number): string {
     if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
     if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';

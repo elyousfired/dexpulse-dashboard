@@ -5,6 +5,7 @@ import { fetchCexTickers, initCexWebSocket } from './services/cexService';
 import { DashboardHeader } from './components/DashboardHeader';
 import { CexGrid } from './components/CexGrid';
 import { CexDetailPanel } from './components/CexDetailPanel';
+import { VwapScanner } from './components/VwapScanner';
 
 const App: React.FC = () => {
   // ─── CEX State (Primary) ────────────────────────
@@ -13,6 +14,7 @@ const App: React.FC = () => {
   const [selectedCexTicker, setSelectedCexTicker] = useState<CexTicker | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [activeView, setActiveView] = useState<'grid' | 'scanner'>('grid');
 
   // ─── CEX Data Fetching ─────────────────────────
   const loadCexData = useCallback(async () => {
@@ -60,16 +62,25 @@ const App: React.FC = () => {
           onSearchChange={setSearchTerm}
           isScanning={false}
           lastUpdated={lastUpdated}
+          activeView={activeView}
+          onViewChange={setActiveView}
         />
 
         <main className="flex-1 p-4 md:p-6 overflow-hidden">
           <div className="h-full max-w-[1600px] mx-auto">
-            <CexGrid
-              tickers={cexTickers}
-              loading={cexLoading}
-              onRefresh={loadCexData}
-              onTickerClick={setSelectedCexTicker}
-            />
+            {activeView === 'grid' ? (
+              <CexGrid
+                tickers={cexTickers}
+                loading={cexLoading}
+                onRefresh={loadCexData}
+                onTickerClick={setSelectedCexTicker}
+              />
+            ) : (
+              <VwapScanner
+                tickers={cexTickers}
+                onTickerClick={setSelectedCexTicker}
+              />
+            )}
           </div>
         </main>
       </div>
