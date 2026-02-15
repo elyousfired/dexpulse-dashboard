@@ -1,14 +1,14 @@
 
 import React from 'react';
-import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, BookOpen, Users, MessagesSquare, Repeat, Newspaper } from 'lucide-react';
+import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, BookOpen, Users, MessagesSquare, Repeat, Newspaper, Layers } from 'lucide-react';
 
 interface DashboardHeaderProps {
     searchTerm: string;
     onSearchChange: (term: string) => void;
     isScanning: boolean;
     lastUpdated: Date;
-    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'advisor' | 'swap' | 'news';
-    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'advisor' | 'swap' | 'news') => void;
+    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'advisor' | 'swap' | 'news' | 'vwapMulti';
+    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'advisor' | 'swap' | 'news' | 'vwapMulti') => void;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -111,6 +111,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     >
                         <Newspaper className="w-3.5 h-3.5" />
                         News
+                    </button>
+                    <button
+                        onClick={() => onViewChange('vwapMulti')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'vwapMulti' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Layers className="w-3.5 h-3.5" />
+                        Multi-TF VWAP
                     </button>
                 </div>
 
