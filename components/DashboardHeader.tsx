@@ -1,14 +1,14 @@
 
 import React from 'react';
-import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare } from 'lucide-react';
+import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, BookOpen } from 'lucide-react';
 
 interface DashboardHeaderProps {
     searchTerm: string;
     onSearchChange: (term: string) => void;
     isScanning: boolean;
     lastUpdated: Date;
-    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation';
-    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation') => void;
+    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook';
+    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook') => void;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -76,6 +76,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     >
                         <LayoutList className="w-3.5 h-3.5" />
                         Watchlist Simulator
+                    </button>
+                    <button
+                        onClick={() => onViewChange('playbook')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'playbook' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        Playbook
                     </button>
                 </div>
 
