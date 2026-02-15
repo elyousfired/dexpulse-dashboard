@@ -6,6 +6,7 @@ import { DashboardHeader } from './components/DashboardHeader';
 import { CexGrid } from './components/CexGrid';
 import { CexDetailPanel } from './components/CexDetailPanel';
 import { VwapScanner } from './components/VwapScanner';
+import { DecisionBuyAi } from './components/DecisionBuyAi';
 
 const App: React.FC = () => {
   // ─── CEX State (Primary) ────────────────────────
@@ -14,7 +15,7 @@ const App: React.FC = () => {
   const [selectedCexTicker, setSelectedCexTicker] = useState<CexTicker | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [activeView, setActiveView] = useState<'grid' | 'scanner'>('grid');
+  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision'>('grid');
 
   // ─── CEX Data Fetching ─────────────────────────
   const loadCexData = useCallback(async () => {
@@ -75,8 +76,13 @@ const App: React.FC = () => {
                 onRefresh={loadCexData}
                 onTickerClick={setSelectedCexTicker}
               />
-            ) : (
+            ) : activeView === 'scanner' ? (
               <VwapScanner
+                tickers={cexTickers}
+                onTickerClick={setSelectedCexTicker}
+              />
+            ) : (
+              <DecisionBuyAi
                 tickers={cexTickers}
                 onTickerClick={setSelectedCexTicker}
               />
