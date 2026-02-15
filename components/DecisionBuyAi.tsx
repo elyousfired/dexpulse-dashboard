@@ -7,6 +7,7 @@ import { Brain, Star, TrendingUp, Info, ArrowRight, Zap, Trophy, ShieldCheck } f
 interface DecisionBuyAiProps {
     tickers: CexTicker[];
     onTickerClick: (ticker: CexTicker) => void;
+    onAddToWatchlist: (ticker: CexTicker) => void;
 }
 
 interface BuySignal {
@@ -17,7 +18,7 @@ interface BuySignal {
     type: 'GOLDEN' | 'MOMENTUM' | 'SUPPORT';
 }
 
-export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerClick }) => {
+export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerClick, onAddToWatchlist }) => {
     const [vwapStore, setVwapStore] = useState<Record<string, VwapData>>({});
     const [isLoading, setIsLoading] = useState(true);
 
@@ -138,8 +139,8 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
 
                             <div className="flex items-center gap-3 mb-4">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${sig.type === 'GOLDEN' ? 'bg-yellow-500 text-black' :
-                                        sig.type === 'MOMENTUM' ? 'bg-purple-600 text-white' :
-                                            'bg-blue-600 text-white'
+                                    sig.type === 'MOMENTUM' ? 'bg-purple-600 text-white' :
+                                        'bg-blue-600 text-white'
                                     }`}>
                                     {sig.ticker.symbol[0]}
                                 </div>
@@ -149,8 +150,8 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
                                     </h3>
                                     <div className="flex items-center gap-2 mt-0.5">
                                         <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${sig.type === 'GOLDEN' ? 'bg-yellow-500/20 text-yellow-500' :
-                                                sig.type === 'MOMENTUM' ? 'bg-purple-500/20 text-purple-400' :
-                                                    'bg-blue-500/20 text-blue-400'
+                                            sig.type === 'MOMENTUM' ? 'bg-purple-500/20 text-purple-400' :
+                                                'bg-blue-500/20 text-blue-400'
                                             }`}>
                                             {sig.type} SIGNAL
                                         </span>
@@ -184,10 +185,16 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
                             </div>
 
                             <div className="mt-6 flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-green-400">
-                                    <TrendingUp className="w-4 h-4" />
-                                    <span className="text-xs font-black font-mono">+{sig.ticker.priceChangePercent24h.toFixed(2)}% (24h)</span>
-                                </div>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onAddToWatchlist(sig.ticker);
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-600/10 text-blue-400 border border-blue-600/20 rounded-xl text-[10px] font-black hover:bg-blue-600 hover:text-white transition-all"
+                                >
+                                    <Star className="w-3 h-3" />
+                                    ADD TO WATCHLIST
+                                </button>
                                 <div className="flex items-center gap-1 text-purple-400 font-black text-xs group-hover:gap-2 transition-all uppercase">
                                     Investigate <ArrowRight className="w-4 h-4" />
                                 </div>

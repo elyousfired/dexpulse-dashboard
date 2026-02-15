@@ -1,14 +1,14 @@
 
 import React from 'react';
-import { Search, Zap, Shield, Activity, Brain } from 'lucide-react';
+import { Search, Zap, Shield, Activity, Brain, LayoutList } from 'lucide-react';
 
 interface DashboardHeaderProps {
     searchTerm: string;
     onSearchChange: (term: string) => void;
     isScanning: boolean;
     lastUpdated: Date;
-    activeView: 'grid' | 'scanner' | 'decision';
-    onViewChange: (view: 'grid' | 'scanner' | 'decision') => void;
+    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist';
+    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist') => void;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -55,6 +55,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     >
                         <Brain className="w-3.5 h-3.5" />
                         Decision Buy AI
+                    </button>
+                    <button
+                        onClick={() => onViewChange('watchlist')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'watchlist' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <LayoutList className="w-3.5 h-3.5" />
+                        Watchlist Simulator
                     </button>
                 </div>
 

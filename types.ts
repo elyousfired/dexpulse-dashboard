@@ -115,3 +115,14 @@ export interface CexTicker {
   exchange: string;
 }
 
+
+export interface WatchlistTrade {
+  id: string; // trade uuid
+  symbol: string;
+  entryPrice: number;
+  entryTime: number;
+  amount: number; // simulated USD amount
+  status: 'open' | 'closed';
+  closePrice?: number;
+  closeTime?: number;
+}

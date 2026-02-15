@@ -4,14 +4,15 @@ import { TokenChart } from './TokenChart';
 import { CexAiAnalysis } from './CexAiAnalysis';
 import { ScriptEditor } from './ScriptEditor';
 import { fetchBinanceKlines, formatLargeNumber, formatPrice } from '../services/cexService';
-import { X, ExternalLink, TrendingUp, TrendingDown, Globe, Code, BarChart2, Zap, Layers } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, TrendingDown, Globe, Code, BarChart2, Zap, Layers, Star } from 'lucide-react';
 
 interface CexDetailPanelProps {
     ticker: CexTicker;
     onClose: () => void;
+    onAddToWatchlist?: (ticker: CexTicker) => void;
 }
 
-export const CexDetailPanel: React.FC<CexDetailPanelProps> = ({ ticker, onClose }) => {
+export const CexDetailPanel: React.FC<CexDetailPanelProps> = ({ ticker, onClose, onAddToWatchlist }) => {
     const isPositive = ticker.priceChangePercent24h >= 0;
     const [ohlcvData, setOhlcvData] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<'price' | 'flow' | 'vwap_weekly'>('price');

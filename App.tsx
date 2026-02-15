@@ -7,6 +7,8 @@ import { CexGrid } from './components/CexGrid';
 import { CexDetailPanel } from './components/CexDetailPanel';
 import { VwapScanner } from './components/VwapScanner';
 import { DecisionBuyAi } from './components/DecisionBuyAi';
+import { WatchlistPanel } from './components/WatchlistPanel';
+import { WatchlistTrade } from './types';
 
 const App: React.FC = () => {
   // ─── CEX State (Primary) ────────────────────────
@@ -15,7 +17,46 @@ const App: React.FC = () => {
   const [selectedCexTicker, setSelectedCexTicker] = useState<CexTicker | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision'>('grid');
+  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision' | 'watchlist'>('grid');
+  const [watchlist, setWatchlist] = useState<WatchlistTrade[]>(() => {
+    const saved = localStorage.getItem('dexpulse_watchlist');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('dexpulse_watchlist', JSON.stringify(watchlist));
+  }, [watchlist]);
+
+  const handleAddToWatchlist = (ticker: CexTicker) => {
+    const newTrade: WatchlistTrade = {
+      id: Math.random().toString(36).substr(2, 9),
+      symbol: ticker.symbol,
+      entryPrice: ticker.priceUsd,
+      entryTime: Date.now(),
+      amount: 1000, // Default $1k simulator amount
+      status: 'open'
+    };
+    setWatchlist(prev => [...prev, newTrade]);
+  };
+
+  const handleCloseTrade = (tradeId: string) => {
+    setWatchlist(prev => prev.map(t => {
+      if (t.id === tradeId) {
+        const ticker = cexTickers.find(ct => ct.symbol === t.symbol);
+        return {
+          ...t,
+          status: 'closed',
+          closePrice: ticker?.priceUsd || t.entryPrice,
+          closeTime: Date.now()
+        };
+      }
+      return t;
+    }));
+  };
+
+  const handleRemoveTrade = (tradeId: string) => {
+    setWatchlist(prev => prev.filter(t => t.id !== tradeId));
+  };
 
   // ─── CEX Data Fetching ─────────────────────────
   const loadCexData = useCallback(async () => {
@@ -81,9 +122,18 @@ const App: React.FC = () => {
                 tickers={cexTickers}
                 onTickerClick={setSelectedCexTicker}
               />
-            ) : (
+            ) : activeView === 'decision' ? (
               <DecisionBuyAi
                 tickers={cexTickers}
+                onTickerClick={setSelectedCexTicker}
+                onAddToWatchlist={handleAddToWatchlist}
+              />
+            ) : (
+              <WatchlistPanel
+                trades={watchlist}
+                tickers={cexTickers}
+                onCloseTrade={handleCloseTrade}
+                onRemoveTrade={handleRemoveTrade}
                 onTickerClick={setSelectedCexTicker}
               />
             )}
@@ -96,6 +146,7 @@ const App: React.FC = () => {
         <CexDetailPanel
           ticker={selectedCexTicker}
           onClose={() => setSelectedCexTicker(null)}
+          onAddToWatchlist={handleAddToWatchlist}
         />
       )}
     </div>
