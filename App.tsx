@@ -8,6 +8,7 @@ import { CexDetailPanel } from './components/CexDetailPanel';
 import { VwapScanner } from './components/VwapScanner';
 import { DecisionBuyAi } from './components/DecisionBuyAi';
 import { WatchlistPanel } from './components/WatchlistPanel';
+import { WhaleScanner } from './components/WhaleScanner';
 import { WatchlistTrade } from './types';
 
 const App: React.FC = () => {
@@ -17,7 +18,7 @@ const App: React.FC = () => {
   const [selectedCexTicker, setSelectedCexTicker] = useState<CexTicker | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision' | 'watchlist'>('grid');
+  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale'>('grid');
   const [watchlist, setWatchlist] = useState<WatchlistTrade[]>(() => {
     const saved = localStorage.getItem('dexpulse_watchlist');
     return saved ? JSON.parse(saved) : [];
@@ -127,6 +128,11 @@ const App: React.FC = () => {
                 tickers={cexTickers}
                 onTickerClick={setSelectedCexTicker}
                 onAddToWatchlist={handleAddToWatchlist}
+              />
+            ) : activeView === 'whale' ? (
+              <WhaleScanner
+                tickers={cexTickers}
+                onTickerClick={setSelectedCexTicker}
               />
             ) : (
               <WatchlistPanel

@@ -1,14 +1,14 @@
 
 import React from 'react';
-import { Search, Zap, Shield, Activity, Brain, LayoutList } from 'lucide-react';
+import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor } from 'lucide-react';
 
 interface DashboardHeaderProps {
     searchTerm: string;
     onSearchChange: (term: string) => void;
     isScanning: boolean;
     lastUpdated: Date;
-    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist';
-    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist') => void;
+    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale';
+    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale') => void;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -48,6 +48,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     >
                         <Activity className="w-3.5 h-3.5" />
                         VWAP Scan
+                    </button>
+                    <button
+                        onClick={() => onViewChange('whale')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'whale' ? 'bg-blue-600/20 text-blue-400 border border-blue-600/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Anchor className="w-3.5 h-3.5" />
+                        Whale Accumulation
                     </button>
                     <button
                         onClick={() => onViewChange('decision')}
