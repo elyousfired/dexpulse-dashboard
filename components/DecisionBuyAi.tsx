@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CexTicker } from '../types';
 import { fetchWeeklyVwapData, VwapData, formatPrice } from '../services/cexService';
-import { Brain, Star, TrendingUp, Info, ArrowRight, Zap, Trophy, ShieldCheck } from 'lucide-react';
+import { Brain, Star, TrendingUp, Info, ArrowRight, Zap, Trophy, ShieldCheck, Bell, Settings, Send, CheckCircle, XCircle } from 'lucide-react';
+import { sendGoldenSignalAlert, wasAlertedToday, loadTelegramConfig, saveTelegramConfig, sendTestAlert, TelegramConfig } from '../services/telegramService';
 
 interface DecisionBuyAiProps {
     tickers: CexTicker[];
@@ -21,6 +22,11 @@ interface BuySignal {
 export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerClick, onAddToWatchlist }) => {
     const [vwapStore, setVwapStore] = useState<Record<string, VwapData>>({});
     const [isLoading, setIsLoading] = useState(true);
+    const [showSettings, setShowSettings] = useState(false);
+    const [tgConfig, setTgConfig] = useState<TelegramConfig>(loadTelegramConfig);
+    const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle');
+    const [alertCount, setAlertCount] = useState(0);
+    const alertedRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
         const loadVwapData = async () => {
@@ -88,6 +94,45 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
             .sort((a, b) => b.score - a.score);
     }, [tickers, vwapStore]);
 
+    // ─── Telegram Alert Trigger ───────────────────
+    useEffect(() => {
+        if (signals.length === 0 || !tgConfig.enabled) return;
+
+        let sent = 0;
+        signals.forEach(sig => {
+            if (alertedRef.current.has(sig.ticker.symbol)) return;
+            if (wasAlertedToday(sig.ticker.symbol)) {
+                alertedRef.current.add(sig.ticker.symbol);
+                return;
+            }
+            alertedRef.current.add(sig.ticker.symbol);
+            sendGoldenSignalAlert({
+                symbol: sig.ticker.symbol,
+                price: sig.ticker.priceUsd,
+                change24h: sig.ticker.priceChangePercent24h,
+                score: sig.score,
+                vwapMax: sig.vwap.max,
+                vwapMid: sig.vwap.mid,
+                reason: sig.reason,
+                type: sig.type
+            });
+            sent++;
+        });
+        if (sent > 0) setAlertCount(prev => prev + sent);
+    }, [signals, tgConfig.enabled]);
+
+    const handleSaveConfig = (config: TelegramConfig) => {
+        saveTelegramConfig(config);
+        setTgConfig(config);
+    };
+
+    const handleTestAlert = async () => {
+        setTestStatus('sending');
+        const ok = await sendTestAlert(tgConfig);
+        setTestStatus(ok ? 'ok' : 'fail');
+        setTimeout(() => setTestStatus('idle'), 3000);
+    };
+
     if (isLoading && Object.keys(vwapStore).length === 0) {
         return (
             <div className="flex flex-col items-center justify-center p-20 text-gray-500 gap-4">
@@ -116,8 +161,55 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
                         <span className="text-[10px] font-black text-gray-600 uppercase">Signals Found</span>
                         <span className="text-xl font-black text-purple-400">{signals.length}</span>
                     </div>
+                    <button onClick={() => setShowSettings(!showSettings)}
+                        className={`relative p-2.5 rounded-xl border transition-all ${tgConfig.enabled ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-gray-800 border-gray-700 text-gray-500 hover:text-gray-300'}`}>
+                        <Bell className="w-5 h-5" />
+                        {tgConfig.enabled && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#0d0f14] animate-pulse"></div>}
+                    </button>
                 </div>
             </div>
+
+            {/* Telegram Settings Panel */}
+            {showSettings && (
+                <div className="p-5 bg-[#0a0c10] border-b border-gray-800">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Settings className="w-4 h-4 text-purple-400" />
+                        <h3 className="text-xs font-black text-white uppercase tracking-widest">Telegram Alerts</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider block mb-1">Bot Token</label>
+                            <input type="password" placeholder="123456:ABC-DEF1234ghIkl..." value={tgConfig.botToken}
+                                onChange={e => handleSaveConfig({ ...tgConfig, botToken: e.target.value })}
+                                className="w-full bg-black/60 text-white text-sm font-mono px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-purple-500" />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider block mb-1">Chat ID</label>
+                            <input type="text" placeholder="-1001234567890" value={tgConfig.chatId}
+                                onChange={e => handleSaveConfig({ ...tgConfig, chatId: e.target.value })}
+                                className="w-full bg-black/60 text-white text-sm font-mono px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-purple-500" />
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <div className={`w-10 h-5 rounded-full relative transition-all ${tgConfig.enabled ? 'bg-emerald-500' : 'bg-gray-700'}`}
+                                onClick={() => handleSaveConfig({ ...tgConfig, enabled: !tgConfig.enabled })}>
+                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${tgConfig.enabled ? 'left-5.5' : 'left-0.5'}`}></div>
+                            </div>
+                            <span className="text-xs font-bold text-gray-400">{tgConfig.enabled ? 'Alerts ON' : 'Alerts OFF'}</span>
+                        </label>
+                        <button onClick={handleTestAlert} disabled={!tgConfig.botToken || !tgConfig.chatId || testStatus === 'sending'}
+                            className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-xl text-[10px] font-black uppercase hover:bg-purple-600 hover:text-white transition-all disabled:opacity-30">
+                            {testStatus === 'sending' ? <Send className="w-3 h-3 animate-pulse" /> :
+                                testStatus === 'ok' ? <CheckCircle className="w-3 h-3 text-emerald-400" /> :
+                                    testStatus === 'fail' ? <XCircle className="w-3 h-3 text-rose-400" /> :
+                                        <Send className="w-3 h-3" />}
+                            {testStatus === 'ok' ? 'Sent!' : testStatus === 'fail' ? 'Failed' : 'Test Alert'}
+                        </button>
+                    </div>
+                    <p className="text-[9px] text-gray-600 mt-3 font-bold">Create a bot via @BotFather on Telegram. Get Chat ID via @userinfobot.</p>
+                </div>
+            )}
 
             {/* Signal List */}
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
