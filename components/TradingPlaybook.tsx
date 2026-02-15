@@ -38,7 +38,7 @@ export const TradingPlaybook: React.FC = () => {
                                 When BTC drops, a "Hedge" token either stays flat or pumps.
                             </p>
                             <div className="p-4 bg-black/40 rounded-2xl border border-white/5 font-mono text-[10px] text-gray-500">
-                                <span className="text-indigo-500">IF</span> (BTC_Change < 0 && Token_Change > 0) <br />
+                                <span className="text-indigo-500">IF</span> (BTC_Change {'<'} 0 && Token_Change {'>'} 0) <br />
                                 <span className="text-indigo-500">THEN</span> Strength = (Abs_Delta * 10)
                             </div>
                         </div>
