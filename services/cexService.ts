@@ -291,7 +291,7 @@ export async function fetchBinanceKlines(
     symbol: string,
     interval: string = '15m',
     limit: number = 100
-): Promise<any[]> {
+): Promise<OHLCV[]> {
     // Map application intervals to Binance intervals
     const intervalMap: Record<string, string> = {
         '1m': '1m',
@@ -319,7 +319,8 @@ export async function fetchBinanceKlines(
             high: parseFloat(d[2]),
             low: parseFloat(d[3]),
             close: parseFloat(d[4]),
-            volume: parseFloat(d[7]), // Quote volume (USDT)
+            volume: parseFloat(d[5]), // Base volume (e.g. BTC)
+            quoteVolume: parseFloat(d[7]), // Quote volume (e.g. USDT)
             buyVolume: parseFloat(d[10]) // Taker buy quote volume (USDT)
         }));
     } catch (err) {
@@ -367,15 +368,9 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
 
     klines.forEach((k, index) => {
         // True VWAP calculation for the day
-        // k.volume is index 5 (base), k.volumeQuote is index 7 (USDT)
-        // Note: fetchBinanceKlines returns volume as index 7 already (quote volume)
-        // We need both for accurate VWAP calculation if available, 
-        // but for 1D bars, (High+Low+Close)/3 is a standard proxy if volume-weighting is complex.
-        // However, the user asked for precise: (Price * Volume) / Volume
-
-        // Let's use the provided HLC3 calculation for individual daily bars as the proxy for Daily VWAP
-        // and then find the Max/Min of those Daily VWAPs.
-        const dailyVwap = (k.high + k.low + k.close) / 3;
+        // k.volume is index 5 (base), k.quoteVolume is index 7 (USDT)
+        // Formula: VWAP = sum(Price * Vol) / sum(Vol) = Total Quote Volume / Total Base Volume
+        const dailyVwap = k.volume > 0 ? k.quoteVolume / k.volume : (k.high + k.low + k.close) / 3;
 
         // Only consider completed days since Monday for structural Max/Min
         // The last kline is the "Current/In-Progress" day

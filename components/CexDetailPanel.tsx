@@ -14,7 +14,7 @@ interface CexDetailPanelProps {
 export const CexDetailPanel: React.FC<CexDetailPanelProps> = ({ ticker, onClose }) => {
     const isPositive = ticker.priceChangePercent24h >= 0;
     const [ohlcvData, setOhlcvData] = useState<any[]>([]);
-    const [activeTab, setActiveTab] = useState<'price' | 'flow'>('price');
+    const [activeTab, setActiveTab] = useState<'price' | 'flow' | 'vwap_weekly'>('price');
     const [customScript, setCustomScript] = useState<string | null>(null);
     const [showEditor, setShowEditor] = useState(false);
     const [divergence, setDivergence] = useState<'absorption' | 'trend' | 'none'>('none');
@@ -101,6 +101,13 @@ export const CexDetailPanel: React.FC<CexDetailPanelProps> = ({ ticker, onClose 
                                             <Zap size={14} />
                                             Liquidity Flow
                                         </button>
+                                        <button
+                                            onClick={() => setActiveTab('vwap_weekly')}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'vwap_weekly' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                                        >
+                                            <Layers size={14} />
+                                            VWAP Weekly
+                                        </button>
                                     </div>
                                     <button
                                         onClick={() => setShowEditor(!showEditor)}
@@ -126,8 +133,8 @@ export const CexDetailPanel: React.FC<CexDetailPanelProps> = ({ ticker, onClose 
                                         {divergence !== 'none' && (
                                             <div className="absolute top-16 left-4 z-20 animate-in fade-in zoom-in duration-500">
                                                 <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-xl backdrop-blur-md ${divergence === 'absorption'
-                                                        ? 'bg-yellow-500/20 border-yellow-500 text-yellow-500'
-                                                        : 'bg-green-500/20 border-green-500 text-green-500'
+                                                    ? 'bg-yellow-500/20 border-yellow-500 text-yellow-500'
+                                                    : 'bg-green-500/20 border-green-500 text-green-500'
                                                     }`}>
                                                     <div className={`w-2 h-2 rounded-full animate-pulse ${divergence === 'absorption' ? 'bg-yellow-500' : 'bg-green-500'}`} />
                                                     <span className="text-[10px] font-black uppercase tracking-widest leading-none">

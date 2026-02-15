@@ -12,6 +12,7 @@ export interface OHLCV {
     low: number;
     close: number;
     volume: number;
+    quoteVolume: number; // Sum of price * quantity
     buyVolume?: number;  // Taker Buy Volume
     sellVolume?: number; // Total Volume - Taker Buy Volume
 }
