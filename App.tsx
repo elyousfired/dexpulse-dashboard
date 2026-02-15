@@ -135,6 +135,11 @@ const App: React.FC = () => {
                 tickers={cexTickers}
                 onTickerClick={setSelectedCexTicker}
               />
+            ) : activeView === 'correlation' ? (
+              <BtcCorrelation
+                tickers={cexTickers}
+                onTickerClick={setSelectedCexTicker}
+              />
             ) : (
               <WatchlistPanel
                 trades={watchlist}
