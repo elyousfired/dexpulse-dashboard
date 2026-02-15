@@ -1,5 +1,15 @@
-
 import { CexTicker } from '../types';
+
+export interface OHLCV {
+    time: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+    quoteVolume: number;
+    buyVolume: number;
+}
 
 // Binance Public API
 const BINANCE_REST_API = 'https://api.binance.com/api/v3/ticker/24hr';
@@ -415,4 +425,49 @@ export function formatPrice(price: number): string {
     if (price >= 1) return price.toFixed(2);
     if (price >= 0.001) return price.toFixed(4);
     return price.toFixed(8);
+}
+
+export interface CorrelationStats {
+    followerScore: number; // % of days signs match
+    hedgeScore: number;    // % of days BTC down & Token up
+    outperformScore: number; // % of days Token > BTC
+}
+
+export async function calculateHistoricalCorrelation(symbol: string): Promise<CorrelationStats | null> {
+    const btcKlines = await fetchBinanceKlines('BTC', '1d', 14);
+    const tokenKlines = await fetchBinanceKlines(symbol, '1d', 14);
+
+    if (btcKlines.length < 7 || tokenKlines.length < 7) return null;
+
+    let followerCount = 0;
+    let hedgeCount = 0;
+    let outperformCount = 0;
+    let btcDownDays = 0;
+
+    // We compare matching times
+    const commonLength = Math.min(btcKlines.length, tokenKlines.length);
+    for (let i = 1; i < commonLength; i++) {
+        const btcPrev = btcKlines[i - 1].close;
+        const btcCurr = btcKlines[i].close;
+        const tokenPrev = tokenKlines[i - 1].close;
+        const tokenCurr = tokenKlines[i].close;
+
+        const btcChange = (btcCurr - btcPrev) / btcPrev;
+        const tokenChange = (tokenCurr - tokenPrev) / tokenPrev;
+
+        if (Math.sign(btcChange) === Math.sign(tokenChange)) followerCount++;
+        if (tokenChange > btcChange) outperformCount++;
+
+        if (btcChange < 0) {
+            btcDownDays++;
+            if (tokenChange > 0) hedgeCount++;
+        }
+    }
+
+    const totalDays = commonLength - 1;
+    return {
+        followerScore: (followerCount / totalDays) * 100,
+        hedgeScore: btcDownDays > 0 ? (hedgeCount / btcDownDays) * 100 : 0,
+        outperformScore: (outperformCount / totalDays) * 100
+    };
 }

@@ -1,8 +1,8 @@
 
 import React, { useMemo } from 'react';
 import { CexTicker } from '../types';
-import { formatPrice } from '../services/cexService';
-import { Link, ShieldAlert, TrendingUp, TrendingDown, Zap, BarChart3, Activity, ArrowRight } from 'lucide-react';
+import { formatPrice, calculateHistoricalCorrelation, CorrelationStats } from '../services/cexService';
+import { Link, ShieldAlert, TrendingUp, TrendingDown, Zap, BarChart3, Activity, ArrowRight, Star, History } from 'lucide-react';
 
 interface BtcCorrelationProps {
     tickers: CexTicker[];
@@ -14,10 +14,34 @@ interface CorrelationResult {
     relPerformance: number; // Token % - BTC %
     category: 'HEDGE' | 'ALPHA' | 'LAGGARD';
     strength: number;
+    histStats?: CorrelationStats;
 }
 
 export const BtcCorrelation: React.FC<BtcCorrelationProps> = ({ tickers, onTickerClick }) => {
+    const [historicalStats, setHistoricalStats] = React.useState<Record<string, CorrelationStats>>({});
+    const [isAnalyzing, setIsAnalyzing] = React.useState(true);
+
     const btc = useMemo(() => tickers.find(t => t.symbol === 'BTC'), [tickers]);
+
+    React.useEffect(() => {
+        const analyzeHistory = async () => {
+            setIsAnalyzing(true);
+            const stats: Record<string, CorrelationStats> = {};
+            // Analyze top 40 tickers by volume only to save time/rate limits
+            const targets = tickers.filter(t => t.symbol !== 'BTC').slice(0, 40);
+
+            for (let i = 0; i < targets.length; i += 5) {
+                const chunk = targets.slice(i, i + 5);
+                await Promise.all(chunk.map(async (t) => {
+                    const res = await calculateHistoricalCorrelation(t.symbol);
+                    if (res) stats[t.id] = res;
+                }));
+            }
+            setHistoricalStats(stats);
+            setIsAnalyzing(false);
+        };
+        analyzeHistory();
+    }, [tickers.length > 0]);
 
     const results = useMemo(() => {
         if (!btc) return [];
@@ -49,10 +73,16 @@ export const BtcCorrelation: React.FC<BtcCorrelationProps> = ({ tickers, onTicke
                     strength = Math.min(100, Math.abs(relPerformance) * 5);
                 }
 
-                return { ticker: t, relPerformance, category, strength };
+                return {
+                    ticker: t,
+                    relPerformance,
+                    category,
+                    strength,
+                    histStats: historicalStats[t.id]
+                };
             })
             .sort((a, b) => b.relPerformance - a.relPerformance);
-    }, [tickers, btc]);
+    }, [tickers, btc, historicalStats]);
 
     if (!btc) return (
         <div className="flex flex-col items-center justify-center p-20 text-gray-500 gap-4">
@@ -118,6 +148,11 @@ export const BtcCorrelation: React.FC<BtcCorrelationProps> = ({ tickers, onTicke
                                     <div className="text-right">
                                         <div className="text-sm font-black text-green-400">+{res.ticker.priceChangePercent24h.toFixed(2)}%</div>
                                         <div className="text-[10px] font-black text-rose-500">Outperforms BTC: {res.relPerformance.toFixed(1)}%</div>
+                                        {res.histStats && res.histStats.hedgeScore > 60 && (
+                                            <div className="mt-1 flex items-center justify-end gap-1 text-blue-400 font-bold text-[8px] uppercase">
+                                                <History size={10} /> Consist. Hedge ({res.histStats.hedgeScore.toFixed(0)}%)
+                                            </div>
+                                        )}
                                     </div>
                                 </button>
                             ))}
@@ -153,6 +188,11 @@ export const BtcCorrelation: React.FC<BtcCorrelationProps> = ({ tickers, onTicke
                                     <div className="text-right">
                                         <div className="text-sm font-black text-emerald-400">+{res.ticker.priceChangePercent24h.toFixed(2)}%</div>
                                         <div className="text-[10px] font-black text-emerald-600">Alpha over BTC: +{res.relPerformance.toFixed(1)}%</div>
+                                        {res.histStats && res.histStats.followerScore > 75 && (
+                                            <div className="mt-1 flex items-center justify-end gap-1 text-emerald-400 font-bold text-[8px] uppercase">
+                                                <Star size={10} /> Mirror Runner ({res.histStats.followerScore.toFixed(0)}%)
+                                            </div>
+                                        )}
                                     </div>
                                 </button>
                             ))}
