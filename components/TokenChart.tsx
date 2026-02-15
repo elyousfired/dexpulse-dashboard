@@ -47,6 +47,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [vwapData, setVwapData] = useState<VwapData | null>(null);
+    const isVwapWeeklyView = activeView === 'vwap_weekly';
 
     useEffect(() => {
         if (!chartContainerRef.current) return;
@@ -204,12 +205,6 @@ export const TokenChart: React.FC<TokenChartProps> = ({
 
                 if (chartRef.current && candlestickSeriesRef.current) {
                     const isFlowMode = activeView === 'flow';
-                    const isVwapWeeklyView = activeView === 'vwap_weekly';
-
-                    // If in VWAP Weekly view, ensure indicators are on
-                    if (isVwapWeeklyView) {
-                        setShowWeeklyVwap(true);
-                    }
 
                     // 1. Candlesticks with State Coloring
                     candlestickSeriesRef.current.setData(isFlowMode ? [] : data.map(d => {
