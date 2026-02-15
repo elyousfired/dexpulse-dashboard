@@ -148,7 +148,11 @@ export const BtcCorrelation: React.FC<BtcCorrelationProps> = ({ tickers, onTicke
                                     <div className="text-right">
                                         <div className="text-sm font-black text-green-400">+{res.ticker.priceChangePercent24h.toFixed(2)}%</div>
                                         <div className="text-[10px] font-black text-rose-500">Outperforms BTC: {res.relPerformance.toFixed(1)}%</div>
-                                        {res.histStats && res.histStats.hedgeScore > 60 && (
+                                        {isAnalyzing ? (
+                                            <div className="mt-1 flex items-center justify-end gap-1 text-gray-600 font-bold text-[8px] uppercase animate-pulse">
+                                                <Activity size={10} className="animate-spin" /> Analyzing History...
+                                            </div>
+                                        ) : res.histStats && res.histStats.hedgeScore > 50 && (
                                             <div className="mt-1 flex items-center justify-end gap-1 text-blue-400 font-bold text-[8px] uppercase">
                                                 <History size={10} /> Consist. Hedge ({res.histStats.hedgeScore.toFixed(0)}%)
                                             </div>
@@ -188,7 +192,11 @@ export const BtcCorrelation: React.FC<BtcCorrelationProps> = ({ tickers, onTicke
                                     <div className="text-right">
                                         <div className="text-sm font-black text-emerald-400">+{res.ticker.priceChangePercent24h.toFixed(2)}%</div>
                                         <div className="text-[10px] font-black text-emerald-600">Alpha over BTC: +{res.relPerformance.toFixed(1)}%</div>
-                                        {res.histStats && res.histStats.followerScore > 75 && (
+                                        {isAnalyzing ? (
+                                            <div className="mt-1 flex items-center justify-end gap-1 text-gray-600 font-bold text-[8px] uppercase animate-pulse">
+                                                <Activity size={10} className="animate-spin" /> Analyzing History...
+                                            </div>
+                                        ) : res.histStats && res.histStats.followerScore > 65 && (
                                             <div className="mt-1 flex items-center justify-end gap-1 text-emerald-400 font-bold text-[8px] uppercase">
                                                 <Star size={10} /> Mirror Runner ({res.histStats.followerScore.toFixed(0)}%)
                                             </div>
