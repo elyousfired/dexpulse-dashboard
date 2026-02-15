@@ -4,7 +4,7 @@ import { TokenChart } from './TokenChart';
 import { CexAiAnalysis } from './CexAiAnalysis';
 import { ScriptEditor } from './ScriptEditor';
 import { fetchBinanceKlines, formatLargeNumber, formatPrice } from '../services/cexService';
-import { X, ExternalLink, TrendingUp, TrendingDown, Globe, Code, BarChart2, Zap } from 'lucide-react';
+import { X, ExternalLink, TrendingUp, TrendingDown, Globe, Code, BarChart2, Zap, Layers } from 'lucide-react';
 
 interface CexDetailPanelProps {
     ticker: CexTicker;
