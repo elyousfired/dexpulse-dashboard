@@ -140,99 +140,193 @@ export const BtcCorrelation: React.FC<BtcCorrelationProps> = ({ tickers, onTicke
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Hedges Section (Strong when BTC weak) */}
-                    <div>
-                        <h3 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <ShieldAlert className="w-4 h-4" /> BTC Hedges (Negative Correlation)
-                        </h3>
-                        <div className="space-y-3">
-                            {results.filter(r => r.category === 'HEDGE').slice(0, 10).map(res => (
-                                <button
-                                    key={res.ticker.id}
-                                    onClick={() => onTickerClick(res.ticker)}
-                                    className="w-full group flex items-center justify-between p-4 bg-[#12141c] border border-gray-800 rounded-2xl hover:border-rose-500/50 transition-all"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-rose-600 rounded-xl flex items-center justify-center font-black text-white">
-                                            {res.ticker.symbol[0]}
-                                        </div>
-                                        <div className="text-left">
-                                            <div className="text-sm font-black text-white">{res.ticker.symbol}/USDT</div>
-                                            <div className="text-[10px] font-bold text-gray-600 uppercase">Strong decoupled strength</div>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-sm font-black text-green-400">+{res.ticker.priceChangePercent24h.toFixed(2)}%</div>
-                                        <div className="text-[10px] font-black text-rose-500">Outperforms BTC: {res.relPerformance.toFixed(1)}%</div>
-                                        {isAnalyzing ? (
-                                            <div className="mt-1 flex items-center justify-end gap-1 text-gray-600 font-bold text-[8px] uppercase animate-pulse">
-                                                <Activity size={10} className="animate-spin" /> Analyzing History...
-                                            </div>
-                                        ) : res.histStats && res.histStats.hedgeScore > 50 && (
-                                            <div className="mt-1 flex items-center justify-end gap-1 text-blue-400 font-bold text-[8px] uppercase">
-                                                <History size={10} /> Consist. Hedge ({res.histStats.hedgeScore.toFixed(0)}%)
-                                            </div>
-                                        )}
-                                    </div>
-                                </button>
-                            ))}
-                            {results.filter(r => r.category === 'HEDGE').length === 0 && (
-                                <div className="p-10 text-center text-gray-700 text-xs italic border border-dashed border-gray-800 rounded-2xl">
-                                    No tokens currently decoupled from BTC drop.
-                                </div>
-                            )}
-                        </div>
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-12">
+                {/* ─── SECTION 1: ACTIVE 24H POWER ──────────────────────── */}
+                <div>
+                    <div className="flex items-center gap-3 mb-6">
+                        <Activity className="w-5 h-5 text-blue-500" />
+                        <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">Active 24h Signals</h3>
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-blue-500/20 to-transparent"></div>
                     </div>
 
-                    {/* Alpha Section (Leading the pump) */}
-                    <div>
-                        <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <Zap className="w-4 h-4" /> Alpha Leaders (High Beta)
-                        </h3>
-                        <div className="space-y-3">
-                            {results.filter(r => r.category === 'ALPHA').slice(0, 10).map(res => (
-                                <button
-                                    key={res.ticker.id}
-                                    onClick={() => onTickerClick(res.ticker)}
-                                    className="w-full group flex items-center justify-between p-4 bg-[#12141c] border border-gray-800 rounded-2xl hover:border-emerald-500/50 transition-all"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center font-black text-white">
-                                            {res.ticker.symbol[0]}
-                                        </div>
-                                        <div className="text-left">
-                                            <div className="text-sm font-black text-white">{res.ticker.symbol}/USDT</div>
-                                            <div className="text-[10px] font-bold text-gray-600 uppercase">High correlation leverage</div>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-sm font-black text-emerald-400">+{res.ticker.priceChangePercent24h.toFixed(2)}%</div>
-                                        <div className="text-[10px] font-black text-emerald-600">Alpha over BTC: +{res.relPerformance.toFixed(1)}%</div>
-                                        {isAnalyzing ? (
-                                            <div className="mt-1 flex items-center justify-end gap-1 text-gray-600 font-bold text-[8px] uppercase animate-pulse">
-                                                <Activity size={10} className="animate-spin" /> Analyzing History...
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Hedges Section (Strong when BTC weak) */}
+                        <div>
+                            <h3 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2 px-2">
+                                <ShieldAlert className="w-4 h-4" /> BTC Hedges (Negative Delta)
+                            </h3>
+                            <div className="space-y-3">
+                                {results.filter(r => r.category === 'HEDGE').slice(0, 5).map(res => (
+                                    <button
+                                        key={res.ticker.id}
+                                        onClick={() => onTickerClick(res.ticker)}
+                                        className="w-full group flex items-center justify-between p-4 bg-[#12141c] border border-gray-800 rounded-2xl hover:border-rose-500/50 transition-all shadow-lg hover:shadow-rose-500/5"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-rose-600 rounded-xl flex items-center justify-center font-black text-white shadow-[0_4px_10px_rgba(225,29,72,0.3)]">
+                                                {res.ticker.symbol[0]}
                                             </div>
-                                        ) : res.histStats && res.histStats.followerScore > 65 && (
-                                            <div className="mt-1 flex items-center justify-end gap-1 text-emerald-400 font-bold text-[8px] uppercase">
-                                                <Star size={10} /> Mirror Runner ({res.histStats.followerScore.toFixed(0)}%)
+                                            <div className="text-left">
+                                                <div className="text-sm font-black text-white tracking-tight">{res.ticker.symbol}/USDT</div>
+                                                <div className="text-[10px] font-bold text-gray-600 uppercase">Strong decoupled strength</div>
                                             </div>
-                                        )}
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-sm font-black text-green-400">+{res.ticker.priceChangePercent24h.toFixed(2)}%</div>
+                                            <div className="text-[10px] font-black text-rose-500">Rel. Perf: +{res.relPerformance.toFixed(1)}%</div>
+                                        </div>
+                                    </button>
+                                ))}
+                                {results.filter(r => r.category === 'HEDGE').length === 0 && (
+                                    <div className="p-8 text-center text-gray-700 text-[10px] font-bold uppercase tracking-widest border border-dashed border-gray-800/50 rounded-2xl">
+                                        No active hedges detected.
                                     </div>
-                                </button>
-                            ))}
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Alpha Section (Leading the pump) */}
+                        <div>
+                            <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2 px-2">
+                                <Zap className="w-4 h-4" /> Alpha Leaders (High Beta)
+                            </h3>
+                            <div className="space-y-3">
+                                {results.filter(r => r.category === 'ALPHA').slice(0, 5).map(res => (
+                                    <button
+                                        key={res.ticker.id}
+                                        onClick={() => onTickerClick(res.ticker)}
+                                        className="w-full group flex items-center justify-between p-4 bg-[#12141c] border border-gray-800 rounded-2xl hover:border-emerald-500/50 transition-all shadow-lg hover:shadow-emerald-500/5"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center font-black text-white shadow-[0_4px_10px_rgba(5,150,105,0.3)]">
+                                                {res.ticker.symbol[0]}
+                                            </div>
+                                            <div className="text-left">
+                                                <div className="text-sm font-black text-white tracking-tight">{res.ticker.symbol}/USDT</div>
+                                                <div className="text-[10px] font-bold text-gray-600 uppercase">High correlation leverage</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-sm font-black text-emerald-400">+{res.ticker.priceChangePercent24h.toFixed(2)}%</div>
+                                            <div className="text-[10px] font-black text-emerald-600">Pure Alpha: +{res.relPerformance.toFixed(1)}%</div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ─── SECTION 2: HISTORICAL CHAMPIONS (14D) ────────────────── */}
+                <div>
+                    <div className="flex items-center gap-3 mb-6">
+                        <History className="w-5 h-5 text-indigo-500" />
+                        <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">Historical Consistency (14D)</h3>
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-indigo-500/20 to-transparent"></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Historical Hedges (Consistent decoupled tokens) */}
+                        <div>
+                            <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2 px-2">
+                                <ShieldAlert className="w-4 h-4" /> Hedge Masters (Safe Havens)
+                            </h3>
+                            <div className="space-y-3">
+                                {results
+                                    .filter(r => r.histStats && r.histStats.hedgeScore > 30)
+                                    .sort((a, b) => (b.histStats?.hedgeScore || 0) - (a.histStats?.hedgeScore || 0))
+                                    .slice(0, 5)
+                                    .map(res => (
+                                        <button
+                                            key={res.ticker.id}
+                                            onClick={() => onTickerClick(res.ticker)}
+                                            className="w-full group flex items-center justify-between p-4 bg-[#12141c]/50 border border-indigo-500/10 rounded-2xl hover:border-indigo-500/40 transition-all"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 bg-indigo-900/40 border border-indigo-500/20 rounded-xl flex items-center justify-center font-black text-indigo-400 uppercase">
+                                                    {res.ticker.symbol[0]}
+                                                </div>
+                                                <div className="text-left">
+                                                    <div className="text-sm font-black text-white">{res.ticker.symbol}/USDT</div>
+                                                    <div className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter">Pumps on BTC drops</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-xs font-black text-blue-400 uppercase tracking-tighter">
+                                                    {res.histStats?.hedgeScore.toFixed(0)}% Consistency
+                                                </div>
+                                                <div className="flex items-center justify-end gap-1 mt-0.5">
+                                                    <div className="w-16 h-1 bg-gray-800 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-blue-500" style={{ width: `${res.histStats?.hedgeScore}%` }}></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                {isAnalyzing && (
+                                    <div className="p-8 text-center text-gray-600 flex flex-col items-center gap-2 bg-black/20 rounded-2xl border border-dashed border-gray-800">
+                                        <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+                                        <span className="text-[9px] font-black uppercase tracking-widest">Scanning blockchain history...</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Historical Followers (Alpha Kings) */}
+                        <div>
+                            <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2 px-2">
+                                <Star className="w-4 h-4" /> Alpha Kings (Consistent Beta)
+                            </h3>
+                            <div className="space-y-3">
+                                {results
+                                    .filter(r => r.histStats && r.histStats.followerScore > 50)
+                                    .sort((a, b) => (b.histStats?.followerScore || 0) - (a.histStats?.followerScore || 0))
+                                    .slice(0, 5)
+                                    .map(res => (
+                                        <button
+                                            key={res.ticker.id}
+                                            onClick={() => onTickerClick(res.ticker)}
+                                            className="w-full group flex items-center justify-between p-4 bg-[#12141c]/50 border border-amber-500/10 rounded-2xl hover:border-amber-500/40 transition-all"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 bg-amber-900/40 border border-amber-500/20 rounded-xl flex items-center justify-center font-black text-amber-400 uppercase">
+                                                    {res.ticker.symbol[0]}
+                                                </div>
+                                                <div className="text-left">
+                                                    <div className="text-sm font-black text-white">{res.ticker.symbol}/USDT</div>
+                                                    <div className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter">Consistent BTC Mirror</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-xs font-black text-amber-500 uppercase tracking-tighter">
+                                                    {res.histStats?.followerScore.toFixed(0)}% Mirroring
+                                                </div>
+                                                <div className="flex items-center justify-end gap-1 mt-0.5">
+                                                    <div className="w-16 h-1 bg-gray-800 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-amber-500" style={{ width: `${res.histStats?.followerScore}%` }}></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Footer */}
-            <div className={`p-4 border-t flex items-center gap-3 ${btcIsDown ? 'bg-rose-900/5 border-rose-500/10' : 'bg-emerald-900/5 border-emerald-500/10'}`}>
-                <Activity className={`w-4 h-4 ${btcIsDown ? 'text-rose-400' : 'text-emerald-400'}`} />
-                <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
-                    Real-time delta tracking against BTCUSDT benchmarks.
-                </span>
+            <div className={`p-4 border-t flex items-center justify-between ${btcIsDown ? 'bg-rose-900/5 border-rose-500/10' : 'bg-emerald-900/5 border-emerald-500/10'}`}>
+                <div className="flex items-center gap-3">
+                    <Activity className={`w-4 h-4 ${btcIsDown ? 'text-rose-400' : 'text-emerald-400'}`} />
+                    <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+                        Hybrid Analysis: Real-time Delta + 14-Day Structural Correlation
+                    </span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${isAnalyzing ? 'bg-indigo-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+                    <span className="text-[9px] font-black text-gray-500 uppercase">AI Guard Status: Active</span>
+                </div>
             </div>
         </div>
     );
