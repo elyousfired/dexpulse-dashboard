@@ -433,11 +433,11 @@ export interface CorrelationStats {
     outperformScore: number; // % of days Token > BTC
 }
 
-export async function calculateHistoricalCorrelation(symbol: string): Promise<CorrelationStats | null> {
-    const btcKlines = await fetchBinanceKlines('BTC', '1d', 14);
+export async function calculateHistoricalCorrelation(symbol: string, btcKlines?: OHLCV[]): Promise<CorrelationStats | null> {
+    const btcData = btcKlines || await fetchBinanceKlines('BTC', '1d', 14);
     const tokenKlines = await fetchBinanceKlines(symbol, '1d', 14);
 
-    if (btcKlines.length < 7 || tokenKlines.length < 7) return null;
+    if (btcData.length < 7 || tokenKlines.length < 7) return null;
 
     let followerCount = 0;
     let hedgeCount = 0;
@@ -445,10 +445,10 @@ export async function calculateHistoricalCorrelation(symbol: string): Promise<Co
     let btcDownDays = 0;
 
     // We compare matching times
-    const commonLength = Math.min(btcKlines.length, tokenKlines.length);
+    const commonLength = Math.min(btcData.length, tokenKlines.length);
     for (let i = 1; i < commonLength; i++) {
-        const btcPrev = btcKlines[i - 1].close;
-        const btcCurr = btcKlines[i].close;
+        const btcPrev = btcData[i - 1].close;
+        const btcCurr = btcData[i].close;
         const tokenPrev = tokenKlines[i - 1].close;
         const tokenCurr = tokenKlines[i].close;
 

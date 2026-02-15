@@ -1,8 +1,8 @@
 
 import React, { useMemo } from 'react';
 import { CexTicker } from '../types';
-import { formatPrice, calculateHistoricalCorrelation, CorrelationStats } from '../services/cexService';
-import { Link, ShieldAlert, TrendingUp, TrendingDown, Zap, BarChart3, Activity, ArrowRight, Star, History } from 'lucide-react';
+import { formatPrice, calculateHistoricalCorrelation, CorrelationStats, fetchBinanceKlines } from '../services/cexService';
+import { Link, ShieldAlert, TrendingUp, TrendingDown, Zap, BarChart3, Activity, ArrowRight, Star, History, Loader2 } from 'lucide-react';
 
 interface BtcCorrelationProps {
     tickers: CexTicker[];
@@ -24,24 +24,42 @@ export const BtcCorrelation: React.FC<BtcCorrelationProps> = ({ tickers, onTicke
     const btc = useMemo(() => tickers.find(t => t.symbol === 'BTC'), [tickers]);
 
     React.useEffect(() => {
+        if (tickers.length === 0) return;
+
         const analyzeHistory = async () => {
+            console.log('Starting historical correlation analysis for', tickers.length, 'tickers');
             setIsAnalyzing(true);
             const stats: Record<string, CorrelationStats> = {};
-            // Analyze top 40 tickers by volume only to save time/rate limits
-            const targets = tickers.filter(t => t.symbol !== 'BTC').slice(0, 40);
 
-            for (let i = 0; i < targets.length; i += 5) {
-                const chunk = targets.slice(i, i + 5);
-                await Promise.all(chunk.map(async (t) => {
-                    const res = await calculateHistoricalCorrelation(t.symbol);
-                    if (res) stats[t.id] = res;
-                }));
+            try {
+                // Fetch BTC Klines ONCE
+                const btcKlines = await fetchBinanceKlines('BTC', '1d', 14);
+                if (btcKlines.length === 0) {
+                    console.error('Failed to fetch BTC klines');
+                    setIsAnalyzing(false);
+                    return;
+                }
+
+                // Analyze top 50 tickers by volume
+                const targets = tickers.filter(t => t.symbol !== 'BTC').slice(0, 50);
+
+                for (let i = 0; i < targets.length; i += 10) {
+                    const chunk = targets.slice(i, i + 10);
+                    await Promise.all(chunk.map(async (t) => {
+                        const res = await calculateHistoricalCorrelation(t.symbol, btcKlines);
+                        if (res) stats[t.id] = res;
+                    }));
+                }
+                console.log('Historical analysis complete. Results:', Object.keys(stats).length);
+                setHistoricalStats(stats);
+            } catch (err) {
+                console.error('Analysis error:', err);
+            } finally {
+                setIsAnalyzing(false);
             }
-            setHistoricalStats(stats);
-            setIsAnalyzing(false);
         };
         analyzeHistory();
-    }, [tickers.length > 0]);
+    }, [tickers.length > 0 ? 1 : 0]); // Trigger when tickers load for the first time
 
     const results = useMemo(() => {
         if (!btc) return [];
