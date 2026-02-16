@@ -27,7 +27,7 @@ let tickerSubscriptions: Map<string, ((update: CexTicker) => void)[]> = new Map(
 
 const STABLECOINS = [
     'USDT', 'USDC', 'BUSD', 'DAI', 'FDUSD', 'TUSD', 'EUR', 'TRY', 'GBP',
-    'USDP', 'XUSD', 'USDE', 'USDS', 'VAI', 'AEUR', 'ZAR', 'UAH', 'PLN', 'RON'
+    'USDP', 'XUSD', 'USDE', 'USDS', 'VAI', 'AEUR', 'ZAR', 'UAH', 'PLN', 'RON', 'USD1'
 ];
 
 function isStable(symbol: string): boolean {
