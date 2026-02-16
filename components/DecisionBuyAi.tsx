@@ -76,14 +76,22 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
 
             const price = t.priceUsd;
             let signal: BuySignal | null = null;
+            const isMonday = new Date().getUTCDay() === 1;
 
-            // 1. GOLDEN BREAKOUT: Price > Max && Price > Mid && High Gain && Structural Range Exists
-            if (price > vwap.max && t.priceChangePercent24h > 5 && vwap.max > vwap.min) {
+            // ─── GOLDEN SIGNAL LOGIC ───
+            // Monday: Price > Max && Min && Mid (Daily)
+            // Other Days: Price > Max && Min
+            const isGoldenMonday = isMonday && price > vwap.max && price > vwap.min && price > vwap.mid;
+            const isGoldenStandard = !isMonday && price > vwap.max && price > vwap.min;
+
+            if (isGoldenMonday || isGoldenStandard) {
                 signal = {
                     ticker: t,
                     vwap,
                     score: 95 + Math.min(5, t.priceChangePercent24h / 10),
-                    reason: "Strong Breakout above Weekly Max with high momentum.",
+                    reason: isMonday
+                        ? "Monday Elite: Price above Weekly Max, Min and Daily VWAP. Strong weekly opening."
+                        : "Golden Breakout: Price confirmed above Weekly Max and Min levels.",
                     type: 'GOLDEN'
                 };
             }
