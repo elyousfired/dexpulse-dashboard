@@ -5,8 +5,10 @@ import { fetchTokenVwapProfile, TokenVwapProfile, TIMEFRAMES } from '../services
 import { formatPrice } from '../services/cexService';
 import {
     BarChart3, Loader2, RefreshCw, TrendingUp, TrendingDown,
-    ArrowUpRight, ArrowDownRight, Filter, Layers, ChevronUp, ChevronDown
+    ArrowUpRight, ArrowDownRight, Filter, Layers, ChevronUp, ChevronDown,
+    Bell, BellOff, Volume2
 } from 'lucide-react';
+import { wasAlertedToday } from '../services/telegramService';
 
 interface VwapMultiTFProps {
     tickers: CexTicker[];
@@ -27,6 +29,27 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
     const [loading, setLoading] = useState(true);
     const [activeTF, setActiveTF] = useState('1d');
     const [showAboveOnly, setShowAboveOnly] = useState(true);
+    const [audioEnabled, setAudioEnabled] = useState(() => localStorage.getItem('vwap_audio_enabled') === 'true');
+    const alertedRef = React.useRef<Set<string>>(new Set());
+    const audioRef = React.useRef<HTMLAudioElement | null>(null);
+
+    // Initialize audio
+    useEffect(() => {
+        audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        audioRef.current.volume = 0.5;
+    }, []);
+
+    const playAlarm = () => {
+        if (!audioEnabled || !audioRef.current) return;
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(e => console.log('Audio blocked:', e));
+    };
+
+    const toggleAudio = () => {
+        const newValue = !audioEnabled;
+        setAudioEnabled(newValue);
+        localStorage.setItem('vwap_audio_enabled', String(newValue));
+    };
 
     const loadProfiles = useCallback(async () => {
         setLoading(true);
@@ -64,6 +87,33 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
                 : aLevel.priceVsVwap - bLevel.priceVsVwap;
         });
 
+    // ─── ALARM TRIGGER LOGIC (Monday & Full Long) ───
+    useEffect(() => {
+        if (loading || profiles.length === 0) return;
+
+        const isMonday = new Date().getUTCDay() === 1;
+
+        profiles.forEach(p => {
+            if (alertedRef.current.has(p.symbol)) return;
+
+            const aboveAll = p.aboveCount === 6;
+
+            // Monday specific: Above 4h, 1h, 15m
+            const v4h = p.levels.find(l => l.timeframe === '4h')?.isAbove;
+            const v1h = p.levels.find(l => l.timeframe === '1h')?.isAbove;
+            const v15m = p.levels.find(l => l.timeframe === '15m')?.isAbove;
+            const isMondayMatch = isMonday && v4h && v1h && v15m && p.change24h > 5;
+
+            if (aboveAll || isMondayMatch) {
+                // Double check persisted alerts to avoid cross-component spam
+                if (!wasAlertedToday(p.symbol)) {
+                    playAlarm();
+                    alertedRef.current.add(p.symbol);
+                }
+            }
+        });
+    }, [profiles, loading, audioEnabled]);
+
     const activeTFLabel = TIMEFRAMES.find(t => t.key === activeTF)?.label || activeTF;
 
     return (
@@ -81,9 +131,38 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
                         </p>
                     </div>
                 </div>
-                <button onClick={loadProfiles} disabled={loading} className="p-3 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 transition-all">
-                    <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
-                </button>
+
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={toggleAudio}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${audioEnabled
+                                ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)]'
+                                : 'bg-gray-800/50 text-gray-500 border-gray-700'
+                            }`}
+                    >
+                        {audioEnabled ? <Volume2 className="w-4 h-4 animate-pulse" /> : <BellOff className="w-4 h-4" />}
+                        <span className="text-[10px] font-black uppercase">{audioEnabled ? 'Alarm ON' : 'Alarm OFF'}</span>
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            const original = audioEnabled;
+                            setAudioEnabled(true);
+                            setTimeout(() => {
+                                playAlarm();
+                                setAudioEnabled(original);
+                            }, 50);
+                        }}
+                        className="p-2.5 bg-gray-800/50 hover:bg-gray-700 rounded-xl border border-gray-700 transition-all text-gray-400 hover:text-white"
+                        title="Test Alarm"
+                    >
+                        <Bell className="w-4 h-4" />
+                    </button>
+
+                    <button onClick={loadProfiles} disabled={loading} className="p-2.5 bg-gray-800/50 hover:bg-gray-700 rounded-xl border border-gray-700 transition-all">
+                        <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                </div>
             </div>
 
             {/* Timeframe Tabs */}
@@ -91,8 +170,8 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
                 {TIMEFRAMES.map(tf => (
                     <button key={tf.key} onClick={() => setActiveTF(tf.key)}
                         className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${activeTF === tf.key
-                                ? 'text-white shadow-lg'
-                                : 'bg-[#12141c] text-gray-500 border-gray-800 hover:text-gray-300'
+                            ? 'text-white shadow-lg'
+                            : 'bg-[#12141c] text-gray-500 border-gray-800 hover:text-gray-300'
                             }`}
                         style={activeTF === tf.key ? {
                             backgroundColor: `${TF_COLORS[tf.key]}20`,
@@ -179,8 +258,8 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
                                             <div className="text-sm font-mono font-bold text-gray-400">${formatPrice(activeLevel.vwap)}</div>
                                         </div>
                                         <div className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-black ${activeLevel.isAbove
-                                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                                             }`}>
                                             {activeLevel.isAbove
                                                 ? <ArrowUpRight className="w-4 h-4" />
