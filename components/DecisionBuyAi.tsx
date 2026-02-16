@@ -17,6 +17,7 @@ interface BuySignal {
     score: number;
     reason: string;
     type: 'GOLDEN' | 'MOMENTUM' | 'SUPPORT';
+    activeSince?: number; // timestamp
 }
 
 export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerClick, onAddToWatchlist }) => {
@@ -32,6 +33,14 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
     });
     const alertedRef = useRef<Set<string>>(new Set());
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [firstSeenTimes, setFirstSeenTimes] = useState<Record<string, number>>({});
+    const [currentTime, setCurrentTime] = useState(Date.now());
+
+    // Live timer update
+    useEffect(() => {
+        const interval = setInterval(() => setCurrentTime(Date.now()), 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
@@ -92,6 +101,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
                     reason: isMonday
                         ? "Monday Elite: Price above Weekly Max, Min and Daily VWAP. Strong weekly opening."
                         : "Golden Breakout: Price confirmed above Weekly Max and Min levels.",
+                    activeSince: firstSeenTimes[t.id] || Date.now(),
                     type: 'GOLDEN'
                 };
             }
@@ -120,6 +130,45 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
         })
             .filter((s): s is BuySignal => s !== null)
             .sort((a, b) => b.score - a.score);
+    }, [tickers, vwapStore, firstSeenTimes]);
+
+    // ─── TRACK FIRST SEEN TIMES ───────────────────
+    useEffect(() => {
+        const currentGoldenIds = new Set(
+            tickers
+                .filter(t => {
+                    const vwap = vwapStore[t.id];
+                    if (!vwap) return false;
+                    const isMonday = new Date().getUTCDay() === 1;
+                    return isMonday
+                        ? (t.priceUsd > vwap.max && t.priceUsd > vwap.min && t.priceUsd > vwap.mid)
+                        : (t.priceUsd > vwap.max && t.priceUsd > vwap.min);
+                })
+                .map(t => t.id)
+        );
+
+        setFirstSeenTimes(prev => {
+            const next = { ...prev };
+            let changed = false;
+
+            // Add new ones
+            currentGoldenIds.forEach(id => {
+                if (!next[id]) {
+                    next[id] = Date.now();
+                    changed = true;
+                }
+            });
+
+            // Remove lost ones
+            Object.keys(next).forEach(id => {
+                if (!currentGoldenIds.has(id)) {
+                    delete next[id];
+                    changed = true;
+                }
+            });
+
+            return changed ? next : prev;
+        });
     }, [tickers, vwapStore]);
 
     // ─── Telegram Alert Trigger ───────────────────
@@ -293,6 +342,11 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
                                     <Trophy className={`w-4 h-4 ${sig.score > 90 ? 'text-yellow-500' : 'text-purple-400'}`} />
                                     <span className="text-2xl font-black text-white italic">{sig.score.toFixed(0)}</span>
                                 </div>
+                                {sig.type === 'GOLDEN' && sig.activeSince && (
+                                    <span className="text-[9px] font-black text-amber-500/70 mt-1 uppercase tracking-tighter bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10">
+                                        ⏱️ {Math.floor((currentTime - sig.activeSince) / 1000 / 60)}m {Math.floor((currentTime - sig.activeSince) / 1000) % 60}s
+                                    </span>
+                                )}
                             </div>
 
                             <div className="flex items-center gap-3 mb-4">
