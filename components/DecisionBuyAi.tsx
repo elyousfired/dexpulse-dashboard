@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CexTicker } from '../types';
 import { fetchWeeklyVwapData, VwapData, formatPrice } from '../services/cexService';
-import { Brain, Star, TrendingUp, Info, ArrowRight, Zap, Trophy, ShieldCheck, Bell, Settings, Send, CheckCircle, XCircle, Volume2, VolumeX } from 'lucide-react';
+import { Brain, Star, TrendingUp, Info, ArrowRight, Zap, Trophy, ShieldCheck, Bell, Settings, Send, CheckCircle, XCircle, Volume2, VolumeX, Timer, Filter } from 'lucide-react';
 import { sendGoldenSignalAlert, wasAlertedToday, loadTelegramConfig, saveTelegramConfig, sendTestAlert, TelegramConfig } from '../services/telegramService';
 
 interface DecisionBuyAiProps {
@@ -31,6 +31,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
         const saved = localStorage.getItem('dexpulse_audio_alerts');
         return saved ? saved === 'true' : true;
     });
+    const [sortBy, setSortBy] = useState<'score' | 'time'>('score');
     const alertedRef = useRef<Set<string>>(new Set());
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [firstSeenTimes, setFirstSeenTimes] = useState<Record<string, number>>({});
@@ -129,8 +130,15 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
             return signal;
         })
             .filter((s): s is BuySignal => s !== null)
-            .sort((a, b) => b.score - a.score);
-    }, [tickers, vwapStore, firstSeenTimes]);
+            .sort((a, b) => {
+                if (sortBy === 'time') {
+                    const aTime = a.activeSince || 0;
+                    const bTime = b.activeSince || 0;
+                    return bTime - aTime; // Newest first
+                }
+                return b.score - a.score;
+            });
+    }, [tickers, vwapStore, firstSeenTimes, sortBy]);
 
     // ─── TRACK FIRST SEEN TIMES ───────────────────
     useEffect(() => {
@@ -251,15 +259,29 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
                     </div>
                 </div>
 
-                <div className="flex items-center gap-6">
-                    <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-black text-gray-600 uppercase">Signals Found</span>
-                        <span className="text-xl font-black text-purple-400">{signals.length}</span>
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center bg-black/40 rounded-xl p-1 border border-purple-500/20 mr-2">
+                        <button
+                            onClick={() => setSortBy('score')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${sortBy === 'score' ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'
+                                }`}
+                        >
+                            <Trophy className="w-3 h-3" />
+                            SCORE
+                        </button>
+                        <button
+                            onClick={() => setSortBy('time')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${sortBy === 'time' ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'
+                                }`}
+                        >
+                            <Timer className="w-3 h-3" />
+                            TIME
+                        </button>
                     </div>
+
                     <button onClick={() => setShowSettings(!showSettings)}
-                        className={`relative p-2.5 rounded-xl border transition-all ${tgConfig.enabled ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-gray-800 border-gray-700 text-gray-500 hover:text-gray-300'}`}>
-                        <Bell className="w-5 h-5" />
-                        {tgConfig.enabled && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#0d0f14] animate-pulse"></div>}
+                        className={`p-3 rounded-xl border transition-all ${showSettings ? 'bg-purple-600 border-purple-400 text-white' : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:text-white'}`}>
+                        <Settings className={`w-5 h-5 ${showSettings ? 'animate-spin-slow' : ''}`} />
                     </button>
                 </div>
             </div>
