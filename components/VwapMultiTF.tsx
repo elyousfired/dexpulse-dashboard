@@ -105,25 +105,27 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
             const isMondayMatch = isMonday && v4h && v1h && v15m && p.change24h > 5;
             const isConvergence = v4h && v1h && v15m;
 
+            // 1. Audio Alarm (Selective Elite Tiers)
             if (aboveAll || isMondayMatch) {
-                // Double check persisted alerts to avoid cross-component spam
-                if (!wasAlertedToday(p.symbol)) {
+                if (!alertedRef.current.has(p.symbol)) {
                     playAlarm();
                     alertedRef.current.add(p.symbol);
+                }
+            }
 
-                    // Telegram alert ONLY for the specific convergence (4H/1H/15M)
-                    if (isConvergence) {
-                        sendGoldenSignalAlert({
-                            symbol: p.symbol,
-                            price: p.price,
-                            change24h: p.change24h,
-                            score: p.aboveCount * 16.6,
-                            vwapMax: p.levels.find(l => l.timeframe === '4h')?.vwap || 0,
-                            vwapMid: p.levels.find(l => l.timeframe === '1h')?.vwap || 0,
-                            reason: `MTF Convergence: Price above 4H, 1H, and 15m VWAP. Strong intra-day momentum.`,
-                            type: 'CONVERGENCE'
-                        });
-                    }
+            // 2. Telegram Alert (Strategic MTF Convergence)
+            if (isConvergence) {
+                if (!wasAlertedToday(p.symbol)) {
+                    sendGoldenSignalAlert({
+                        symbol: p.symbol,
+                        price: p.price,
+                        change24h: p.change24h,
+                        score: p.aboveCount * 16.6,
+                        vwapMax: p.levels.find(l => l.timeframe === '4h')?.vwap || 0,
+                        vwapMid: p.levels.find(l => l.timeframe === '1h')?.vwap || 0,
+                        reason: `MTF Convergence: Price above 4H, 1H, and 15m VWAP levels. High strategic alignment.`,
+                        type: 'CONVERGENCE'
+                    });
                 }
             }
         });
