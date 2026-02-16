@@ -25,6 +25,15 @@ let ws: WebSocket | null = null;
 let listeners: ((tickers: CexTicker[]) => void)[] = [];
 let tickerSubscriptions: Map<string, ((update: CexTicker) => void)[]> = new Map();
 
+const STABLECOINS = [
+    'USDT', 'USDC', 'BUSD', 'DAI', 'FDUSD', 'TUSD', 'EUR', 'TRY', 'GBP',
+    'USDP', 'XUSD', 'USDE', 'USDS', 'VAI', 'AEUR', 'ZAR', 'UAH', 'PLN', 'RON'
+];
+
+function isStable(symbol: string): boolean {
+    return STABLECOINS.includes(symbol.toUpperCase());
+}
+
 export async function fetchCexTickers(): Promise<CexTicker[]> {
     if (cache && Date.now() - cache.ts < CACHE_TTL) return cache.data;
 
@@ -35,11 +44,12 @@ export async function fetchCexTickers(): Promise<CexTicker[]> {
 
         const data = await res.json();
 
-        // Filter for USDT pairs and sort by volume
+        // Filter for USDT pairs, exclude stablecoins, and sort by volume
         const tickers: CexTicker[] = data
             .filter((t: any) => t.symbol.endsWith('USDT'))
             .map((t: any) => {
                 const baseSymbol = t.symbol.replace('USDT', '');
+                if (isStable(baseSymbol)) return null;
                 return {
                     id: t.symbol,
                     symbol: baseSymbol,
@@ -53,6 +63,7 @@ export async function fetchCexTickers(): Promise<CexTicker[]> {
                     exchange: 'Binance',
                 };
             })
+            .filter((t: any): t is CexTicker => t !== null)
             .sort((a: CexTicker, b: CexTicker) => b.volume24h - a.volume24h)
             .slice(0, 250); // Top 250 by volume
 
@@ -78,6 +89,7 @@ async function fetchKuCoinTickers(): Promise<CexTicker[]> {
             .filter((t: any) => t.symbol.endsWith('-USDT'))
             .map((t: any) => {
                 const symbol = t.symbol.split('-')[0];
+                if (isStable(symbol)) return null;
                 return {
                     id: t.symbol,
                     symbol,
@@ -91,6 +103,7 @@ async function fetchKuCoinTickers(): Promise<CexTicker[]> {
                     exchange: 'KuCoin',
                 };
             })
+            .filter((t: any): t is CexTicker => t !== null)
             .sort((a: CexTicker, b: CexTicker) => b.volume24h - a.volume24h)
             .slice(0, 250);
 
