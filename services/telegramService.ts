@@ -101,17 +101,17 @@ export async function sendGoldenSignalAlert(params: {
     vwapMax: number;
     vwapMid: number;
     reason: string;
-    type: 'GOLDEN' | 'MOMENTUM' | 'SUPPORT';
+    type: 'GOLDEN' | 'MOMENTUM' | 'SUPPORT' | 'CONVERGENCE';
 }): Promise<boolean> {
-    // SECURITY: Only allow GOLDEN signals to be sent to Telegram
-    if (params.type !== 'GOLDEN') return false;
+    // SECURITY: Only allow GOLDEN and CONVERGENCE signals to be sent to Telegram
+    if (params.type !== 'GOLDEN' && params.type !== 'CONVERGENCE') return false;
 
     const config = loadTelegramConfig();
     if (!config.enabled || !config.botToken || !config.chatId) return false;
     if (wasAlertedToday(params.symbol)) return false;
 
-    const emoji = params.type === 'GOLDEN' ? '🏆' : params.type === 'MOMENTUM' ? '🚀' : '🛡️';
-    const typeLabel = params.type === 'GOLDEN' ? '⚡ GOLDEN SIGNAL' : params.type === 'MOMENTUM' ? '📈 MOMENTUM SIGNAL' : '🔵 SUPPORT SIGNAL';
+    const emoji = params.type === 'GOLDEN' ? '🏆' : params.type === 'CONVERGENCE' ? '🎯' : '🚀';
+    const typeLabel = params.type === 'GOLDEN' ? '⚡ GOLDEN SIGNAL' : params.type === 'CONVERGENCE' ? '📍 MTF CONVERGENCE' : '📈 MOMENTUM';
 
     const message = [
         `${emoji} <b>${typeLabel}</b>`,

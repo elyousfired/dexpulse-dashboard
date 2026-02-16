@@ -8,7 +8,7 @@ import {
     ArrowUpRight, ArrowDownRight, Filter, Layers, ChevronUp, ChevronDown,
     Bell, BellOff, Volume2
 } from 'lucide-react';
-import { wasAlertedToday } from '../services/telegramService';
+import { wasAlertedToday, sendGoldenSignalAlert } from '../services/telegramService';
 
 interface VwapMultiTFProps {
     tickers: CexTicker[];
@@ -103,12 +103,27 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
             const v1h = p.levels.find(l => l.timeframe === '1h')?.isAbove;
             const v15m = p.levels.find(l => l.timeframe === '15m')?.isAbove;
             const isMondayMatch = isMonday && v4h && v1h && v15m && p.change24h > 5;
+            const isConvergence = v4h && v1h && v15m;
 
             if (aboveAll || isMondayMatch) {
                 // Double check persisted alerts to avoid cross-component spam
                 if (!wasAlertedToday(p.symbol)) {
                     playAlarm();
                     alertedRef.current.add(p.symbol);
+
+                    // Telegram alert ONLY for the specific convergence (4H/1H/15M)
+                    if (isConvergence) {
+                        sendGoldenSignalAlert({
+                            symbol: p.symbol,
+                            price: p.price,
+                            change24h: p.change24h,
+                            score: p.aboveCount * 16.6,
+                            vwapMax: p.levels.find(l => l.timeframe === '4h')?.vwap || 0,
+                            vwapMid: p.levels.find(l => l.timeframe === '1h')?.vwap || 0,
+                            reason: `MTF Convergence: Price above 4H, 1H, and 15m VWAP. Strong intra-day momentum.`,
+                            type: 'CONVERGENCE'
+                        });
+                    }
                 }
             }
         });
@@ -136,8 +151,8 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
                     <button
                         onClick={toggleAudio}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${audioEnabled
-                                ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)]'
-                                : 'bg-gray-800/50 text-gray-500 border-gray-700'
+                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)]'
+                            : 'bg-gray-800/50 text-gray-500 border-gray-700'
                             }`}
                     >
                         {audioEnabled ? <Volume2 className="w-4 h-4 animate-pulse" /> : <BellOff className="w-4 h-4" />}
