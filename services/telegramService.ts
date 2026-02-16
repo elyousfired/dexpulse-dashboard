@@ -108,7 +108,6 @@ export async function sendGoldenSignalAlert(params: {
 
     const config = loadTelegramConfig();
     if (!config.enabled || !config.botToken || !config.chatId) return false;
-    if (wasAlertedToday(params.symbol)) return false;
 
     const emoji = params.type === 'GOLDEN' ? '🏆' : params.type === 'CONVERGENCE' ? '🎯' : '🚀';
     const typeLabel = params.type === 'GOLDEN' ? '⚡ GOLDEN SIGNAL' : params.type === 'CONVERGENCE' ? '📍 MTF CONVERGENCE' : '📈 MOMENTUM';

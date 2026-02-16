@@ -115,7 +115,7 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
 
             // 2. Telegram Alert (Strategic MTF Convergence)
             if (isConvergence) {
-                if (!wasAlertedToday(p.symbol)) {
+                if (!alertedRef.current.has(p.symbol)) {
                     sendGoldenSignalAlert({
                         symbol: p.symbol,
                         price: p.price,
@@ -126,7 +126,13 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
                         reason: `MTF Convergence: Price above 4H, 1H, and 15m VWAP levels. High strategic alignment.`,
                         type: 'CONVERGENCE'
                     });
+                    // Also mark in alertedRef for this specific session/encounter
+                    alertedRef.current.add(p.symbol);
                 }
+            } else if (alertedRef.current.has(p.symbol)) {
+                // If it was alerted but now LOST convergence, remove from alertedRef
+                // so it can re-trigger if it comes back up.
+                alertedRef.current.delete(p.symbol);
             }
         });
     }, [profiles, loading, audioEnabled]);

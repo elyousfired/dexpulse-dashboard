@@ -116,31 +116,46 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
 
     // ─── Telegram Alert Trigger ───────────────────
     useEffect(() => {
-        if (signals.length === 0 || !tgConfig.enabled) return;
+        if (!tgConfig.enabled) return;
+
+        const currentGoldenSymbols = new Set(signals.filter(s => s.type === 'GOLDEN').map(s => s.ticker.symbol));
+        const allActiveSymbols = new Set(signals.map(s => s.ticker.symbol));
 
         let sent = 0;
         signals.forEach(sig => {
-            if (alertedRef.current.has(sig.ticker.symbol)) return;
-            if (wasAlertedToday(sig.ticker.symbol)) {
-                alertedRef.current.add(sig.ticker.symbol);
-                return;
-            }
-            alertedRef.current.add(sig.ticker.symbol);
+            const symbol = sig.ticker.symbol;
+
             if (sig.type === 'GOLDEN') {
-                sendGoldenSignalAlert({
-                    symbol: sig.ticker.symbol,
-                    price: sig.ticker.priceUsd,
-                    change24h: sig.ticker.priceChangePercent24h,
-                    score: sig.score,
-                    vwapMax: sig.vwap.max,
-                    vwapMid: sig.vwap.mid,
-                    reason: sig.reason,
-                    type: sig.type
-                });
-                playAlarm();
+                if (!alertedRef.current.has(symbol)) {
+                    sendGoldenSignalAlert({
+                        symbol,
+                        price: sig.ticker.priceUsd,
+                        change24h: sig.ticker.priceChangePercent24h,
+                        score: sig.score,
+                        vwapMax: sig.vwap.max,
+                        vwapMid: sig.vwap.mid,
+                        reason: sig.reason,
+                        type: sig.type
+                    });
+                    playAlarm();
+                    alertedRef.current.add(symbol);
+                    sent++;
+                }
+            } else {
+                // Not golden: if it was alerted before, clear it so it can re-trigger
+                if (alertedRef.current.has(symbol)) {
+                    alertedRef.current.delete(symbol);
+                }
             }
-            sent++;
         });
+
+        // Cleanup: tokens that completely fell out of signals
+        alertedRef.current.forEach(symbol => {
+            if (!allActiveSymbols.has(symbol)) {
+                alertedRef.current.delete(symbol);
+            }
+        });
+
         if (sent > 0) setAlertCount(prev => prev + sent);
     }, [signals, tgConfig.enabled, audioEnabled]);
 
