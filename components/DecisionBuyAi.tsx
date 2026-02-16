@@ -126,17 +126,19 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
                 return;
             }
             alertedRef.current.add(sig.ticker.symbol);
-            sendGoldenSignalAlert({
-                symbol: sig.ticker.symbol,
-                price: sig.ticker.priceUsd,
-                change24h: sig.ticker.priceChangePercent24h,
-                score: sig.score,
-                vwapMax: sig.vwap.max,
-                vwapMid: sig.vwap.mid,
-                reason: sig.reason,
-                type: sig.type
-            });
-            if (sig.type === 'GOLDEN') playAlarm();
+            if (sig.type === 'GOLDEN') {
+                sendGoldenSignalAlert({
+                    symbol: sig.ticker.symbol,
+                    price: sig.ticker.priceUsd,
+                    change24h: sig.ticker.priceChangePercent24h,
+                    score: sig.score,
+                    vwapMax: sig.vwap.max,
+                    vwapMid: sig.vwap.mid,
+                    reason: sig.reason,
+                    type: sig.type
+                });
+                playAlarm();
+            }
             sent++;
         });
         if (sent > 0) setAlertCount(prev => prev + sent);
