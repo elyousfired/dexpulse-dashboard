@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CexTicker } from '../types';
 import { fetchWeeklyVwapData, VwapData, formatPrice } from '../services/cexService';
-import { Brain, Star, TrendingUp, Info, ArrowRight, Zap, Trophy, ShieldCheck, Bell, Settings, Send, CheckCircle, XCircle } from 'lucide-react';
+import { Brain, Star, TrendingUp, Info, ArrowRight, Zap, Trophy, ShieldCheck, Bell, Settings, Send, CheckCircle, XCircle, Volume2, VolumeX } from 'lucide-react';
 import { sendGoldenSignalAlert, wasAlertedToday, loadTelegramConfig, saveTelegramConfig, sendTestAlert, TelegramConfig } from '../services/telegramService';
 
 interface DecisionBuyAiProps {
@@ -26,7 +26,27 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
     const [tgConfig, setTgConfig] = useState<TelegramConfig>(loadTelegramConfig);
     const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle');
     const [alertCount, setAlertCount] = useState(0);
+    const [audioEnabled, setAudioEnabled] = useState(() => {
+        const saved = localStorage.getItem('dexpulse_audio_alerts');
+        return saved ? saved === 'true' : true;
+    });
     const alertedRef = useRef<Set<string>>(new Set());
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        audioRef.current.volume = 0.5;
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('dexpulse_audio_alerts', audioEnabled.toString());
+    }, [audioEnabled]);
+
+    const playAlarm = () => {
+        if (!audioEnabled || !audioRef.current) return;
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(e => console.warn("Audio play blocked by browser. Interaction required.", e));
+    };
 
     useEffect(() => {
         const loadVwapData = async () => {
@@ -116,10 +136,11 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
                 reason: sig.reason,
                 type: sig.type
             });
+            if (sig.type === 'GOLDEN') playAlarm();
             sent++;
         });
         if (sent > 0) setAlertCount(prev => prev + sent);
-    }, [signals, tgConfig.enabled]);
+    }, [signals, tgConfig.enabled, audioEnabled]);
 
     const handleSaveConfig = (config: TelegramConfig) => {
         saveTelegramConfig(config);
@@ -205,6 +226,26 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
                                     testStatus === 'fail' ? <XCircle className="w-3 h-3 text-rose-400" /> :
                                         <Send className="w-3 h-3" />}
                             {testStatus === 'ok' ? 'Sent!' : testStatus === 'fail' ? 'Failed' : 'Test Alert'}
+                        </button>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-gray-800 pt-4 mt-4">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setAudioEnabled(!audioEnabled)}
+                                className={`p-2 rounded-lg border transition-all ${audioEnabled ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' : 'bg-gray-800 border-gray-700 text-gray-500'}`}
+                            >
+                                {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                            </button>
+                            <div>
+                                <h4 className="text-[10px] font-black text-white uppercase">Audio Alarm</h4>
+                                <p className="text-[9px] text-gray-500 font-bold uppercase">Sound on Golden Signal</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={playAlarm}
+                            className="px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all"
+                        >
+                            Test Sound
                         </button>
                     </div>
                     <p className="text-[9px] text-gray-600 mt-3 font-bold">Create a bot via @BotFather on Telegram. Get Chat ID via @userinfobot.</p>
