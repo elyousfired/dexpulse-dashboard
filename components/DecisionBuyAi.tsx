@@ -7,6 +7,9 @@ import { sendGoldenSignalAlert, wasAlertedToday, loadTelegramConfig, saveTelegra
 
 interface DecisionBuyAiProps {
     tickers: CexTicker[];
+    vwapStore: Record<string, VwapData>;
+    firstSeenTimes: Record<string, number>;
+    isLoading: boolean;
     onTickerClick: (ticker: CexTicker) => void;
     onAddToWatchlist: (ticker: CexTicker) => void;
 }
@@ -20,9 +23,14 @@ interface BuySignal {
     activeSince?: number; // timestamp
 }
 
-export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerClick, onAddToWatchlist }) => {
-    const [vwapStore, setVwapStore] = useState<Record<string, VwapData>>({});
-    const [isLoading, setIsLoading] = useState(true);
+export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
+    tickers,
+    vwapStore,
+    firstSeenTimes,
+    isLoading,
+    onTickerClick,
+    onAddToWatchlist
+}) => {
     const [showSettings, setShowSettings] = useState(false);
     const [tgConfig, setTgConfig] = useState<TelegramConfig>(loadTelegramConfig);
     const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle');
@@ -34,16 +42,13 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
     const [sortBy, setSortBy] = useState<'score' | 'time'>('score');
     const alertedRef = useRef<Set<string>>(new Set());
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const [firstSeenTimes, setFirstSeenTimes] = useState<Record<string, number>>(() => {
-        const saved = localStorage.getItem('dexpulse_golden_times');
-        return saved ? JSON.parse(saved) : {};
-    });
     const [currentTime, setCurrentTime] = useState(Date.now());
 
-    // Persist timers
-    useEffect(() => {
-        localStorage.setItem('dexpulse_golden_times', JSON.stringify(firstSeenTimes));
-    }, [firstSeenTimes]);
+    const playAlarm = () => {
+        if (!audioEnabled || !audioRef.current) return;
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(e => console.warn("Audio play blocked by browser. Interaction required.", e));
+    };
 
     // Live timer update
     useEffect(() => {
@@ -59,33 +64,6 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
     useEffect(() => {
         localStorage.setItem('dexpulse_audio_alerts', audioEnabled.toString());
     }, [audioEnabled]);
-
-    const playAlarm = () => {
-        if (!audioEnabled || !audioRef.current) return;
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(e => console.warn("Audio play blocked by browser. Interaction required.", e));
-    };
-
-    useEffect(() => {
-        const loadVwapData = async () => {
-            setIsLoading(true);
-            const results: Record<string, VwapData> = {};
-            // Scan top 100 for signals
-            const targetSymbols = tickers.slice(0, 100);
-
-            const CHUNK_SIZE = 10;
-            for (let i = 0; i < targetSymbols.length; i += CHUNK_SIZE) {
-                const chunk = targetSymbols.slice(i, i + CHUNK_SIZE);
-                await Promise.all(chunk.map(async (t) => {
-                    const data = await fetchWeeklyVwapData(t.symbol);
-                    if (data) results[t.id] = data;
-                }));
-            }
-            setVwapStore(results);
-            setIsLoading(false);
-        };
-        loadVwapData();
-    }, [tickers.length > 0]);
 
     const signals = useMemo(() => {
         return tickers.map(t => {
@@ -147,52 +125,6 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
                 return b.score - a.score;
             });
     }, [tickers, vwapStore, firstSeenTimes, sortBy]);
-
-    // ─── TRACK FIRST SEEN TIMES ───────────────────
-    useEffect(() => {
-        if (Object.keys(vwapStore).length === 0 || isLoading) return;
-
-        const currentGoldenIds = new Set(
-            tickers
-                .filter(t => {
-                    const vwap = vwapStore[t.id];
-                    if (!vwap) return false;
-                    const isMonday = new Date().getUTCDay() === 1;
-                    return isMonday
-                        ? (t.priceUsd > vwap.max && t.priceUsd > vwap.min && t.priceUsd > vwap.mid)
-                        : (t.priceUsd > vwap.max && t.priceUsd > vwap.min);
-                })
-                .map(t => t.id)
-        );
-
-        setFirstSeenTimes(prev => {
-            const next = { ...prev };
-            let changed = false;
-
-            // Add new ones
-            currentGoldenIds.forEach(id => {
-                if (!next[id]) {
-                    next[id] = Date.now();
-                    changed = true;
-                }
-            });
-
-            // Remove lost ones
-            Object.keys(next).forEach(id => {
-                // IMPORTANT: Only remove if the ticker is actually in the scanned list
-                // This prevents wiping the state if a ticker is temporarily missing
-                if (!currentGoldenIds.has(id)) {
-                    const existsInScannedList = tickers.some(t => t.id === id);
-                    if (existsInScannedList) {
-                        delete next[id];
-                        changed = true;
-                    }
-                }
-            });
-
-            return changed ? next : prev;
-        });
-    }, [tickers, vwapStore, isLoading]);
 
     // ─── Telegram Alert Trigger ───────────────────
     useEffect(() => {

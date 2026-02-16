@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { CexTicker } from './types';
-import { fetchCexTickers, initCexWebSocket } from './services/cexService';
+import { fetchCexTickers, initCexWebSocket, VwapData, fetchWeeklyVwapData } from './services/cexService';
 import { DashboardHeader } from './components/DashboardHeader';
 import { CexGrid } from './components/CexGrid';
 import { CexDetailPanel } from './components/CexDetailPanel';
@@ -28,6 +28,12 @@ const App: React.FC = () => {
   const [watchlist, setWatchlist] = useState<WatchlistTrade[]>(() => {
     const saved = localStorage.getItem('dexpulse_watchlist');
     return saved ? JSON.parse(saved) : [];
+  });
+  const [vwapStore, setVwapStore] = useState<Record<string, VwapData>>({});
+  const [vwapLoading, setVwapLoading] = useState(false);
+  const [firstSeenTimes, setFirstSeenTimes] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('dexpulse_golden_times');
+    return saved ? JSON.parse(saved) : {};
   });
 
   useEffect(() => {
@@ -102,6 +108,78 @@ const App: React.FC = () => {
     return () => cleanup();
   }, [loadCexData]);
 
+  // ─── BACKGROUND VWAP SCANNING (Decision Buy AI) ───
+  useEffect(() => {
+    const scanGoldenData = async () => {
+      if (cexTickers.length === 0) return;
+      setVwapLoading(true);
+      const results: Record<string, VwapData> = {};
+      const targetSymbols = cexTickers.slice(0, 100);
+
+      const CHUNK_SIZE = 10;
+      for (let i = 0; i < targetSymbols.length; i += CHUNK_SIZE) {
+        const chunk = targetSymbols.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map(async (t) => {
+          const data = await fetchWeeklyVwapData(t.symbol);
+          if (data) results[t.id] = data;
+        }));
+      }
+      setVwapStore(results);
+      setVwapLoading(false);
+    };
+
+    scanGoldenData();
+    const interval = setInterval(scanGoldenData, 1000 * 60 * 5); // Refresh every 5 mins
+    return () => clearInterval(interval);
+  }, [cexTickers.length > 0]);
+
+  // ─── GOLDEN SIGNAL PERFORMANCE TRACKING ───────────
+  useEffect(() => {
+    if (Object.keys(vwapStore).length === 0 || vwapLoading) return;
+
+    const isMonday = new Date().getUTCDay() === 1;
+    const currentGoldenIds = new Set(
+      cexTickers
+        .filter(t => {
+          const vwap = vwapStore[t.id];
+          if (!vwap) return false;
+          return isMonday
+            ? (t.priceUsd > vwap.max && t.priceUsd > vwap.min && t.priceUsd > vwap.mid)
+            : (t.priceUsd > vwap.max && t.priceUsd > vwap.min);
+        })
+        .map(t => t.id)
+    );
+
+    setFirstSeenTimes(prev => {
+      const next = { ...prev };
+      let changed = false;
+
+      currentGoldenIds.forEach(id => {
+        if (!next[id]) {
+          next[id] = Date.now();
+          changed = true;
+        }
+      });
+
+      Object.keys(next).forEach(id => {
+        if (!currentGoldenIds.has(id)) {
+          const existsInScannedList = cexTickers.some(t => t.id === id);
+          if (existsInScannedList && vwapStore[id]) {
+            delete next[id];
+            changed = true;
+          }
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [cexTickers, vwapStore, vwapLoading]);
+
+  // Persist Golden Timers
+  useEffect(() => {
+    localStorage.setItem('dexpulse_golden_times', JSON.stringify(firstSeenTimes));
+  }, [firstSeenTimes]);
+
   return (
     <div className="app-layout min-h-screen bg-[#0d0f14] text-gray-100 flex flex-col">
       {/* Main Content */}
@@ -132,6 +210,9 @@ const App: React.FC = () => {
             ) : activeView === 'decision' ? (
               <DecisionBuyAi
                 tickers={cexTickers}
+                vwapStore={vwapStore}
+                firstSeenTimes={firstSeenTimes}
+                isLoading={vwapLoading}
                 onTickerClick={setSelectedCexTicker}
                 onAddToWatchlist={handleAddToWatchlist}
               />
