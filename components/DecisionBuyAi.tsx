@@ -77,8 +77,8 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
             const price = t.priceUsd;
             let signal: BuySignal | null = null;
 
-            // 1. GOLDEN BREAKOUT: Price > Max && Price > Mid && High Gain
-            if (price > vwap.max && t.priceChangePercent24h > 5) {
+            // 1. GOLDEN BREAKOUT: Price > Max && Price > Mid && High Gain && Structural Range Exists
+            if (price > vwap.max && t.priceChangePercent24h > 5 && vwap.max > vwap.min) {
                 signal = {
                     ticker: t,
                     vwap,
