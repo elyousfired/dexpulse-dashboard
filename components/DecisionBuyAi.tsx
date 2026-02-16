@@ -34,8 +34,16 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
     const [sortBy, setSortBy] = useState<'score' | 'time'>('score');
     const alertedRef = useRef<Set<string>>(new Set());
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const [firstSeenTimes, setFirstSeenTimes] = useState<Record<string, number>>({});
+    const [firstSeenTimes, setFirstSeenTimes] = useState<Record<string, number>>(() => {
+        const saved = localStorage.getItem('dexpulse_golden_times');
+        return saved ? JSON.parse(saved) : {};
+    });
     const [currentTime, setCurrentTime] = useState(Date.now());
+
+    // Persist timers
+    useEffect(() => {
+        localStorage.setItem('dexpulse_golden_times', JSON.stringify(firstSeenTimes));
+    }, [firstSeenTimes]);
 
     // Live timer update
     useEffect(() => {
