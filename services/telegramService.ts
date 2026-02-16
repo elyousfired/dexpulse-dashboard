@@ -103,6 +103,9 @@ export async function sendGoldenSignalAlert(params: {
     reason: string;
     type: 'GOLDEN' | 'MOMENTUM' | 'SUPPORT';
 }): Promise<boolean> {
+    // SECURITY: Only allow GOLDEN signals to be sent to Telegram
+    if (params.type !== 'GOLDEN') return false;
+
     const config = loadTelegramConfig();
     if (!config.enabled || !config.botToken || !config.chatId) return false;
     if (wasAlertedToday(params.symbol)) return false;
