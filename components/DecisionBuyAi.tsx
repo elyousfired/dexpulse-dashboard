@@ -150,6 +150,8 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
 
     // ─── TRACK FIRST SEEN TIMES ───────────────────
     useEffect(() => {
+        if (Object.keys(vwapStore).length === 0 || isLoading) return;
+
         const currentGoldenIds = new Set(
             tickers
                 .filter(t => {
@@ -177,15 +179,20 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({ tickers, onTickerC
 
             // Remove lost ones
             Object.keys(next).forEach(id => {
+                // IMPORTANT: Only remove if the ticker is actually in the scanned list
+                // This prevents wiping the state if a ticker is temporarily missing
                 if (!currentGoldenIds.has(id)) {
-                    delete next[id];
-                    changed = true;
+                    const existsInScannedList = tickers.some(t => t.id === id);
+                    if (existsInScannedList) {
+                        delete next[id];
+                        changed = true;
+                    }
                 }
             });
 
             return changed ? next : prev;
         });
-    }, [tickers, vwapStore]);
+    }, [tickers, vwapStore, isLoading]);
 
     // ─── Telegram Alert Trigger ───────────────────
     useEffect(() => {
