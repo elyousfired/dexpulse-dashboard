@@ -255,7 +255,8 @@ export function subscribeToKlines(
                 high: parseFloat(k.h),
                 low: parseFloat(k.l),
                 close: parseFloat(k.c),
-                volume: parseFloat(k.q), // Quote volume (USDT)
+                volume: parseFloat(k.v), // Base volume
+                quoteVolume: parseFloat(k.q), // Quote volume (USDT)
                 buyVolume: parseFloat(k.Q), // Taker buy quote volume (USDT)
                 isFinal: k.x
             });
