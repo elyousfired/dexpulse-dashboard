@@ -3,6 +3,7 @@ import { Search, Table, TrendingUp, TrendingDown, RefreshCw, Zap, Info, ArrowRig
 import { CexTicker } from '../types';
 import { getSlidingAVWAPData, AnchoredVwapResult } from '../services/avwapTradingService';
 import { formatPrice, VwapData } from '../services/cexService';
+import { TokenChart } from './TokenChart';
 
 interface VwapAnchorBotProps {
     tickers: CexTicker[];
@@ -23,6 +24,7 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
     } | null>(null);
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
     const [botActive, setBotActive] = useState(true);
+    const [entryPrices, setEntryPrices] = useState<Record<string, number>>({});
 
     // 1. Filter tokens by Price > 1D VWAP (mid)
     const filteredBy1D = useMemo(() => {
@@ -40,9 +42,29 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
         if (result) {
             setDetailData(result);
             setLastUpdate(new Date());
+
+            // Profit Tracking Logic
+            if (result.signal === 'LONG') {
+                if (!entryPrices[selectedSymbol]) {
+                    // Capture entry price from the live price of the current ticker
+                    const ticker = tickers.find(t => t.symbol === selectedSymbol);
+                    if (ticker) {
+                        setEntryPrices(prev => ({ ...prev, [selectedSymbol]: ticker.priceUsd }));
+                    }
+                }
+            } else {
+                // Clear entry price if signal is no longer LONG
+                if (entryPrices[selectedSymbol]) {
+                    setEntryPrices(prev => {
+                        const next = { ...prev };
+                        delete next[selectedSymbol];
+                        return next;
+                    });
+                }
+            }
         }
         setLoading(false);
-    }, [selectedSymbol, timeframe]);
+    }, [selectedSymbol, timeframe, tickers, entryPrices]);
 
     useEffect(() => {
         fetchVwapData();
@@ -172,6 +194,20 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                     detailData.signal === 'EXIT' ? 'EXIT NOW' :
                                         'IDLE'}
                             </div>
+
+                            {/* Profit Display */}
+                            {detailData.signal === 'LONG' && entryPrices[selectedSymbol] && activeTicker && (
+                                <div className="mt-2 flex flex-col items-center">
+                                    <div className="text-[10px] font-black text-emerald-500/60 uppercase tracking-widest mb-1">Live Performance</div>
+                                    <div className={`text-2xl font-black font-mono ${(activeTicker.priceUsd - entryPrices[selectedSymbol]) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        {((activeTicker.priceUsd - entryPrices[selectedSymbol]) / entryPrices[selectedSymbol] * 100).toFixed(2)}%
+                                    </div>
+                                    <div className="text-[9px] text-gray-500 font-bold uppercase mt-1">
+                                        Entry: ${formatPrice(entryPrices[selectedSymbol])} | Current: ${formatPrice(activeTicker.priceUsd)}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex items-center gap-2">
                                 {detailData.signal === 'LONG' ? <TrendingUp className="w-5 h-5 text-emerald-400" /> :
                                     detailData.signal === 'EXIT' ? <TrendingDown className="w-5 h-5 text-rose-400" /> :
@@ -186,8 +222,25 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                     )}
                 </div>
 
-                {/* Right Side: Calculation Deep Dive */}
+                {/* Right Side: Chart & Calculation Deep Dive */}
                 <div className="lg:col-span-2 space-y-6">
+                    {/* Live Chart Container */}
+                    <div className="h-[400px] bg-[#12141c] rounded-2xl border border-gray-800 overflow-hidden shadow-lg">
+                        {activeTicker ? (
+                            <TokenChart
+                                address={activeTicker.id}
+                                symbol={activeTicker.symbol}
+                                isCex={true}
+                                activeView="price"
+                            />
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center space-y-4">
+                                <BarChart3 className="w-12 h-12 text-gray-800 animate-pulse" />
+                                <p className="text-gray-600 font-black uppercase text-xs">Waiting for Ticker Feed...</p>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="bg-[#12141c] rounded-2xl border border-gray-800 overflow-hidden shadow-lg">
                         <div className="p-5 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-emerald-500/5 to-transparent">
                             <div className="flex items-center gap-3">
@@ -238,8 +291,8 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                                         ${formatPrice(detailData.previous.lastTypicalPrice)}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-5">
-                                                    <div className="text-xs font-mono text-gray-500">
+                                                <td className="px-6 py-5 border-r border-gray-800/30">
+                                                    <div className="text-xs font-mono text-gray-500 italic">
                                                         ${formatPrice(detailData.previous.lastClosePrice)}
                                                     </div>
                                                 </td>
@@ -272,9 +325,9 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                                         ${formatPrice(detailData.current.lastTypicalPrice)}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-5">
-                                                    <div className="text-xs font-mono text-white/70">
-                                                        ${formatPrice(detailData.current.lastClosePrice)}
+                                                <td className="px-6 py-5 border-r border-gray-800/30">
+                                                    <div className="text-xs font-mono font-black text-emerald-400">
+                                                        ${formatPrice(activeTicker?.priceUsd || detailData.current.lastClosePrice)}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">

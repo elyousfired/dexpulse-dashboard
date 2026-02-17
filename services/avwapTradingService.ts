@@ -69,12 +69,13 @@ export async function getSlidingAVWAPData(
         const limit = timeframeMinutes * 3;
         const klines1m = await fetchBinanceKlines(symbol, '1m', limit);
 
-        if (klines1m.length < timeframeMinutes * 2) return null;
+        if (klines1m.length === 0) return null;
 
-        const now = Math.floor(Date.now() / 1000);
+        // Use the latest kline timestamp as the reference "now" to ensure perfect alignment with market data
+        const latestTime = klines1m[klines1m.length - 1].time;
         const candleDurationSec = timeframeMinutes * 60;
 
-        const currentCandleOpen = Math.floor(now / candleDurationSec) * candleDurationSec;
+        const currentCandleOpen = Math.floor(latestTime / candleDurationSec) * candleDurationSec;
         const previousCandleOpen = currentCandleOpen - candleDurationSec;
 
         const currentKlines = klines1m.filter(k => k.time >= currentCandleOpen);
