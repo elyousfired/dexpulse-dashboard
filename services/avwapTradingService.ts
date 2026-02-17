@@ -74,10 +74,11 @@ export async function getSlidingAVWAPData(
         const previousCandleOpen = currentCandleOpen - candleDurationSec;
 
         const currentKlines = klines1m.filter(k => k.time >= currentCandleOpen);
-        const previousKlines = klines1m.filter(k => k.time >= previousCandleOpen && k.time < currentCandleOpen);
+        // Long Anchor: from previous candle open until NOW
+        const longAnchorKlines = klines1m.filter(k => k.time >= previousCandleOpen);
 
         const currentResult = calculateAVWAP(currentKlines);
-        const previousResult = calculateAVWAP(previousKlines);
+        const previousResult = calculateAVWAP(longAnchorKlines);
 
         let signal: 'LONG' | 'EXIT' | 'IDLE' = 'IDLE';
         if (currentResult.vwap > previousResult.vwap && previousResult.vwap > 0) {

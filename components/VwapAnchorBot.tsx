@@ -122,8 +122,8 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                         key={t.id}
                                         onClick={() => setSelectedSymbol(t.symbol)}
                                         className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${selectedSymbol === t.symbol
-                                                ? 'bg-emerald-500/10 border-emerald-500/50 text-white'
-                                                : 'bg-black/20 border-gray-800 text-gray-400 hover:border-gray-600'
+                                            ? 'bg-emerald-500/10 border-emerald-500/50 text-white'
+                                            : 'bg-black/20 border-gray-800 text-gray-400 hover:border-gray-600'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">
@@ -155,13 +155,13 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                     {/* Active Signal Card */}
                     {detailData && (
                         <div className={`p-6 rounded-2xl border shadow-xl flex flex-col items-center justify-center text-center space-y-4 ${detailData.signal === 'LONG' ? 'bg-emerald-500/10 border-emerald-500/30' :
-                                detailData.signal === 'EXIT' ? 'bg-rose-500/10 border-rose-500/30' :
-                                    'bg-gray-800/10 border-gray-800'
+                            detailData.signal === 'EXIT' ? 'bg-rose-500/10 border-rose-500/30' :
+                                'bg-gray-800/10 border-gray-800'
                             }`}>
                             <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">operational Status: {selectedSymbol}</div>
                             <div className={`text-4xl font-black italic tracking-tighter ${detailData.signal === 'LONG' ? 'text-emerald-400' :
-                                    detailData.signal === 'EXIT' ? 'text-rose-400' :
-                                        'text-gray-400'
+                                detailData.signal === 'EXIT' ? 'text-rose-400' :
+                                    'text-gray-400'
                                 }`}>
                                 {detailData.signal === 'LONG' ? 'ENTER LONG' :
                                     detailData.signal === 'EXIT' ? 'EXIT NOW' :
@@ -214,12 +214,12 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                 <tbody className="divide-y divide-gray-800">
                                     {detailData ? (
                                         <>
-                                            {/* Previous Candle */}
+                                            {/* Previous Candle (Now Long Anchor) */}
                                             <tr className="hover:bg-white/5 transition-colors">
                                                 <td className="px-6 py-5">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-2 h-2 rounded-full bg-gray-600" />
-                                                        <span className="text-xs font-black text-gray-500 uppercase">Shift Previous ({timeframe}m)</span>
+                                                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                                        <span className="text-xs font-black text-blue-400 uppercase">Anchor N-1 (Full Range)</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">
