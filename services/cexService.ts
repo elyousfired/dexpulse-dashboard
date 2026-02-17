@@ -399,7 +399,7 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         const isCompletedDay = index < klines.length - 1;
         const isSinceMonday = k.time >= mondayTs;
 
-        if (isSinceMonday && isCompletedDay) {
+        if (isSinceMonday) {
             if (dailyVwap > wMax) wMax = dailyVwap;
             if (dailyVwap < wMin) wMin = dailyVwap;
         }
