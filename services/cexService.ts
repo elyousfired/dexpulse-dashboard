@@ -394,14 +394,14 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         // True VWAP calculation for the day
         const dailyVwap = k.volume > 0 ? k.quoteVolume / k.volume : (k.high + k.low + k.close) / 3;
 
-        // Structural levels use Daily High for Max and Daily Low for Min
-        // This confirms true price breakouts/floors for the week
+        // Structural levels: Highest and Lowest DAILY VWAP values since Monday
+        // This creates a channel based on institutional daily value areas
         const isCompletedDay = index < klines.length - 1;
         const isSinceMonday = k.time >= mondayTs;
 
         if (isSinceMonday && isCompletedDay) {
-            if (k.high > wMax) wMax = k.high;
-            if (k.low < wMin) wMin = k.low;
+            if (dailyVwap > wMax) wMax = dailyVwap;
+            if (dailyVwap < wMin) wMin = dailyVwap;
         }
 
         // Current Mid is the VWAP of the active day (last kline)
