@@ -207,6 +207,7 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                         <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Bot Execution Layer</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Anchor (Open)</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Typ Price</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Close Price</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Accum. Volume</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase pt-4">AVWAP RESULT</th>
                                     </tr>
@@ -230,6 +231,11 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                                 <td className="px-6 py-5">
                                                     <div className="text-xs font-mono font-bold text-gray-500">
                                                         ${formatPrice(detailData.previous.lastTypicalPrice)}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="text-xs font-mono text-gray-500">
+                                                        ${formatPrice(detailData.previous.lastClosePrice)}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">
@@ -259,6 +265,11 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                                 <td className="px-6 py-5">
                                                     <div className="text-xs font-mono font-bold text-white">
                                                         ${formatPrice(detailData.current.lastTypicalPrice)}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="text-xs font-mono text-white/70">
+                                                        ${formatPrice(detailData.current.lastClosePrice)}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">

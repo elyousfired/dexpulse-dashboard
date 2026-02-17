@@ -6,6 +6,7 @@ export interface AnchoredVwapResult {
     cumulativeSumV: number;
     lastTypicalPrice: number;
     lastVolume: number;
+    lastClosePrice: number;
     candleOpenTime: number;
     candleCloseTime: number;
 }
@@ -44,6 +45,7 @@ export function calculateAVWAP(klines: OHLCV[]): AnchoredVwapResult {
         cumulativeSumV: sumV,
         lastTypicalPrice: (lastK.high + lastK.low + lastK.close) / 3,
         lastVolume: lastK.quoteVolume || lastK.volume,
+        lastClosePrice: lastK.close,
         candleOpenTime: klines[0].time,
         candleCloseTime: lastK.time
     };
