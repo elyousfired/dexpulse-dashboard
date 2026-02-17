@@ -15,7 +15,12 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
     const [selectedSymbol, setSelectedSymbol] = useState<string>('BTC');
     const [timeframe, setTimeframe] = useState<number>(15);
     const [loading, setLoading] = useState(false);
-    const [detailData, setDetailData] = useState<{ current: AnchoredVwapResult; previous: AnchoredVwapResult; signal: 'LONG' | 'EXIT' | 'IDLE' } | null>(null);
+    const [detailData, setDetailData] = useState<{
+        current: AnchoredVwapResult;
+        previous: AnchoredVwapResult;
+        fullRange: AnchoredVwapResult;
+        signal: 'LONG' | 'EXIT' | 'IDLE'
+    } | null>(null);
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
     const [botActive, setBotActive] = useState(true);
 
@@ -220,7 +225,7 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                                 <td className="px-6 py-5">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                                        <span className="text-xs font-black text-blue-400 uppercase">Anchor N-1 (Full Range)</span>
+                                                        <span className="text-xs font-black text-blue-400 uppercase">Anchor N-1 (Live Long)</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">
@@ -239,13 +244,13 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">
-                                                    <div className="text-xs font-mono text-gray-500 uppercase">
-                                                        ${(detailData.previous.cumulativeSumV / 1e3).toFixed(1)}K
+                                                    <div className="text-xs font-mono text-emerald-400/60 uppercase">
+                                                        ${(detailData.fullRange.cumulativeSumV / 1e3).toFixed(1)}K
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">
                                                     <div className="text-sm font-mono font-black text-gray-300">
-                                                        ${formatPrice(detailData.previous.vwap)}
+                                                        ${formatPrice(detailData.fullRange.vwap)}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -254,7 +259,7 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                                 <td className="px-6 py-5">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                                                        <span className="text-xs font-black text-emerald-400 uppercase tracking-tighter">Live Current Tracking</span>
+                                                        <span className="text-xs font-black text-emerald-400 uppercase tracking-tighter">Live Short Tracker</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">
@@ -278,7 +283,7 @@ export const VwapAnchorBot: React.FC<VwapAnchorBotProps> = ({ tickers, vwapStore
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">
-                                                    <div className={`text-base font-mono font-black ${detailData.current.vwap > detailData.previous.vwap ? 'text-emerald-400' : 'text-rose-400'
+                                                    <div className={`text-base font-mono font-black ${detailData.current.vwap > detailData.fullRange.vwap ? 'text-emerald-400' : 'text-rose-400'
                                                         }`}>
                                                         ${formatPrice(detailData.current.vwap)}
                                                     </div>
