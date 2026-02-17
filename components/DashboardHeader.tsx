@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, BookOpen, Users, Repeat, Newspaper, Layers } from 'lucide-react';
+import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, BookOpen, Users, Repeat, Newspaper, Layers, Bot } from 'lucide-react';
 
 interface DashboardHeaderProps {
     searchTerm: string;
@@ -116,8 +116,8 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                         onClick={() => onViewChange('anchoredVWAP')}
                         className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'anchoredVWAP' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
-                        <Zap className="w-3.5 h-3.5" />
-                        AVWAP Anchor
+                        <Bot className="w-3.5 h-3.5" />
+                        VWAP Anchor Bot
                     </button>
                 </div>
 

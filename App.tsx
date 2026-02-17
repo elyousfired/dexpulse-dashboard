@@ -15,7 +15,7 @@ import { AntfarmSentiment } from './components/AntfarmSentiment';
 import { SwapPanel } from './components/SwapPanel';
 import { NewsFeed } from './components/NewsFeed';
 import { VwapMultiTF } from './components/VwapMultiTF';
-import { AnchoredVwapSection } from './components/AnchoredVwapSection';
+import { VwapAnchorBot } from './components/VwapAnchorBot';
 import { WatchlistTrade } from './types';
 
 const App: React.FC = () => {
@@ -241,7 +241,7 @@ const App: React.FC = () => {
             ) : activeView === 'vwapMulti' ? (
               <VwapMultiTF tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
             ) : activeView === 'anchoredVWAP' ? (
-              <AnchoredVwapSection tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
+              <VwapAnchorBot tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />
             ) : (
               <WatchlistPanel
                 trades={watchlist}
