@@ -392,18 +392,16 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
 
     klines.forEach((k, index) => {
         // True VWAP calculation for the day
-        // k.volume is index 5 (base), k.quoteVolume is index 7 (USDT)
-        // Formula: VWAP = sum(Price * Vol) / sum(Vol) = Total Quote Volume / Total Base Volume
         const dailyVwap = k.volume > 0 ? k.quoteVolume / k.volume : (k.high + k.low + k.close) / 3;
 
-        // Only consider completed days since Monday for structural Max/Min
-        // The last kline is the "Current/In-Progress" day
+        // Structural levels use Daily High for Max and Daily Low for Min
+        // This confirms true price breakouts/floors for the week
         const isCompletedDay = index < klines.length - 1;
         const isSinceMonday = k.time >= mondayTs;
 
         if (isSinceMonday && isCompletedDay) {
-            if (dailyVwap > wMax) wMax = dailyVwap;
-            if (dailyVwap < wMin) wMin = dailyVwap;
+            if (k.high > wMax) wMax = k.high;
+            if (k.low < wMin) wMin = k.low;
         }
 
         // Current Mid is the VWAP of the active day (last kline)
