@@ -81,6 +81,7 @@ const App: React.FC = () => {
     const mainTickers = cexTickers.filter(t => t.volume24h > 1000000).slice(0, 150);
 
     const fetchSignals = async () => {
+      setVwapLoading(true);
       const newVwapStore: Record<string, VwapData> = { ...vwapStore };
       const newFirstSeen: Record<string, number> = { ...firstSeenTimes };
 
@@ -98,6 +99,7 @@ const App: React.FC = () => {
 
       setVwapStore(newVwapStore);
       setFirstSeenTimes(newFirstSeen);
+      setVwapLoading(false);
     };
 
     fetchSignals();
@@ -106,14 +108,14 @@ const App: React.FC = () => {
   }, [cexTickers, activeView]);
 
   // ─── Watchlist Handlers ─────────────────────────
-  const handleAddToWatchlist = (symbol: string, entryPrice: number) => {
-    const isDuplicate = watchlist.some(t => t.symbol === symbol && t.status === 'open');
+  const handleAddToWatchlist = (ticker: CexTicker) => {
+    const isDuplicate = watchlist.some(t => t.symbol === ticker.symbol && t.status === 'open');
     if (isDuplicate) return;
 
     const newTrade: WatchlistTrade = {
       id: crypto.randomUUID(),
-      symbol,
-      entryPrice,
+      symbol: ticker.symbol,
+      entryPrice: ticker.priceUsd,
       entryTime: Date.now(),
       amount: 100, // Fixed unit for simulation
       status: 'open'
@@ -123,7 +125,14 @@ const App: React.FC = () => {
     localStorage.setItem('dex_cex_watchlist', JSON.stringify(nextWatchlist));
   };
 
-  const handleCloseTrade = (tradeId: string, currentPrice: number) => {
+  const handleCloseTrade = (tradeId: string) => {
+    // We need the current price to close. Find it in tickers.
+    const trade = watchlist.find(t => t.id === tradeId);
+    if (!trade) return;
+
+    const ticker = cexTickers.find(t => t.symbol === trade.symbol);
+    const currentPrice = ticker ? ticker.priceUsd : trade.entryPrice;
+
     const nextWatchlist = watchlist.map(t => {
       if (t.id === tradeId && t.status === 'open') {
         return {
@@ -153,6 +162,7 @@ const App: React.FC = () => {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         lastUpdated={lastUpdated}
+        isScanning={cexLoading}
       />
 
       <main className="max-w-[1600px] mx-auto px-4 py-6 md:px-8">

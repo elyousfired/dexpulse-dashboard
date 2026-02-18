@@ -448,6 +448,22 @@ export function formatLargeNumber(n: number): string {
     return n.toFixed(2);
 }
 
+
+export function getTodayStartUTC(): number {
+    const d = new Date();
+    d.setUTCHours(0, 0, 0, 0);
+    return d.getTime();
+}
+
+export function getMondayStartUTC(): number {
+    const d = new Date();
+    const day = d.getUTCDay(); // 0 is Sunday, 1 is Monday...
+    const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setUTCDate(diff));
+    monday.setUTCHours(0, 0, 0, 0);
+    return monday.getTime();
+}
+
 export function formatPrice(price: number): string {
     if (price >= 1000) return price.toLocaleString('en-US', { maximumFractionDigits: 2 });
     if (price >= 1) return price.toFixed(2);
