@@ -373,25 +373,15 @@ export interface VwapData {
     symbol: string;
 }
 
-// Day-based cache: keyed by "SYMBOL:YYYY-MM-DD" so it auto-invalidates at 00:00 UTC
-const vwapDayCache: Map<string, { data: VwapData; day: string }> = new Map();
-
-function getCurrentUTCDay(): string {
-    return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-}
+// Standard cache with short TTL for live updates
+const vwapCache: Map<string, { data: VwapData, expires: number }> = new Map();
+const VWAP_CACHE_TTL = 1000 * 60 * 1; // 1 minute for fresh slope/mid values
 
 export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | null> {
-    const currentDay = getCurrentUTCDay();
-    const cacheKey = symbol;
-    const cached = vwapDayCache.get(cacheKey);
+    const cached = vwapCache.get(symbol);
+    if (cached && cached.expires > Date.now()) return cached.data;
 
-    // If we already calculated for today's UTC day, return frozen value
-    if (cached && cached.day === currentDay) {
-        return cached.data;
-    }
-
-    // New UTC day detected → recalculate
-    // Fetch 24 days to have enough for ATR(14) + Slope Lookback(10)
+    // Fetch 30 days to have enough for ATR(14) + Slope Lookback(10)
     const klines = await fetchBinanceKlines(symbol, '1d', 30);
     if (klines.length < 15) return null;
 
@@ -467,8 +457,7 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         symbol
     };
 
-    // Store frozen for the rest of this UTC day
-    vwapDayCache.set(cacheKey, { data: vwapData, day: currentDay });
+    vwapCache.set(symbol, { data: vwapData, expires: Date.now() + VWAP_CACHE_TTL });
     return vwapData;
 }
 
