@@ -20,133 +20,116 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     onViewChange
 }) => {
     return (
-        <header className="dashboard-header">
-            <div className="header-inner">
+        <header className="dashboard-header text-white">
+            <div className="header-inner flex items-center justify-between px-6 py-3 bg-[#0d0f14]/80 backdrop-blur-xl border-b border-gray-800">
                 {/* Brand */}
-                <div className="header-brand">
-                    <div className="brand-logo">
-                        <Zap className="brand-icon" />
+                <div className="header-brand flex items-center gap-3">
+                    <div className="brand-logo w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <Zap className="brand-icon text-white w-6 h-6" />
                     </div>
                     <div>
-                        <h1 className="brand-title">DexPulse</h1>
-                        <p className="brand-subtitle underline decoration-yellow-500/50 underline-offset-4">CEX Terminal</p>
+                        <h1 className="brand-title text-lg font-black tracking-tighter uppercase italic">DexPulse</h1>
+                        <p className="brand-subtitle text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none">CEX Terminal</p>
                     </div>
                 </div>
 
                 {/* View Switcher */}
-                <div className="flex bg-black/40 p-1 rounded-xl border border-gray-800 ml-4">
+                <div className="flex bg-black/40 p-1 rounded-xl border border-gray-800 mx-4 overflow-x-auto no-scrollbar max-w-[70%] lg:max-w-none">
                     <button
                         onClick={() => onViewChange('grid')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'grid' ? 'bg-gray-800 text-white shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'grid' ? 'bg-gray-800 text-white shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <Search className="w-3.5 h-3.5" />
                         Market Grid
                     </button>
                     <button
                         onClick={() => onViewChange('scanner')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'scanner' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/20' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'scanner' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/20' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <Activity className="w-3.5 h-3.5" />
                         VWAP Scan
                     </button>
                     <button
                         onClick={() => onViewChange('whale')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'whale' ? 'bg-blue-600/20 text-blue-400 border border-blue-600/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'whale' ? 'bg-blue-600/20 text-blue-400 border border-blue-600/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <Anchor className="w-3.5 h-3.5" />
-                        Whale Accumulation
+                        Whales
                     </button>
                     <button
                         onClick={() => onViewChange('correlation')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'correlation' ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'correlation' ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <GitCompare className="w-3.5 h-3.5" />
-                        BTC Correlation
+                        BTC Core
                     </button>
                     <button
                         onClick={() => onViewChange('decision')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'decision' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'decision' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <Brain className="w-3.5 h-3.5" />
-                        Decision Buy AI
+                        AI Signals
                     </button>
                     <button
                         onClick={() => onViewChange('watchlist')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'watchlist' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'watchlist' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <LayoutList className="w-3.5 h-3.5" />
-                        Watchlist Simulator
-                    </button>
-                    <button
-                        onClick={() => onViewChange('playbook')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'playbook' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
-                    >
-                        <BookOpen className="w-3.5 h-3.5" />
-                        Playbook
-                    </button>
-                    <button
-                        onClick={() => onViewChange('sentiment')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'sentiment' ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
-                    >
-                        <Users className="w-3.5 h-3.5" />
-                        Sentiment (Antfarm)
-                    </button>
-                    <button
-                        onClick={() => onViewChange('swap')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'swap' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
-                    >
-                        <Repeat className="w-3.5 h-3.5" />
-                        SAC Rotation
-                    </button>
-                    <button
-                        onClick={() => onViewChange('news')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'news' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
-                    >
-                        <Newspaper className="w-3.5 h-3.5" />
-                        News
+                        Watchlist
                     </button>
                     <button
                         onClick={() => onViewChange('vwapMulti')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'vwapMulti' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'vwapMulti' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <Layers className="w-3.5 h-3.5" />
-                        Multi-TF VWAP
+                        Multi-V
                     </button>
                     <button
                         onClick={() => onViewChange('ecosystems')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'ecosystems' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'ecosystems' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <Layers className="w-3.5 h-3.5" />
                         Ecosystems
                     </button>
                     <button
                         onClick={() => onViewChange('anchoredVWAP')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'anchoredVWAP' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'anchoredVWAP' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <Bot className="w-3.5 h-3.5" />
-                        VWAP Anchor Bot
+                        Anchor
+                    </button>
+
+                    <div className="w-px h-6 bg-gray-800 mx-2 hidden lg:block" />
+
+                    <button
+                        onClick={() => onViewChange('tma')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'tma' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Compass className="w-3.5 h-3.5" />
+                        TMA ARCHITECTURE
                     </button>
                 </div>
 
-                {/* Search */}
-                <div className="header-search-wrap">
-                    <Search className="search-icon" />
-                    <input
-                        type="text"
-                        placeholder="Search by symbol, name, or address..."
-                        className="header-search"
-                        value={searchTerm}
-                        onChange={(e) => onSearchChange(e.target.value)}
-                    />
-                </div>
+                {/* Search & Stats */}
+                <div className="flex items-center gap-6">
+                    <div className="relative group hidden xl:block">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Search TICKER..."
+                            className="bg-black/40 border border-gray-800 rounded-xl pl-9 pr-4 py-1.5 text-xs font-bold text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 transition-all w-48"
+                            value={searchTerm}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                        />
+                    </div>
 
-                {/* Stats */}
-                <div className="header-stats">
-                    <div className="stat-item">
-                        <Activity className="stat-icon stat-icon-blue" />
-                        <div>
-                            <span className="stat-value">{lastUpdated.toLocaleTimeString()}</span>
-                            <span className="stat-label">Last Sync</span>
+                    <div className="flex items-center gap-3 pl-6 border-l border-gray-800">
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1.5">
+                                <Activity className={`w-3 h-3 ${isScanning ? 'text-blue-500 animate-pulse' : 'text-emerald-500'}`} />
+                                <span className="text-[10px] font-black text-white">{lastUpdated.toLocaleTimeString()}</span>
+                            </div>
+                            <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest leading-none mt-1">Satellite Link</span>
                         </div>
                     </div>
                 </div>

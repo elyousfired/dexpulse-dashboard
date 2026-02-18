@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, ISeriesApi, LineStyle } from 'lightweight-charts';
 
@@ -41,7 +42,16 @@ export const TokenChart: React.FC<TokenChartProps> = ({
     const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
     const vwapSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const volumeCurveSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+
+    // Structural Analytics Refs
+    const weeklyMaxSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const weeklyMinSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const customSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const netFlowSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+    const cvdSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const flowZoneSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+
+    // TMA Refs
     const pdhSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const pdlSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const pdoSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
@@ -436,6 +446,6 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                 </div>
                 <div className="text-[9px] font-black text-gray-600 italic">POWERED BY BINANCE REAL-TIME DATA ENGINE</div>
             </div>
-        </div >
+        </div>
     );
 };
