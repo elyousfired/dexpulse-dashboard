@@ -368,6 +368,8 @@ export interface VwapData {
     max: number;
     min: number;
     mid: number;
+    slope: number;
+    normalizedSlope: number;
     symbol: string;
 }
 
@@ -389,8 +391,9 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     }
 
     // New UTC day detected → recalculate
-    const klines = await fetchBinanceKlines(symbol, '1d', 14);
-    if (klines.length === 0) return null;
+    // Fetch 24 days to have enough for ATR(14) + Slope Lookback(10)
+    const klines = await fetchBinanceKlines(symbol, '1d', 30);
+    if (klines.length < 15) return null;
 
     // Monday 00:00 UTC boundary
     const now = new Date();
@@ -405,8 +408,11 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     let wMin = Infinity;
     let currentMid = 0;
 
+    // Calculate Daily VWAP values for all klines
+    const rawVwap = klines.map(k => (k.volume > 0 ? k.quoteVolume / k.volume : (k.high + k.low + k.close) / 3));
+
     klines.forEach((k, index) => {
-        const dailyVwap = k.volume > 0 ? k.quoteVolume / k.volume : (k.high + k.low + k.close) / 3;
+        const dailyVwap = rawVwap[index];
         const isCompletedDay = index < klines.length - 1;
         const isSinceMonday = k.time >= mondayTs;
 
@@ -422,6 +428,32 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         }
     });
 
+    // Slope Calculation (Lookback 10, ATR 14 normalization)
+    const SLOPE_LOOKBACK = 10;
+    const ATR_LENGTH = 14;
+
+    // ATR calculation
+    const trueRanges: number[] = klines.map((d, i) => {
+        if (i === 0) return d.high - d.low;
+        const prevClose = klines[i - 1].close;
+        return Math.max(d.high - d.low, Math.abs(d.high - prevClose), Math.abs(d.low - prevClose));
+    });
+
+    let currentAtr = 0;
+    const last14TR = trueRanges.slice(-ATR_LENGTH);
+    if (last14TR.length === ATR_LENGTH) {
+        currentAtr = last14TR.reduce((s, v) => s + v, 0) / ATR_LENGTH;
+    }
+
+    const lastIdx = klines.length - 1;
+    let slope = 0;
+    let normalizedSlope = 0;
+
+    if (lastIdx >= SLOPE_LOOKBACK) {
+        slope = currentMid - rawVwap[lastIdx - SLOPE_LOOKBACK];
+        normalizedSlope = currentAtr > 0 ? slope / currentAtr : 0;
+    }
+
     // Fallback: if no completed days this week yet (e.g. Monday), use current mid
     if (wMax === -Infinity) wMax = currentMid;
     if (wMin === Infinity) wMin = currentMid;
@@ -430,6 +462,8 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         max: wMax,
         min: wMin,
         mid: currentMid,
+        slope,
+        normalizedSlope,
         symbol
     };
 

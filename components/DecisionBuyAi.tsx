@@ -19,7 +19,7 @@ interface BuySignal {
     vwap: VwapData;
     score: number;
     reason: string;
-    type: 'GOLDEN' | 'MOMENTUM' | 'SUPPORT';
+    type: 'GOLDEN' | 'MOMENTUM' | 'SUPPORT' | 'EXIT';
     activeSince?: number; // timestamp
 }
 
@@ -41,6 +41,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
     });
     const [sortBy, setSortBy] = useState<'score' | 'time'>('score');
     const alertedRef = useRef<Set<string>>(new Set());
+    const exitAlertedRef = useRef<Set<string>>(new Set());
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [currentTime, setCurrentTime] = useState(Date.now());
 
@@ -74,41 +75,53 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             let signal: BuySignal | null = null;
             const isMonday = new Date().getUTCDay() === 1;
 
-            // ─── GOLDEN SIGNAL LOGIC ───
-            // Monday: Price > Max && Min && Mid (Daily)
-            // Other Days: Price > Max && Min
-            const isGoldenMonday = isMonday && price > vwap.max && price > vwap.min && price > vwap.mid;
-            const isGoldenStandard = !isMonday && price > vwap.max && price > vwap.min;
+            // Trend strength (0.05 threshold same as chart coloring)
+            const isVwapPositive = vwap.normalizedSlope > 0.05;
+            const isVwapNegative = vwap.normalizedSlope < -0.05;
 
-            if (isGoldenMonday || isGoldenStandard) {
+            // ─── GOLDEN SIGNAL LOGIC ───
+            // Requirement: Price > Max && Daily VWAP Slope is Positive
+            const isPriceAboveMax = price > vwap.max;
+
+            if (isPriceAboveMax && isVwapPositive) {
                 signal = {
                     ticker: t,
                     vwap,
-                    score: 95 + Math.min(5, t.priceChangePercent24h / 10),
+                    score: 95 + Math.min(5, vwap.normalizedSlope * 20),
                     reason: isMonday
-                        ? "Monday Elite: Price above Weekly Max, Min and Daily VWAP. Strong weekly opening."
-                        : "Golden Breakout: Price confirmed above Weekly Max and Min levels.",
+                        ? "Monday Golden: Price above Weekly Max with strong positive trend. High probability start."
+                        : "Golden Breakout: Price holding above Weekly Max with confirmed positive momentum.",
                     activeSince: firstSeenTimes[t.id] || Date.now(),
                     type: 'GOLDEN'
                 };
             }
-            // 2. MOMENTUM PUSH: Price > Mid && Price < Max && Price rising
-            else if (price > vwap.mid && price < vwap.max && t.priceChangePercent24h > 2) {
+            // ──── EXIT SIGNAL ────
+            else if (isVwapNegative) {
                 signal = {
                     ticker: t,
                     vwap,
-                    score: 85 + Math.min(10, t.priceChangePercent24h / 5),
-                    reason: "Entering momentum zone. High potential for Max retest.",
+                    score: 90, // "Exit priority"
+                    reason: "VWAP Trend reversal. Daily slope turned negative. High risk of redistribution.",
+                    type: 'EXIT'
+                };
+            }
+            // 2. MOMENTUM PUSH: Price > Mid && Price < Max && Trend positive
+            else if (price > vwap.mid && price < vwap.max && isVwapPositive) {
+                signal = {
+                    ticker: t,
+                    vwap,
+                    score: 85 + Math.min(10, vwap.normalizedSlope * 10),
+                    reason: "Momentum buildup. Trend is positive and approaching Weekly Max resistance.",
                     type: 'MOMENTUM'
                 };
             }
-            // 3. SUPPORT BOUNCE: Price approx Mid && Pos change
-            else if (Math.abs(price - vwap.mid) / vwap.mid < 0.02 && t.priceChangePercent24h > 0) {
+            // 3. SUPPORT BOUNCE: Price approx Mid && Pos trend
+            else if (Math.abs(price - vwap.mid) / vwap.mid < 0.02 && isVwapPositive) {
                 signal = {
                     ticker: t,
                     vwap,
                     score: 80,
-                    reason: "Bouncing off Weekly Mid support. Safe entry point.",
+                    reason: "Bouncing off Weekly Mid support with positive daily trend confirmation.",
                     type: 'SUPPORT'
                 };
             }
@@ -117,6 +130,10 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
         })
             .filter((s): s is BuySignal => s !== null)
             .sort((a, b) => {
+                // EXITs always first
+                if (a.type === 'EXIT' && b.type !== 'EXIT') return -1;
+                if (b.type === 'EXIT' && a.type !== 'EXIT') return 1;
+
                 if (sortBy === 'time') {
                     const aTime = a.activeSince || 0;
                     const bTime = b.activeSince || 0;
@@ -130,7 +147,6 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
     useEffect(() => {
         if (!tgConfig.enabled) return;
 
-        const currentGoldenSymbols = new Set(signals.filter(s => s.type === 'GOLDEN').map(s => s.ticker.symbol));
         const allActiveSymbols = new Set(signals.map(s => s.ticker.symbol));
 
         let sent = 0;
@@ -151,10 +167,30 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     });
                     playAlarm();
                     alertedRef.current.add(symbol);
+                    exitAlertedRef.current.delete(symbol); // Reset exit alert if it becomes golden again
+                    sent++;
+                }
+            } else if (sig.type === 'EXIT') {
+                if (!exitAlertedRef.current.has(symbol)) {
+                    sendGoldenSignalAlert({
+                        symbol,
+                        price: sig.ticker.priceUsd,
+                        change24h: sig.ticker.priceChangePercent24h,
+                        score: sig.score,
+                        vwapMax: sig.vwap.max,
+                        vwapMid: sig.vwap.mid,
+                        reason: sig.reason,
+                        type: 'EXIT'
+                    });
+                    // Only play alarm for EXIT if it was previously a known positive signal
+                    if (alertedRef.current.has(symbol)) playAlarm();
+
+                    exitAlertedRef.current.add(symbol);
+                    alertedRef.current.delete(symbol);
                     sent++;
                 }
             } else {
-                // Not golden: if it was alerted before, clear it so it can re-trigger
+                // Not golden or exit: if it was alerted before, clear it so it can re-trigger
                 if (alertedRef.current.has(symbol)) {
                     alertedRef.current.delete(symbol);
                 }
@@ -162,10 +198,13 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
         });
 
         // Cleanup: tokens that completely fell out of signals
-        alertedRef.current.forEach(symbol => {
-            if (!allActiveSymbols.has(symbol)) {
-                alertedRef.current.delete(symbol);
-            }
+        const cleanupList = [alertedRef, exitAlertedRef];
+        cleanupList.forEach(ref => {
+            ref.current.forEach(symbol => {
+                if (!allActiveSymbols.has(symbol)) {
+                    ref.current.delete(symbol);
+                }
+            });
         });
 
         if (sent > 0) setAlertCount(prev => prev + sent);
@@ -320,8 +359,9 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
 
                             <div className="flex items-center gap-3 mb-4">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${sig.type === 'GOLDEN' ? 'bg-yellow-500 text-black' :
-                                    sig.type === 'MOMENTUM' ? 'bg-purple-600 text-white' :
-                                        'bg-blue-600 text-white'
+                                    sig.type === 'EXIT' ? 'bg-rose-600 text-white' :
+                                        sig.type === 'MOMENTUM' ? 'bg-purple-600 text-white' :
+                                            'bg-blue-600 text-white'
                                     }`}>
                                     {sig.ticker.symbol[0]}
                                 </div>
@@ -331,8 +371,9 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                                     </h3>
                                     <div className="flex items-center gap-2 mt-0.5">
                                         <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${sig.type === 'GOLDEN' ? 'bg-yellow-500/20 text-yellow-500' :
-                                            sig.type === 'MOMENTUM' ? 'bg-purple-500/20 text-purple-400' :
-                                                'bg-blue-500/20 text-blue-400'
+                                            sig.type === 'EXIT' ? 'bg-rose-500/20 text-rose-500' :
+                                                sig.type === 'MOMENTUM' ? 'bg-purple-500/20 text-purple-400' :
+                                                    'bg-blue-500/20 text-blue-400'
                                             }`}>
                                             {sig.type} SIGNAL
                                         </span>

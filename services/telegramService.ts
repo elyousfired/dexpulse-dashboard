@@ -118,16 +118,16 @@ export async function sendGoldenSignalAlert(params: {
     vwapMax: number;
     vwapMid: number;
     reason: string;
-    type: 'GOLDEN' | 'MOMENTUM' | 'SUPPORT' | 'CONVERGENCE';
+    type: 'GOLDEN' | 'MOMENTUM' | 'SUPPORT' | 'CONVERGENCE' | 'EXIT';
 }): Promise<boolean> {
-    // SECURITY: Only allow GOLDEN and CONVERGENCE signals to be sent to Telegram
-    if (params.type !== 'GOLDEN' && params.type !== 'CONVERGENCE') return false;
+    // SECURITY: Only allow GOLDEN, CONVERGENCE, and EXIT signals to be sent to Telegram
+    if (params.type !== 'GOLDEN' && params.type !== 'CONVERGENCE' && params.type !== 'EXIT') return false;
 
     const config = loadTelegramConfig();
     if (!config.enabled || !config.botToken || !config.chatId) return false;
 
-    const emoji = params.type === 'GOLDEN' ? '🏆' : params.type === 'CONVERGENCE' ? '🎯' : '🚀';
-    const typeLabel = params.type === 'GOLDEN' ? '⚡ GOLDEN SIGNAL' : params.type === 'CONVERGENCE' ? '📍 MTF CONVERGENCE' : '📈 MOMENTUM';
+    const emoji = params.type === 'GOLDEN' ? '🏆' : params.type === 'EXIT' ? '🛑' : params.type === 'CONVERGENCE' ? '🎯' : '🚀';
+    const typeLabel = params.type === 'GOLDEN' ? '⚡ GOLDEN SIGNAL' : params.type === 'EXIT' ? '📉 EXIT SIGNAL' : params.type === 'CONVERGENCE' ? '📍 MTF CONVERGENCE' : '📈 MOMENTUM';
 
     const message = [
         `${emoji} <b>${typeLabel}</b>`,
@@ -135,7 +135,7 @@ export async function sendGoldenSignalAlert(params: {
         `<b>Token:</b> ${params.symbol}/USDT`,
         `<b>Price:</b> $${params.price.toLocaleString(undefined, { maximumFractionDigits: 8 })}`,
         `<b>24h Change:</b> ${params.change24h >= 0 ? '+' : ''}${params.change24h.toFixed(2)}%`,
-        `<b>Buy Score:</b> ${params.score.toFixed(0)}/100`,
+        `<b>${params.type === 'EXIT' ? 'Exit' : 'Buy'} Score:</b> ${params.score.toFixed(0)}/100`,
         ``,
         `<b>VWAP Levels:</b>`,
         `  🟢 Target (Max): $${params.vwapMax.toLocaleString(undefined, { maximumFractionDigits: 8 })}`,
