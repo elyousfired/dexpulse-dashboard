@@ -16,6 +16,7 @@ import { SwapPanel } from './components/SwapPanel';
 import { NewsFeed } from './components/NewsFeed';
 import { VwapMultiTF } from './components/VwapMultiTF';
 import { VwapAnchorBot } from './components/VwapAnchorBot';
+import { EcosystemGrid } from './components/EcosystemGrid';
 import { WatchlistTrade } from './types';
 
 const App: React.FC = () => {
@@ -25,7 +26,7 @@ const App: React.FC = () => {
   const [selectedCexTicker, setSelectedCexTicker] = useState<CexTicker | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP'>('grid');
+  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems'>('grid');
   const [watchlist, setWatchlist] = useState<WatchlistTrade[]>(() => {
     const saved = localStorage.getItem('dexpulse_watchlist');
     return saved ? JSON.parse(saved) : [];
@@ -242,6 +243,8 @@ const App: React.FC = () => {
               <VwapMultiTF tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
             ) : activeView === 'anchoredVWAP' ? (
               <VwapAnchorBot tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />
+            ) : activeView === 'ecosystems' ? (
+              <EcosystemGrid tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
             ) : (
               <WatchlistPanel
                 trades={watchlist}
