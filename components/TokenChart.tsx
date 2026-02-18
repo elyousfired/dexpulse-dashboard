@@ -4,7 +4,15 @@ import { createChart, ColorType, IChartApi, ISeriesApi, LineStyle } from 'lightw
 import { fetchBinanceKlines, subscribeToKlines, fetchWeeklyVwapData } from '../services/cexService';
 import { VwapData, OHLCV as TypesOHLCV } from '../types';
 import { executeIndicatorScript, OHLCV } from '../services/scriptEngine';
-import { RefreshCcw, Activity, BarChart2, Zap, TrendingUp, Layers, Eye, EyeOff } from 'lucide-react';
+import {
+    calculatePDMetrics, classifyDay, calculateLiquidityZones,
+    analyzeIntraday, runScenarioEngine, TmaState
+} from '../services/tmaService';
+import { TmaPanel } from './TmaPanel';
+import {
+    RefreshCcw, Activity, BarChart2, Zap, TrendingUp,
+    Layers, Eye, EyeOff, LayoutTemplate
+} from 'lucide-react';
 
 interface TokenChartProps {
     address: string;
@@ -33,18 +41,22 @@ export const TokenChart: React.FC<TokenChartProps> = ({
     const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
     const vwapSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const volumeCurveSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-    const weeklyMaxSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-    const weeklyMinSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-    const customSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-    const netFlowSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
-    const cvdSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const flowZoneSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+    const pdhSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const pdlSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const pdoSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const pdcSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const midLineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const buyZoneSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+    const sellZoneSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
 
     const [interval, setInterval] = useState('15m');
     const [showVwap, setShowVwap] = useState(true);
     const [showVolume, setShowVolume] = useState(false);
     const [showVolumeCurve, setShowVolumeCurve] = useState(false);
     const [showWeeklyVwap, setShowWeeklyVwap] = useState(true);
+    const [showTma, setShowTma] = useState(false);
+    const [tmaState, setTmaState] = useState<TmaState | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [vwapData, setVwapData] = useState<VwapData | null>(null);
@@ -88,6 +100,26 @@ export const TokenChart: React.FC<TokenChartProps> = ({
         cvdSeriesRef.current = chart.addLineSeries({ color: '#facc15', lineWidth: 2, title: 'CVD' });
         flowZoneSeriesRef.current = chart.addAreaSeries({ topColor: 'rgba(34, 197, 94, 0.12)', bottomColor: 'rgba(239, 68, 68, 0.12)', lineVisible: false, priceScaleId: '', title: 'Flow Zones' });
 
+        // TMA Series initialization
+        pdhSeriesRef.current = chart.addLineSeries({ color: 'rgba(239, 68, 68, 0.8)', lineWidth: 2, lineStyle: LineStyle.Solid, title: 'PDH' });
+        pdlSeriesRef.current = chart.addLineSeries({ color: 'rgba(34, 197, 94, 0.8)', lineWidth: 2, lineStyle: LineStyle.Solid, title: 'PDL' });
+        pdoSeriesRef.current = chart.addLineSeries({ color: 'rgba(156, 163, 175, 0.5)', lineWidth: 1, lineStyle: LineStyle.Dotted, title: 'PDO' });
+        pdcSeriesRef.current = chart.addLineSeries({ color: 'rgba(156, 163, 175, 0.5)', lineWidth: 1, lineStyle: LineStyle.Dotted, title: 'PDC' });
+        midLineSeriesRef.current = chart.addLineSeries({ color: 'rgba(255, 255, 255, 0.4)', lineWidth: 1, lineStyle: LineStyle.SparseDotted, title: 'PD-MID' });
+
+        buyZoneSeriesRef.current = chart.addAreaSeries({
+            topColor: 'rgba(34, 197, 94, 0.05)',
+            bottomColor: 'rgba(34, 197, 94, 0.15)',
+            lineVisible: false,
+            priceLineVisible: false
+        });
+        sellZoneSeriesRef.current = chart.addAreaSeries({
+            topColor: 'rgba(239, 68, 68, 0.15)',
+            bottomColor: 'rgba(239, 68, 68, 0.05)',
+            lineVisible: false,
+            priceLineVisible: false
+        });
+
         volumeSeriesRef.current.priceScale().applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
         volumeCurveSeriesRef.current.priceScale().applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
 
@@ -109,10 +141,61 @@ export const TokenChart: React.FC<TokenChartProps> = ({
             setError(null);
 
             try {
-                const [data, weekly] = await Promise.all([
+                const [data, weekly, dailyKlines] = await Promise.all([
                     fetchBinanceKlines(symbol, interval),
-                    fetchWeeklyVwapData(symbol)
+                    fetchWeeklyVwapData(symbol),
+                    fetchBinanceKlines(symbol, '1d', 2)
                 ]);
+
+                // TMA Logic Integration
+                if (dailyKlines.length >= 2) {
+                    const yesterday = dailyKlines[dailyKlines.length - 2];
+                    const metrics = calculatePDMetrics(yesterday);
+                    const classification = classifyDay(metrics);
+                    const zones = calculateLiquidityZones(metrics, data[data.length - 1].close);
+
+                    // Filter for today's 15m klines from data if interval is 15m
+                    const today15m = interval === '15m' ? data : [];
+                    const currentDetection = analyzeIntraday(metrics, today15m);
+                    const probabilities = runScenarioEngine(metrics, currentDetection, today15m);
+
+                    let bias: TmaState['current']['bias'] = 'Neutral';
+                    if (probabilities.reversal > 50) bias = currentDetection.mss === 'Long' ? 'Reversal Long' : 'Reversal Short';
+                    else if (probabilities.continuation > 50) bias = currentDetection.acceptance === 'Above PDH' ? 'Bullish' : 'Bearish';
+                    else if (probabilities.range > 50) bias = 'Neutral';
+
+                    const newState: TmaState = {
+                        metrics, classification, zones,
+                        current: {
+                            ...currentDetection,
+                            bias,
+                            confidence: Math.max(probabilities.reversal, probabilities.continuation, probabilities.range)
+                        } as any,
+                        probabilities
+                    };
+                    setTmaState(newState);
+
+                    // Update TMA visual series
+                    if (showTma && pdhSeriesRef.current && pdlSeriesRef.current) {
+                        const tmaData = data.map(d => ({ time: d.time as any, value: metrics.pdh }));
+                        pdhSeriesRef.current.setData(tmaData);
+                        pdlSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: metrics.pdl })));
+                        pdoSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: metrics.pdo })));
+                        pdcSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: metrics.pdc })));
+                        midLineSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: metrics.mid })));
+
+                        buyZoneSeriesRef.current?.setData(data.map(d => ({ time: d.time as any, value: zones.buySide[1], topValue: zones.buySide[1], bottomValue: zones.buySide[0] })));
+                        sellZoneSeriesRef.current?.setData(data.map(d => ({ time: d.time as any, value: zones.sellSide[0], topValue: zones.sellSide[1], bottomValue: zones.sellSide[0] })));
+                    } else {
+                        pdhSeriesRef.current?.setData([]);
+                        pdlSeriesRef.current?.setData([]);
+                        pdoSeriesRef.current?.setData([]);
+                        pdcSeriesRef.current?.setData([]);
+                        midLineSeriesRef.current?.setData([]);
+                        buyZoneSeriesRef.current?.setData([]);
+                        sellZoneSeriesRef.current?.setData([]);
+                    }
+                }
 
                 setVwapData(weekly);
 
@@ -224,7 +307,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
             } catch (err: any) { setError(err.message); } finally { setLoading(false); }
         };
         fetchData();
-    }, [address, interval, symbol, showVwap, showVolume, showVolumeCurve, showWeeklyVwap, activeView]);
+    }, [address, interval, symbol, showVwap, showVolume, showVolumeCurve, showWeeklyVwap, showTma, activeView]);
 
     useEffect(() => {
         if (!isCex || !address || loading) return;
@@ -314,6 +397,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                     <div className="flex items-center gap-2">
                         <IndicatorToggle active={showWeeklyVwap} onClick={() => setShowWeeklyVwap(!showWeeklyVwap)} icon={Layers} label="VWAP WEEKLY" color="text-emerald-400" />
                         <IndicatorToggle active={showVwap} onClick={() => setShowVwap(!showVwap)} icon={Zap} label="VWAP" color="text-blue-500" />
+                        <IndicatorToggle active={showTma} onClick={() => setShowTma(!showTma)} icon={LayoutTemplate} label="ARCHITECTURE (TMA)" color="text-indigo-400" />
                         <IndicatorToggle active={showVolume} onClick={() => setShowVolume(!showVolume)} icon={BarChart2} label="VOL" color="text-gray-400" />
                         <IndicatorToggle active={showVolumeCurve} onClick={() => setShowVolumeCurve(!showVolumeCurve)} icon={TrendingUp} label="VOL-AVG" color="text-amber-500" />
                     </div>
@@ -324,13 +408,21 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                     ))}
                 </div>
             </div>
-            <div className="relative flex-1 group">
-                {loading && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#0d0f14]/80 backdrop-blur-sm">
-                        <div className="flex flex-col items-center gap-3"><RefreshCcw className="w-8 h-8 text-blue-500 animate-spin" /><span className="text-[10px] font-black text-gray-500 animate-pulse">SYNCING DATA...</span></div>
+            <div className="flex-1 flex overflow-hidden group">
+                <div className="flex-1 relative">
+                    {loading && (
+                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#0d0f14]/80 backdrop-blur-sm">
+                            <div className="flex flex-col items-center gap-3"><RefreshCcw className="w-8 h-8 text-blue-500 animate-spin" /><span className="text-[10px] font-black text-gray-500 animate-pulse">SYNCING DATA...</span></div>
+                        </div>
+                    )}
+                    <div ref={chartContainerRef} className="w-full h-full" />
+                </div>
+
+                {showTma && (
+                    <div className="w-[380px] border-l border-gray-800 bg-[#06080c]/50 backdrop-blur-xl overflow-y-auto p-6 hidden xl:block">
+                        <TmaPanel symbol={symbol} state={tmaState} isLoading={loading} />
                     </div>
                 )}
-                <div ref={chartContainerRef} className="w-full h-full" />
             </div>
             <div className="flex items-center justify-between px-5 py-2.5 border-t border-gray-800 bg-gray-900/40">
                 <div className="flex items-center gap-6">
@@ -344,6 +436,6 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                 </div>
                 <div className="text-[9px] font-black text-gray-600 italic">POWERED BY BINANCE REAL-TIME DATA ENGINE</div>
             </div>
-        </div>
+        </div >
     );
 };
