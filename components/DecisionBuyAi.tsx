@@ -248,8 +248,8 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                                 className="w-full bg-black/60 text-white text-sm font-mono px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-purple-500" />
                         </div>
                         <div>
-                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider block mb-1">Chat ID</label>
-                            <input type="text" placeholder="-1001234567890" value={tgConfig.chatId}
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider block mb-1">Chat IDs (comma-separated)</label>
+                            <input type="text" placeholder="123456789, 987654321" value={tgConfig.chatId}
                                 onChange={e => handleSaveConfig({ ...tgConfig, chatId: e.target.value })}
                                 className="w-full bg-black/60 text-white text-sm font-mono px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-purple-500" />
                         </div>
@@ -291,7 +291,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                             Test Sound
                         </button>
                     </div>
-                    <p className="text-[9px] text-gray-600 mt-3 font-bold">Create a bot via @BotFather on Telegram. Get Chat ID via @userinfobot.</p>
+                    <p className="text-[9px] text-gray-600 mt-3 font-bold">Create a bot via @BotFather on Telegram. Each user must /start the bot, then get their Chat ID via @userinfobot. Separate multiple IDs with commas.</p>
                 </div>
             )}
 

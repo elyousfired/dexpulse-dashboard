@@ -7,7 +7,7 @@
 
 export interface TelegramConfig {
     botToken: string;
-    chatId: string;
+    chatId: string; // Comma-separated for multiple IDs, e.g. "123456,789012"
     enabled: boolean;
 }
 
@@ -61,17 +61,20 @@ export function saveTelegramConfig(config: TelegramConfig) {
     localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
 }
 
-/** Send a Telegram message via Bot API */
-async function sendTelegramMessage(config: TelegramConfig, text: string): Promise<boolean> {
-    if (!config.botToken || !config.chatId) return false;
+/** Parse comma-separated chat IDs */
+function parseChatIds(chatIdStr: string): string[] {
+    return chatIdStr.split(',').map(id => id.trim()).filter(id => id.length > 0);
+}
 
+/** Send a Telegram message to a single chat */
+async function sendToChat(botToken: string, chatId: string, text: string): Promise<boolean> {
     try {
-        const url = `https://api.telegram.org/bot${config.botToken}/sendMessage`;
+        const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
         const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                chat_id: config.chatId,
+                chat_id: chatId,
                 text: text,
                 parse_mode: 'HTML',
                 disable_web_page_preview: true
@@ -80,9 +83,23 @@ async function sendTelegramMessage(config: TelegramConfig, text: string): Promis
         const data = await res.json();
         return data.ok === true;
     } catch (err) {
-        console.error('Telegram send error:', err);
+        console.error(`Telegram send error (chat ${chatId}):`, err);
         return false;
     }
+}
+
+/** Send a Telegram message to ALL configured chat IDs */
+async function sendTelegramMessage(config: TelegramConfig, text: string): Promise<boolean> {
+    if (!config.botToken || !config.chatId) return false;
+
+    const chatIds = parseChatIds(config.chatId);
+    if (chatIds.length === 0) return false;
+
+    const results = await Promise.all(
+        chatIds.map(id => sendToChat(config.botToken, id, text))
+    );
+    // Return true if at least one message was sent successfully
+    return results.some(ok => ok);
 }
 
 /** Send a test message to verify the bot works */
