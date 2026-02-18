@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 // Force deployment trigger with chart and profit tracking
 import { Search, Table, TrendingUp, TrendingDown, RefreshCw, Zap, Info, ArrowRight, BarChart3, Clock, Filter, Bot } from 'lucide-react';
-import { CexTicker } from '../types';
+import { CexTicker, VwapData } from '../types';
 import { getSlidingAVWAPData, AnchoredVwapResult } from '../services/avwapTradingService';
-import { formatPrice, VwapData } from '../services/cexService';
+import { formatPrice } from '../services/cexService';
 import { TokenChart } from './TokenChart';
 
 interface VwapAnchorBotProps {

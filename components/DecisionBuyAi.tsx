@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { CexTicker } from '../types';
-import { fetchWeeklyVwapData, VwapData, formatPrice } from '../services/cexService';
+import { CexTicker, VwapData } from '../types';
+import { fetchWeeklyVwapData, formatPrice } from '../services/cexService';
 import { Brain, Star, TrendingUp, Info, ArrowRight, Zap, Trophy, ShieldCheck, Bell, Settings, Send, CheckCircle, XCircle, Volume2, VolumeX, Timer, Filter } from 'lucide-react';
 import { sendGoldenSignalAlert, wasAlertedToday, loadTelegramConfig, saveTelegramConfig, sendTestAlert, TelegramConfig } from '../services/telegramService';
 

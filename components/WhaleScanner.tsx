@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { CexTicker } from '../types';
-import { fetchWeeklyVwapData, VwapData, formatPrice } from '../services/cexService';
+import { CexTicker, VwapData } from '../types';
+import { fetchWeeklyVwapData, formatPrice } from '../services/cexService';
 import { Anchor, ArrowUpCircle, TrendingUp, Info, Zap, Waves, Activity, Fish } from 'lucide-react';
 
 interface WhaleScannerProps {

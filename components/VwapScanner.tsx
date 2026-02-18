@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { CexTicker } from '../types';
-import { fetchWeeklyVwapData, VwapData, formatPrice } from '../services/cexService';
+import { CexTicker, VwapData } from '../types';
+import { fetchWeeklyVwapData, formatPrice } from '../services/cexService';
 import { Activity, ArrowUpRight, Clock, Search, ShieldCheck } from 'lucide-react';
 
 interface VwapScannerProps {
