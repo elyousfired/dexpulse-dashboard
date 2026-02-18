@@ -133,20 +133,53 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                         })) : []);
                     }
 
-                    // 3. Day-Anchored VWAP
+                    // 3. Day-Anchored VWAP with Slope Coloring
                     if (vwapSeriesRef.current) {
                         if (!isFlowMode && showVwap) {
+                            // Slope parameters
+                            const SLOPE_LOOKBACK = 10;
+                            const ATR_LENGTH = 14;
+                            const NEAR_ZERO_THRESHOLD = 0.05;
+
+                            // Step 1: Compute raw VWAP values
                             let qVol = 0, bVol = 0, lastDay = -1;
-                            const vValues = data.map(d => {
+                            const rawVwap = data.map(d => {
                                 const day = new Date(d.time * 1000).getUTCDate();
                                 if (lastDay !== -1 && day !== lastDay) { qVol = 0; bVol = 0; }
                                 lastDay = day;
                                 qVol += d.quoteVolume || (d.close * d.volume);
                                 bVol += d.volume;
-                                return { time: d.time as any, value: bVol > 0 ? qVol / bVol : d.close };
+                                return { time: d.time, value: bVol > 0 ? qVol / bVol : d.close };
                             });
+
+                            // Step 2: Compute ATR(14) for normalization
+                            const trueRanges: number[] = data.map((d, i) => {
+                                if (i === 0) return d.high - d.low;
+                                const prevClose = data[i - 1].close;
+                                return Math.max(d.high - d.low, Math.abs(d.high - prevClose), Math.abs(d.low - prevClose));
+                            });
+                            const atrValues: number[] = trueRanges.map((_, i) => {
+                                if (i < ATR_LENGTH - 1) return 0;
+                                const slice = trueRanges.slice(i - ATR_LENGTH + 1, i + 1);
+                                return slice.reduce((s, v) => s + v, 0) / ATR_LENGTH;
+                            });
+
+                            // Step 3: Compute slope and assign color per point
+                            const vValues = rawVwap.map((v, i) => {
+                                let color = '#3b82f6'; // default blue (near-zero / no data)
+                                if (i >= SLOPE_LOOKBACK && atrValues[i] > 0) {
+                                    const slope = v.value - rawVwap[i - SLOPE_LOOKBACK].value;
+                                    const normalizedSlope = slope / atrValues[i];
+                                    if (normalizedSlope > NEAR_ZERO_THRESHOLD) {
+                                        color = '#facc15'; // yellow — positive slope
+                                    } else if (normalizedSlope < -NEAR_ZERO_THRESHOLD) {
+                                        color = '#f43f5e'; // rose — negative slope
+                                    }
+                                }
+                                return { time: v.time as any, value: v.value, color };
+                            });
+
                             vwapSeriesRef.current.setData(vValues);
-                            // Set refs for real-time tracking (approximation using last data point totals)
                             cumulativeRef.current = { quote: qVol, base: bVol, lastDay: lastDay };
                         } else vwapSeriesRef.current.setData([]);
                     }
