@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, ISeriesApi, LineStyle } from 'lightweight-charts';
 
-import { fetchBinanceKlines, subscribeToKlines, fetchWeeklyVwapData, VwapData } from '../services/cexService';
+import { fetchBinanceKlines, subscribeToKlines, fetchWeeklyVwapData } from '../services/cexService';
+import { VwapData, OHLCV as TypesOHLCV } from '../types';
 import { executeIndicatorScript, OHLCV } from '../services/scriptEngine';
 import { RefreshCcw, Activity, BarChart2, Zap, TrendingUp, Layers, Eye, EyeOff } from 'lucide-react';
 
