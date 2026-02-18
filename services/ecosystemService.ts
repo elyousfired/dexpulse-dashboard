@@ -61,6 +61,13 @@ export function getEcosystemsWithTickers(tickers: CexTicker[]): EcosystemGroup[]
             gradient: 'from-rose-600/20 to-orange-600/5',
             tokens: []
         },
+        {
+            name: 'Sui Ecosystem',
+            symbol: 'SUI',
+            color: 'text-cyan-400',
+            gradient: 'from-cyan-500/20 to-blue-500/5',
+            tokens: []
+        },
     ];
 
     const mapping: Record<string, number> = {
@@ -75,14 +82,16 @@ export function getEcosystemsWithTickers(tickers: CexTicker[]): EcosystemGroup[]
         'BNB': 2, 'CAKE': 2, 'BAKE': 2, 'TWT': 2, 'ALPACA': 2, 'SFP': 2, 'WRX': 2, 'DODO': 2, 'XVS': 2, 'BEL': 2,
         'LISTA': 2, 'FLOKI': 2, 'ID': 2,
         // L1s
-        'AVAX': 3, 'NEAR': 3, 'FTM': 3, 'DOT': 3, 'ADA': 3, 'TIA': 3, 'SEI': 3, 'SUI': 3, 'APT': 3, 'INJ': 3,
+        'AVAX': 3, 'NEAR': 3, 'FTM': 3, 'DOT': 3, 'ADA': 3, 'TIA': 3, 'SEI': 3, 'APT': 3, 'INJ': 3,
         'GALA': 3, 'IMX': 3, 'BEAM': 3, 'TON': 3, 'KAS': 3, 'ALGO': 3, 'HBAR': 3, 'EGLD': 3, 'MINA': 3,
         // AI
         'FET': 4, 'AGIX': 4, 'OCEAN': 4, 'RNDR': 4, 'TAO': 4, 'AKT': 4, 'WLD': 4, 'ARKM': 4, 'THETA': 4, 'NEAR': 4,
         'PAAL': 4, '0X0': 4, 'NOS': 4, 'AIOZ': 4, 'RSS3': 4,
         // MEME
         'DOGE': 5, 'SHIB': 5, 'PEPE': 5, 'FLOKI': 5, 'BONK': 5, 'WIF': 5, 'BOME': 5, 'TURBO': 5, 'MEME': 5,
-        'SLERF': 5, 'MEW': 5, 'DEGEN': 5, 'BRETT': 5, 'MOG': 5, 'COQ': 5, 'TOSHI': 5
+        'SLERF': 5, 'MEW': 5, 'DEGEN': 5, 'BRETT': 5, 'MOG': 5, 'COQ': 5, 'TOSHI': 5,
+        // SUI
+        'SUI': 6, 'CETUS': 6, 'NAVI': 6, 'SCA': 6, 'BLUB': 6, 'DEEP': 6, 'TURBOS': 6, 'SUIA': 6, 'FUD': 6
     };
 
     tickers.forEach(t => {
