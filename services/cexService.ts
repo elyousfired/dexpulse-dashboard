@@ -1,16 +1,4 @@
-import { CexTicker } from '../types';
-
-export interface OHLCV {
-    time: number;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-    quoteVolume: number;
-    buyVolume: number;
-}
-
+import { CexTicker, VwapData, OHLCV } from '../types';
 // Binance Public API
 const BINANCE_REST_API = 'https://api.binance.com/api/v3/ticker/24hr';
 const BINANCE_WS_URL = 'wss://stream.binance.com:9443/ws/!ticker@arr';
@@ -364,14 +352,6 @@ export async function fetchBinanceKlines(
  * - Max/Min use COMPLETED daily candles only (structural levels).
  * - Mid reflects the current (live) day's VWAP.
  */
-export interface VwapData {
-    max: number;
-    min: number;
-    mid: number;
-    slope: number;
-    normalizedSlope: number;
-    symbol: string;
-}
 
 // Standard cache with short TTL for live updates
 const vwapCache: Map<string, { data: VwapData, expires: number }> = new Map();

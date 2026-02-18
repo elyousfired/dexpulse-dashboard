@@ -1,155 +1,68 @@
 
-import { fetchBinanceKlines, OHLCV } from './cexService';
+import { CexTicker, OHLCV } from '../types';
+import { fetchBinanceKlines, getMondayStartUTC, getTodayStartUTC } from './cexService';
 
-/**
- * Multi-Timeframe VWAP Service
- * Computes VWAP for 6 timeframes: Weekly, 1D, 4H, 1H, 30min, 15min
- * VWAP = SUM(Price * Volume) / SUM(Volume)
- * 
- * Daily and Weekly VWAPs are anchored to 00:00 UTC boundaries.
- */
-
-export interface VwapLevel {
-    timeframe: string;
-    label: string;
-    vwap: number;
-    priceVsVwap: number; // % above/below VWAP
-    isAbove: boolean;
-}
-
-export interface TokenVwapProfile {
-    symbol: string;
-    price: number;
-    change24h: number;
-    levels: VwapLevel[];
-    aboveCount: number; // how many TFs price is above VWAP
-}
-
-// Timeframe configs — daily/weekly use anchored fetching, others use rolling window
 const TIMEFRAMES = [
     { key: 'weekly', label: 'Weekly', interval: '1h', anchored: 'week' as const },
     { key: '1d', label: '1D', interval: '1h', anchored: 'day' as const },
     { key: '4h', label: '4H', interval: '15m', limit: 16 },
     { key: '1h', label: '1H', interval: '5m', limit: 12 },
-    { key: '30m', label: '30min', interval: '1m', limit: 30 },
-    { key: '15m', label: '15min', interval: '1m', limit: 15 },
+    { key: '15m', label: '15M', interval: '1m', limit: 15 }
 ];
 
-function computeVwap(klines: OHLCV[]): number {
-    if (klines.length === 0) return 0;
-    let sumPV = 0;
-    let sumV = 0;
-    for (const k of klines) {
-        const typicalPrice = (k.high + k.low + k.close) / 3;
-        const vol = k.quoteVolume || k.volume;
-        sumPV += typicalPrice * vol;
-        sumV += vol;
+export interface MultiVwapPoint {
+    time: number;
+    value: number;
+}
+
+export interface MultiVwapProfile {
+    timeframe: string;
+    label: string;
+    currentVwap: number;
+    data: MultiVwapPoint[];
+}
+
+export async function fetchTokenVwapProfile(symbol: string): Promise<MultiVwapProfile[]> {
+    const profiles: MultiVwapProfile[] = [];
+
+    for (const tf of TIMEFRAMES) {
+        try {
+            let klines: OHLCV[] = [];
+
+            if ('anchored' in tf && tf.anchored === 'day') {
+                klines = await fetchBinanceKlines(symbol, tf.interval, 100);
+            } else if ('anchored' in tf && tf.anchored === 'week') {
+                klines = await fetchBinanceKlines(symbol, tf.interval, 200);
+            } else {
+                klines = await fetchBinanceKlines(symbol, tf.interval, (tf as any).limit || 100);
+            }
+
+            if (klines.length === 0) continue;
+
+            const vwapData: MultiVwapPoint[] = [];
+            let cumulativePV = 0;
+            let cumulativeV = 0;
+
+            klines.forEach(k => {
+                const typicalPrice = (k.high + k.low + k.close) / 3;
+                cumulativePV += typicalPrice * k.volume;
+                cumulativeV += k.volume;
+                vwapData.push({
+                    time: k.time,
+                    value: cumulativePV / cumulativeV
+                });
+            });
+
+            profiles.push({
+                timeframe: tf.key,
+                label: tf.label,
+                currentVwap: vwapData[vwapData.length - 1].value,
+                data: vwapData
+            });
+        } catch (e) {
+            console.warn(`Failed to fetch VWAP for ${tf.label}`, e);
+        }
     }
-    return sumV > 0 ? sumPV / sumV : 0;
+
+    return profiles;
 }
-
-/**
- * Get the UTC 00:00 timestamp for the start of today.
- */
-function getTodayStartUTC(): number {
-    const now = new Date();
-    now.setUTCHours(0, 0, 0, 0);
-    return now.getTime();
-}
-
-/**
- * Get the UTC 00:00 timestamp for Monday of the current week.
- */
-function getMondayStartUTC(): number {
-    const now = new Date();
-    const dayOfWeek = now.getUTCDay(); // 0 = Sunday
-    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const monday = new Date(now);
-    monday.setUTCHours(0, 0, 0, 0);
-    monday.setUTCDate(now.getUTCDate() - diffToMonday);
-    return monday.getTime();
-}
-
-/**
- * Fetch klines anchored from a specific UTC start time to now.
- */
-async function fetchAnchoredKlines(symbol: string, interval: string, startTimeMs: number): Promise<OHLCV[]> {
-    const pair = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
-    const url = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${interval}&startTime=${startTimeMs}&limit=1000`;
-
-    try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Binance Klines API ${res.status}`);
-
-        const data = await res.json();
-        return data.map((d: any) => ({
-            time: Math.floor(d[0] / 1000),
-            open: parseFloat(d[1]),
-            high: parseFloat(d[2]),
-            low: parseFloat(d[3]),
-            close: parseFloat(d[4]),
-            volume: parseFloat(d[5]),
-            quoteVolume: parseFloat(d[7]),
-            buyVolume: parseFloat(d[10]),
-        }));
-    } catch (err) {
-        console.error('Anchored klines fetch error:', err);
-        return [];
-    }
-}
-
-// Cache
-const profileCache: Map<string, { data: TokenVwapProfile; ts: number }> = new Map();
-const CACHE_TTL = 60 * 1000; // 1 minute
-
-export async function fetchTokenVwapProfile(symbol: string, currentPrice: number, change24h: number): Promise<TokenVwapProfile | null> {
-    const cached = profileCache.get(symbol);
-    if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data;
-
-    try {
-        const results = await Promise.all(
-            TIMEFRAMES.map(async (tf) => {
-                let klines: OHLCV[];
-
-                if ('anchored' in tf && tf.anchored === 'day') {
-                    // Daily VWAP: anchor from today 00:00 UTC
-                    klines = await fetchAnchoredKlines(symbol, tf.interval, getTodayStartUTC());
-                } else if ('anchored' in tf && tf.anchored === 'week') {
-                    // Weekly VWAP: anchor from Monday 00:00 UTC
-                    klines = await fetchAnchoredKlines(symbol, tf.interval, getMondayStartUTC());
-                } else {
-                    // Rolling window for smaller timeframes
-                    klines = await fetchBinanceKlines(symbol, tf.interval, (tf as any).limit);
-                }
-
-                if (klines.length === 0) return null;
-                const vwap = computeVwap(klines);
-                const pctDiff = ((currentPrice - vwap) / vwap) * 100;
-                return {
-                    timeframe: tf.key,
-                    label: tf.label,
-                    vwap,
-                    priceVsVwap: pctDiff,
-                    isAbove: currentPrice > vwap,
-                } as VwapLevel;
-            })
-        );
-
-        const levels = results.filter((r): r is VwapLevel => r !== null);
-        const profile: TokenVwapProfile = {
-            symbol,
-            price: currentPrice,
-            change24h,
-            levels,
-            aboveCount: levels.filter(l => l.isAbove).length,
-        };
-
-        profileCache.set(symbol, { data: profile, ts: Date.now() });
-        return profile;
-    } catch (err) {
-        console.error(`VWAP profile error (${symbol}):`, err);
-        return null;
-    }
-}
-
-export { TIMEFRAMES };

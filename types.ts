@@ -126,3 +126,23 @@ export interface WatchlistTrade {
   closePrice?: number;
   closeTime?: number;
 }
+
+export interface OHLCV {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  quoteVolume: number;
+  buyVolume: number;
+}
+
+export interface VwapData {
+  max: number;
+  min: number;
+  mid: number;
+  slope: number;
+  normalizedSlope: number;
+  symbol: string;
+}
