@@ -143,6 +143,11 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             });
     }, [tickers, vwapStore, firstSeenTimes, sortBy]);
 
+    // Filtered signals for UI display (Show only GOLDEN Entry signals)
+    const displaySignals = useMemo(() => {
+        return signals.filter(s => s.type === 'GOLDEN');
+    }, [signals]);
+
     // ─── Telegram Alert Trigger ───────────────────
     useEffect(() => {
         if (!tgConfig.enabled) return;
@@ -337,7 +342,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             {/* Signal List */}
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    {signals.map((sig) => (
+                    {displaySignals.map((sig) => (
                         <button
                             key={sig.ticker.id}
                             onClick={() => onTickerClick(sig.ticker)}
@@ -425,10 +430,10 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     ))}
                 </div>
 
-                {signals.length === 0 && (
+                {displaySignals.length === 0 && (
                     <div className="flex flex-col items-center justify-center p-20 text-gray-500 italic">
                         <Zap className="w-12 h-12 opacity-10 mb-4" />
-                        <p>Scanning markets for low-risk buying opportunities...</p>
+                        <p>Scanning markets for low-risk Golden Entry opportunities...</p>
                     </div>
                 )}
             </div>
