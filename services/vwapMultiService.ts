@@ -5,6 +5,8 @@ import { fetchBinanceKlines, OHLCV } from './cexService';
  * Multi-Timeframe VWAP Service
  * Computes VWAP for 6 timeframes: Weekly, 1D, 4H, 1H, 30min, 15min
  * VWAP = SUM(Price * Volume) / SUM(Volume)
+ * 
+ * Daily and Weekly VWAPs are anchored to 00:00 UTC boundaries.
  */
 
 export interface VwapLevel {
@@ -23,10 +25,10 @@ export interface TokenVwapProfile {
     aboveCount: number; // how many TFs price is above VWAP
 }
 
-// Timeframe configs
+// Timeframe configs — daily/weekly use anchored fetching, others use rolling window
 const TIMEFRAMES = [
-    { key: 'weekly', label: 'Weekly', interval: '1d', limit: 7 },
-    { key: '1d', label: '1D', interval: '1h', limit: 24 },
+    { key: 'weekly', label: 'Weekly', interval: '1h', anchored: 'week' as const },
+    { key: '1d', label: '1D', interval: '1h', anchored: 'day' as const },
     { key: '4h', label: '4H', interval: '15m', limit: 16 },
     { key: '1h', label: '1H', interval: '5m', limit: 12 },
     { key: '30m', label: '30min', interval: '1m', limit: 30 },
@@ -46,6 +48,56 @@ function computeVwap(klines: OHLCV[]): number {
     return sumV > 0 ? sumPV / sumV : 0;
 }
 
+/**
+ * Get the UTC 00:00 timestamp for the start of today.
+ */
+function getTodayStartUTC(): number {
+    const now = new Date();
+    now.setUTCHours(0, 0, 0, 0);
+    return now.getTime();
+}
+
+/**
+ * Get the UTC 00:00 timestamp for Monday of the current week.
+ */
+function getMondayStartUTC(): number {
+    const now = new Date();
+    const dayOfWeek = now.getUTCDay(); // 0 = Sunday
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const monday = new Date(now);
+    monday.setUTCHours(0, 0, 0, 0);
+    monday.setUTCDate(now.getUTCDate() - diffToMonday);
+    return monday.getTime();
+}
+
+/**
+ * Fetch klines anchored from a specific UTC start time to now.
+ */
+async function fetchAnchoredKlines(symbol: string, interval: string, startTimeMs: number): Promise<OHLCV[]> {
+    const pair = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
+    const url = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${interval}&startTime=${startTimeMs}&limit=1000`;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Binance Klines API ${res.status}`);
+
+        const data = await res.json();
+        return data.map((d: any) => ({
+            time: Math.floor(d[0] / 1000),
+            open: parseFloat(d[1]),
+            high: parseFloat(d[2]),
+            low: parseFloat(d[3]),
+            close: parseFloat(d[4]),
+            volume: parseFloat(d[5]),
+            quoteVolume: parseFloat(d[7]),
+            buyVolume: parseFloat(d[10]),
+        }));
+    } catch (err) {
+        console.error('Anchored klines fetch error:', err);
+        return [];
+    }
+}
+
 // Cache
 const profileCache: Map<string, { data: TokenVwapProfile; ts: number }> = new Map();
 const CACHE_TTL = 60 * 1000; // 1 minute
@@ -57,7 +109,19 @@ export async function fetchTokenVwapProfile(symbol: string, currentPrice: number
     try {
         const results = await Promise.all(
             TIMEFRAMES.map(async (tf) => {
-                const klines = await fetchBinanceKlines(symbol, tf.interval, tf.limit);
+                let klines: OHLCV[];
+
+                if ('anchored' in tf && tf.anchored === 'day') {
+                    // Daily VWAP: anchor from today 00:00 UTC
+                    klines = await fetchAnchoredKlines(symbol, tf.interval, getTodayStartUTC());
+                } else if ('anchored' in tf && tf.anchored === 'week') {
+                    // Weekly VWAP: anchor from Monday 00:00 UTC
+                    klines = await fetchAnchoredKlines(symbol, tf.interval, getMondayStartUTC());
+                } else {
+                    // Rolling window for smaller timeframes
+                    klines = await fetchBinanceKlines(symbol, tf.interval, (tf as any).limit);
+                }
+
                 if (klines.length === 0) return null;
                 const vwap = computeVwap(klines);
                 const pctDiff = ((currentPrice - vwap) / vwap) * 100;

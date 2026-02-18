@@ -356,8 +356,13 @@ export async function fetchBinanceKlines(
 
 /**
  * Fetch historical 1D klines and calculate structural Weekly Max, Weekly Min, and Current Mid VWAP.
- * Formula: VWAP = sum(Price * Volume) / sum(Volume)
- * Uses Binance's quoteAssetVolume (index 7) and volume (index 5).
+ * 
+ * Logic:
+ * - Calculates once per UTC day (at 00:00 UTC when a new daily candle opens).
+ * - Freezes the Weekly VWAP (Max/Min) for the rest of the day.
+ * - Only recalculates when a new UTC day is detected.
+ * - Max/Min use COMPLETED daily candles only (structural levels).
+ * - Mid reflects the current (live) day's VWAP.
  */
 export interface VwapData {
     max: number;
@@ -366,24 +371,34 @@ export interface VwapData {
     symbol: string;
 }
 
-const vwapCache: Map<string, { data: VwapData, expires: number }> = new Map();
-const VWAP_CACHE_TTL = 1000 * 60 * 15; // 15 minutes for faster updates
+// Day-based cache: keyed by "SYMBOL:YYYY-MM-DD" so it auto-invalidates at 00:00 UTC
+const vwapDayCache: Map<string, { data: VwapData; day: string }> = new Map();
+
+function getCurrentUTCDay(): string {
+    return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
 
 export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | null> {
-    const cached = vwapCache.get(symbol);
-    if (cached && cached.expires > Date.now()) return cached.data;
+    const currentDay = getCurrentUTCDay();
+    const cacheKey = symbol;
+    const cached = vwapDayCache.get(cacheKey);
 
-    // Fetch 14 days of 1D klines
+    // If we already calculated for today's UTC day, return frozen value
+    if (cached && cached.day === currentDay) {
+        return cached.data;
+    }
+
+    // New UTC day detected → recalculate
     const klines = await fetchBinanceKlines(symbol, '1d', 14);
     if (klines.length === 0) return null;
 
-    // Monday Reset Logic
+    // Monday 00:00 UTC boundary
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 is Sunday
+    const dayOfWeek = now.getUTCDay(); // 0 = Sunday
     const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     const monday = new Date(now);
-    monday.setHours(0, 0, 0, 0);
-    monday.setDate(now.getDate() - diffToMonday);
+    monday.setUTCHours(0, 0, 0, 0);
+    monday.setUTCDate(now.getUTCDate() - diffToMonday);
     const mondayTs = Math.floor(monday.getTime() / 1000);
 
     let wMax = -Infinity;
@@ -391,26 +406,23 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     let currentMid = 0;
 
     klines.forEach((k, index) => {
-        // True VWAP calculation for the day
         const dailyVwap = k.volume > 0 ? k.quoteVolume / k.volume : (k.high + k.low + k.close) / 3;
-
-        // Structural levels: Highest and Lowest DAILY VWAP values since Monday
-        // This creates a channel based on institutional daily value areas
         const isCompletedDay = index < klines.length - 1;
         const isSinceMonday = k.time >= mondayTs;
 
-        if (isSinceMonday) {
+        // Max/Min: only from COMPLETED daily candles since Monday (structural levels)
+        if (isSinceMonday && isCompletedDay) {
             if (dailyVwap > wMax) wMax = dailyVwap;
             if (dailyVwap < wMin) wMin = dailyVwap;
         }
 
-        // Current Mid is the VWAP of the active day (last kline)
+        // Mid: live VWAP of the current (active) day
         if (index === klines.length - 1) {
             currentMid = dailyVwap;
         }
     });
 
-    // Fallback if no days completed yet this week
+    // Fallback: if no completed days this week yet (e.g. Monday), use current mid
     if (wMax === -Infinity) wMax = currentMid;
     if (wMin === Infinity) wMin = currentMid;
 
@@ -421,7 +433,8 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         symbol
     };
 
-    vwapCache.set(symbol, { data: vwapData, expires: Date.now() + VWAP_CACHE_TTL });
+    // Store frozen for the rest of this UTC day
+    vwapDayCache.set(cacheKey, { data: vwapData, day: currentDay });
     return vwapData;
 }
 
