@@ -7,7 +7,7 @@ import { VwapData, OHLCV as TypesOHLCV } from '../types';
 import { executeIndicatorScript, OHLCV } from '../services/scriptEngine';
 import {
     calculatePDMetrics, classifyDay, calculateLiquidityZones,
-    analyzeIntraday, runScenarioEngine, TmaState
+    analyzeIntraday, runScenarioEngine, TmaState, calculateATR
 } from '../services/tmaService';
 import { TmaPanel } from './TmaPanel';
 import {
@@ -162,33 +162,65 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                     const yesterday = dailyKlines[dailyKlines.length - 2];
                     const metrics = calculatePDMetrics(yesterday);
                     const classification = classifyDay(metrics);
-                    const zones = calculateLiquidityZones(metrics, data[data.length - 1].close);
+
+                    // Calculate ATR for zone sizing
+                    const atr = calculateATR(data, 14);
+                    const zones = calculateLiquidityZones(metrics, data[data.length - 1].close, atr);
 
                     // Filter for today's 15m klines from data if interval is 15m
                     const today15m = interval === '15m' ? data : [];
-                    const currentDetection = analyzeIntraday(metrics, today15m);
-                    const probabilities = runScenarioEngine(metrics, currentDetection, today15m);
+                    const detectionResult = analyzeIntraday(metrics, today15m);
+                    const probabilities = runScenarioEngine(metrics, detectionResult, today15m);
 
                     let bias: TmaState['current']['bias'] = 'Neutral';
-                    if (probabilities.reversal > 50) bias = currentDetection.mss === 'Long' ? 'Reversal Long' : 'Reversal Short';
-                    else if (probabilities.continuation > 50) bias = currentDetection.acceptance === 'Above PDH' ? 'Bullish' : 'Bearish';
+                    if (probabilities.reversal > 50) bias = detectionResult.mss === 'Long' ? 'Reversal Long' : 'Reversal Short';
+                    else if (probabilities.continuation > 50) bias = detectionResult.acceptance === 'Above PDH' ? 'Bullish' : 'Bearish';
                     else if (probabilities.range > 50) bias = 'Neutral';
 
                     const newState: TmaState = {
-                        metrics, classification, zones,
+                        metrics,
+                        classification,
+                        zones,
+                        liquidityTaken: detectionResult.liquidityTaken,
                         current: {
-                            ...currentDetection,
+                            ...detectionResult,
                             bias,
                             confidence: Math.max(probabilities.reversal, probabilities.continuation, probabilities.range)
-                        } as any,
+                        },
                         probabilities
                     };
                     setTmaState(newState);
 
+                    // Update TMA markers (Sweeps & MSS)
+                    if (candlestickSeriesRef.current && today15m.length > 0) {
+                        const markers: any[] = [];
+                        today15m.forEach((k, i) => {
+                            // Buy side sweep
+                            if (k.high > metrics.pdh && k.close < metrics.pdh) {
+                                markers.push({ time: k.time as any, position: 'aboveBar', color: '#ef4444', shape: 'arrowDown', text: '🔥 PDH SWEEP' });
+                            }
+                            // Sell side sweep
+                            if (k.low < metrics.pdl && k.close > metrics.pdl) {
+                                markers.push({ time: k.time as any, position: 'belowBar', color: '#22c55e', shape: 'arrowUp', text: '🧲 PDL SWEEP' });
+                            }
+                        });
+
+                        // Add MSS markers
+                        if (detectionResult.mss) {
+                            markers.push({
+                                time: data[data.length - 1].time as any,
+                                position: detectionResult.mss === 'Long' ? 'belowBar' : 'aboveBar',
+                                color: '#a855f7',
+                                shape: 'circle',
+                                text: `MSS ${detectionResult.mss === 'Long' ? 'UP' : 'DOWN'}`
+                            });
+                        }
+                        candlestickSeriesRef.current.setMarkers(markers);
+                    }
+
                     // Update TMA visual series
                     if (showTma && pdhSeriesRef.current && pdlSeriesRef.current) {
-                        const tmaData = data.map(d => ({ time: d.time as any, value: metrics.pdh }));
-                        pdhSeriesRef.current.setData(tmaData);
+                        pdhSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: metrics.pdh })));
                         pdlSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: metrics.pdl })));
                         pdoSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: metrics.pdo })));
                         pdcSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: metrics.pdc })));
@@ -426,6 +458,30 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                         </div>
                     )}
                     <div ref={chartContainerRef} className="w-full h-full" />
+
+                    {/* Market State Pill Overlay */}
+                    {showTma && tmaState && (
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 pointer-events-none">
+                            <div className={`px-4 py-1.5 rounded-full border shadow-2xl backdrop-blur-md flex items-center gap-3 ${tmaState.current.state === 'ACCEPT ABOVE' || tmaState.current.state === 'ACCEPT BELOW' ? 'bg-red-500/20 border-red-500/40' :
+                                    tmaState.current.state === 'SWEEPING LIQUIDITY' ? 'bg-amber-500/20 border-amber-500/40' :
+                                        'bg-blue-500/20 border-blue-500/40'
+                                }`}>
+                                <div className={`w-2 h-2 rounded-full animate-pulse ${tmaState.current.state === 'ACCEPT ABOVE' || tmaState.current.state === 'ACCEPT BELOW' ? 'bg-red-500' :
+                                        tmaState.current.state === 'SWEEPING LIQUIDITY' ? 'bg-amber-500' :
+                                            'bg-blue-500'
+                                    }`} />
+                                <span className="text-[11px] font-black text-white tracking-[0.2em] uppercase">
+                                    {tmaState.current.state}
+                                </span>
+                            </div>
+                            {tmaState.current.mss && (
+                                <div className="px-3 py-1 rounded-lg bg-purple-500/20 border border-purple-500/40 flex items-center gap-2">
+                                    <Zap className="w-3 h-3 text-purple-400" />
+                                    <span className="text-[9px] font-black text-purple-400 tracking-wider">STRUCTURE SHIFT: {tmaState.current.mss}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {showTma && (
