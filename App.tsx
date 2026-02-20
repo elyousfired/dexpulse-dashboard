@@ -1,7 +1,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { CexTicker, VwapData, WatchlistTrade } from './types';
-import { fetchCexTickers, initCexWebSocket, fetchWeeklyVwapData } from './services/cexService';
+import { fetchCexTickers, initCexWebSocket, fetchWeeklyVwapData, fetchBinanceKlines } from './services/cexService';
+import { buildVwapMetrics, classifyVwapTrend, analyzeVwapIntraday, runVwapScenarioEngine, VwapArchState } from './services/vwapArchService';
+import { VwapArchPanel } from './components/VwapArchPanel';
 import { DashboardHeader } from './components/DashboardHeader';
 import { CexGrid } from './components/CexGrid';
 import { CexDetailPanel } from './components/CexDetailPanel';
@@ -18,6 +20,86 @@ import { VwapMultiTF } from './components/VwapMultiTF';
 import { VwapAnchorBot } from './components/VwapAnchorBot';
 import { EcosystemGrid } from './components/EcosystemGrid';
 import { TokenChart } from './components/TokenChart';
+
+// ─── VWAP Architecture View (Chart + VWAP Indicator) ──────
+const VwapArchView: React.FC<{
+  selectedCexTicker: CexTicker | null;
+  vwapArchState: VwapArchState | null;
+  vwapArchLoading: boolean;
+  setVwapArchState: (s: VwapArchState | null) => void;
+  setVwapArchLoading: (b: boolean) => void;
+}> = ({ selectedCexTicker, vwapArchState, vwapArchLoading, setVwapArchState, setVwapArchLoading }) => {
+  const sym = selectedCexTicker?.symbol || 'BTC';
+  const addr = selectedCexTicker?.id || 'BTCUSDT';
+
+  useEffect(() => {
+    let cancelled = false;
+    const compute = async () => {
+      setVwapArchLoading(true);
+      try {
+        const [weekly, klines15m] = await Promise.all([
+          fetchWeeklyVwapData(addr.replace('USDT', '') + 'USDT' === addr ? addr : addr),
+          fetchBinanceKlines(addr, '15m')
+        ]);
+        if (cancelled || !weekly) return;
+
+        const vwapMetrics = buildVwapMetrics(weekly);
+        const vwapTrend = classifyVwapTrend(vwapMetrics);
+        const vwapDetection = analyzeVwapIntraday(vwapMetrics, klines15m);
+        const vwapProbs = runVwapScenarioEngine(vwapMetrics, vwapDetection, klines15m);
+
+        let vwapBias: VwapArchState['current']['bias'] = 'Neutral';
+        if (vwapProbs.reversal > 50) vwapBias = vwapDetection.mss === 'Long' ? 'Reversal Long' : 'Reversal Short';
+        else if (vwapProbs.continuation > 50) vwapBias = vwapDetection.acceptance === 'Above W-Max' ? 'Bullish' : 'Bearish';
+
+        setVwapArchState({
+          metrics: vwapMetrics,
+          trend: vwapTrend,
+          liquidityTaken: vwapDetection.liquidityTaken,
+          current: {
+            ...vwapDetection,
+            bias: vwapBias,
+            confidence: Math.max(vwapProbs.reversal, vwapProbs.continuation, vwapProbs.range)
+          },
+          probabilities: vwapProbs
+        });
+      } catch (e) {
+        console.error('VWAP Arch error:', e);
+      } finally {
+        if (!cancelled) setVwapArchLoading(false);
+      }
+    };
+    compute();
+    const interval = setInterval(compute, 60000); // refresh every minute
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [addr]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Market Architecture</h2>
+          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Deep Structural Analysis & PD Liquidity Engine</p>
+        </div>
+        <div className="flex bg-[#12141c] rounded-xl p-1 border border-gray-800">
+          <span className="px-4 py-1.5 text-xs font-black text-indigo-400 uppercase tracking-widest">Active Ticker: {sym}</span>
+        </div>
+      </div>
+      <div className="h-[750px] relative">
+        <TokenChart
+          address={addr}
+          symbol={sym}
+          isCex={true}
+          activeView="price"
+        />
+      </div>
+      {/* VWAP Architecture Indicator (Always Visible) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <VwapArchPanel symbol={sym} state={vwapArchState} isLoading={vwapArchLoading} />
+      </div>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   // ─── CEX State (Primary) ────────────────────────
@@ -36,6 +118,10 @@ const App: React.FC = () => {
   const [vwapStore, setVwapStore] = useState<Record<string, VwapData>>({});
   const [firstSeenTimes, setFirstSeenTimes] = useState<Record<string, number>>({});
   const [vwapLoading, setVwapLoading] = useState(false);
+
+  // ─── VWAP Architecture State ────────────────────
+  const [vwapArchState, setVwapArchState] = useState<VwapArchState | null>(null);
+  const [vwapArchLoading, setVwapArchLoading] = useState(false);
 
   // ─── Initial Data Fetch ─────────────────────────
   const loadCexData = useCallback(async () => {
@@ -217,25 +303,13 @@ const App: React.FC = () => {
           ) : activeView === 'ecosystems' ? (
             <EcosystemGrid tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />
           ) : activeView === 'tma' ? (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Market Architecture</h2>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Deep Structural Analysis & PD Liquidity Engine</p>
-                </div>
-                <div className="flex bg-[#12141c] rounded-xl p-1 border border-gray-800">
-                  <span className="px-4 py-1.5 text-xs font-black text-indigo-400 uppercase tracking-widest">Active Ticker: {selectedCexTicker?.symbol || 'BTC'}</span>
-                </div>
-              </div>
-              <div className="h-[750px] relative">
-                <TokenChart
-                  address={selectedCexTicker?.id || 'BTCUSDT'}
-                  symbol={selectedCexTicker?.symbol || 'BTC'}
-                  isCex={true}
-                  activeView="price"
-                />
-              </div>
-            </div>
+            <VwapArchView
+              selectedCexTicker={selectedCexTicker}
+              vwapArchState={vwapArchState}
+              vwapArchLoading={vwapArchLoading}
+              setVwapArchState={setVwapArchState}
+              setVwapArchLoading={setVwapArchLoading}
+            />
           ) : (
             <WatchlistPanel
               trades={watchlist}
