@@ -2,8 +2,39 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CexTicker, VwapData } from '../types';
 import { fetchWeeklyVwapData, formatPrice } from '../services/cexService';
-import { Brain, Star, TrendingUp, Info, ArrowRight, Zap, Trophy, ShieldCheck, Bell, Settings, Send, CheckCircle, XCircle, Volume2, VolumeX, Timer, Filter } from 'lucide-react';
+import { Brain, Star, TrendingUp, TrendingDown, Info, ArrowRight, Zap, Trophy, ShieldCheck, Bell, Settings, Send, CheckCircle, XCircle, Volume2, VolumeX, Timer, Filter, BarChart3, Target } from 'lucide-react';
 import { sendGoldenSignalAlert, wasAlertedToday, loadTelegramConfig, saveTelegramConfig, sendTestAlert, TelegramConfig } from '../services/telegramService';
+
+// ─── Golden Signal Tracker Types ───────────────
+interface TrackedGolden {
+    symbol: string;
+    entryPrice: number;
+    signalTime: number;
+    maxPrice: number;
+    maxGainPct: number;
+    lastPrice: number;
+    stillActive: boolean;
+}
+
+const GOLDEN_TRACKER_KEY = 'dexpulse_golden_tracker';
+const TRACKER_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function loadTrackedGoldens(): TrackedGolden[] {
+    try {
+        const raw = localStorage.getItem(GOLDEN_TRACKER_KEY);
+        if (!raw) return [];
+        const data: TrackedGolden[] = JSON.parse(raw);
+        // Auto-expire entries older than 24h
+        const now = Date.now();
+        return data.filter(t => now - t.signalTime < TRACKER_EXPIRY_MS);
+    } catch { return []; }
+}
+
+function saveTrackedGoldens(data: TrackedGolden[]) {
+    const now = Date.now();
+    const filtered = data.filter(t => now - t.signalTime < TRACKER_EXPIRY_MS);
+    localStorage.setItem(GOLDEN_TRACKER_KEY, JSON.stringify(filtered));
+}
 
 interface DecisionBuyAiProps {
     tickers: CexTicker[];
@@ -44,6 +75,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
     const exitAlertedRef = useRef<Set<string>>(new Set());
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [currentTime, setCurrentTime] = useState(Date.now());
+    const [trackedGoldens, setTrackedGoldens] = useState<TrackedGolden[]>(loadTrackedGoldens);
 
     const playAlarm = () => {
         if (!audioEnabled || !audioRef.current) return;
@@ -214,6 +246,58 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
 
         if (sent > 0) setAlertCount(prev => prev + sent);
     }, [signals, tgConfig.enabled, audioEnabled]);
+
+    // ─── Golden Signal Tracker: record + update ───
+    useEffect(() => {
+        const goldenSignals = signals.filter(s => s.type === 'GOLDEN');
+        const goldenSymbols = new Set(goldenSignals.map(s => s.ticker.symbol));
+
+        setTrackedGoldens(prev => {
+            let updated = [...prev];
+
+            // 1. Add new golden signals not yet tracked
+            goldenSignals.forEach(sig => {
+                const existing = updated.find(t => t.symbol === sig.ticker.symbol);
+                if (!existing) {
+                    updated.push({
+                        symbol: sig.ticker.symbol,
+                        entryPrice: sig.ticker.priceUsd,
+                        signalTime: sig.activeSince || Date.now(),
+                        maxPrice: sig.ticker.priceUsd,
+                        maxGainPct: 0,
+                        lastPrice: sig.ticker.priceUsd,
+                        stillActive: true
+                    });
+                }
+            });
+
+            // 2. Update all tracked entries with current prices
+            updated = updated.map(t => {
+                const ticker = tickers.find(tk => tk.symbol === t.symbol);
+                if (!ticker) return t;
+
+                const currentPrice = ticker.priceUsd;
+                const pnl = ((currentPrice - t.entryPrice) / t.entryPrice) * 100;
+                const newMax = Math.max(t.maxPrice, currentPrice);
+                const newMaxGain = Math.max(t.maxGainPct, pnl);
+
+                return {
+                    ...t,
+                    lastPrice: currentPrice,
+                    maxPrice: newMax,
+                    maxGainPct: newMaxGain,
+                    stillActive: goldenSymbols.has(t.symbol)
+                };
+            });
+
+            // 3. Filter expired (>24h)
+            const now = Date.now();
+            updated = updated.filter(t => now - t.signalTime < TRACKER_EXPIRY_MS);
+
+            saveTrackedGoldens(updated);
+            return updated;
+        });
+    }, [signals, tickers]);
 
     const handleSaveConfig = (config: TelegramConfig) => {
         saveTelegramConfig(config);
@@ -437,6 +521,103 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     </div>
                 )}
             </div>
+
+            {/* ─── Golden Signal Performance Tracker ─── */}
+            {trackedGoldens.length > 0 && (
+                <div className="border-t border-amber-500/20 bg-gradient-to-b from-amber-900/5 to-transparent">
+                    <div className="p-5 pb-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                                <Target className="w-5 h-5 text-amber-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-black text-white uppercase tracking-tighter">Golden Signal Tracker</h3>
+                                <p className="text-[9px] text-amber-400/50 font-bold uppercase tracking-widest">24H Performance • {trackedGoldens.length} Tracked</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="text-right">
+                                <div className="text-[9px] font-black text-gray-600 uppercase">Avg P&L</div>
+                                {(() => {
+                                    const avgPnl = trackedGoldens.reduce((s, t) => s + ((t.lastPrice - t.entryPrice) / t.entryPrice) * 100, 0) / trackedGoldens.length;
+                                    return <span className={`text-sm font-black ${avgPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{avgPnl >= 0 ? '+' : ''}{avgPnl.toFixed(2)}%</span>;
+                                })()}
+                            </div>
+                            <div className="text-right">
+                                <div className="text-[9px] font-black text-gray-600 uppercase">Win Rate</div>
+                                <span className="text-sm font-black text-amber-400">
+                                    {((trackedGoldens.filter(t => t.lastPrice > t.entryPrice).length / trackedGoldens.length) * 100).toFixed(0)}%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="px-4 pb-4 space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+                        {[...trackedGoldens]
+                            .sort((a, b) => {
+                                const pnlA = ((a.lastPrice - a.entryPrice) / a.entryPrice) * 100;
+                                const pnlB = ((b.lastPrice - b.entryPrice) / b.entryPrice) * 100;
+                                return pnlB - pnlA;
+                            })
+                            .map(t => {
+                                const pnl = ((t.lastPrice - t.entryPrice) / t.entryPrice) * 100;
+                                const elapsed = currentTime - t.signalTime;
+                                const hoursAgo = Math.floor(elapsed / 3600000);
+                                const minsAgo = Math.floor((elapsed % 3600000) / 60000);
+                                const isPositive = pnl >= 0;
+                                return (
+                                    <div key={t.symbol} className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${t.stillActive
+                                            ? 'bg-amber-500/5 border-amber-500/15 hover:border-amber-500/30'
+                                            : 'bg-gray-800/30 border-gray-800 opacity-70'
+                                        }`}>
+                                        {/* Symbol */}
+                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm ${t.stillActive ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-400'
+                                            }`}>
+                                            {t.symbol[0]}
+                                        </div>
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-black text-white uppercase tracking-tight">{t.symbol}</span>
+                                                {t.stillActive ? (
+                                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-emerald-500/20 text-emerald-400 uppercase">Active</span>
+                                                ) : (
+                                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-gray-600/30 text-gray-500 uppercase">Expired</span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-3 mt-0.5">
+                                                <span className="text-[9px] text-gray-500 font-bold">Entry: ${formatPrice(t.entryPrice)}</span>
+                                                <span className="text-[9px] text-gray-500 font-bold">Now: ${formatPrice(t.lastPrice)}</span>
+                                                <span className="text-[9px] text-gray-600 font-bold">{hoursAgo}h {minsAgo}m ago</span>
+                                            </div>
+                                        </div>
+                                        {/* P&L */}
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-right">
+                                                <div className="text-[8px] font-black text-gray-600 uppercase">P&L</div>
+                                                <div className={`text-base font-black flex items-center gap-1 ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                    {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                                    {isPositive ? '+' : ''}{pnl.toFixed(2)}%
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-[8px] font-black text-gray-600 uppercase">Max</div>
+                                                <div className="text-sm font-black text-amber-400">+{t.maxGainPct.toFixed(2)}%</div>
+                                            </div>
+                                            {/* Visual bar */}
+                                            <div className="w-16 h-6 bg-black/40 rounded-md overflow-hidden relative">
+                                                <div
+                                                    className={`absolute left-0 top-0 h-full rounded-md transition-all duration-500 ${isPositive ? 'bg-emerald-500/40' : 'bg-rose-500/40'}`}
+                                                    style={{ width: `${Math.min(100, Math.abs(pnl) * 10)}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        }
+                    </div>
+                </div>
+            )}
 
             {/* Footer Notice */}
             <div className="p-4 bg-purple-900/5 border-t border-purple-500/10 flex items-center gap-3">
