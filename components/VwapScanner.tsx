@@ -25,29 +25,46 @@ export const VwapScanner: React.FC<VwapScannerProps> = ({ tickers, onTickerClick
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
-    // Initial load of weekly structural data
+    // Initial load of weekly structural data (rate-limit safe)
     useEffect(() => {
+        let cancelled = false;
         const loadVwapData = async () => {
             setIsLoading(true);
             const results: Record<string, VwapData> = {};
 
-            // Limit to top symbols for performance
-            const targetSymbols = tickers.slice(0, 120);
+            // Top 80 by volume to limit API calls
+            const targetSymbols = tickers.filter(t => t.volume24h > 500000).slice(0, 80);
 
-            const CHUNK_SIZE = 15;
+            const CHUNK_SIZE = 5;
+            const DELAY_MS = 600; // Avoid Binance rate limits
+
             for (let i = 0; i < targetSymbols.length; i += CHUNK_SIZE) {
+                if (cancelled) break;
                 const chunk = targetSymbols.slice(i, i + CHUNK_SIZE);
                 await Promise.all(chunk.map(async (t) => {
-                    const data = await fetchWeeklyVwapData(t.symbol);
-                    if (data) results[t.id] = data;
+                    try {
+                        const data = await fetchWeeklyVwapData(t.symbol);
+                        if (data) results[t.id] = data;
+                    } catch { /* skip failed */ }
                 }));
+
+                // Show results incrementally as they load
+                if (!cancelled) setVwapStore({ ...results });
+
+                // Rate-limit delay between chunks
+                if (i + CHUNK_SIZE < targetSymbols.length) {
+                    await new Promise(r => setTimeout(r, DELAY_MS));
+                }
             }
 
-            setVwapStore(results);
-            setIsLoading(false);
+            if (!cancelled) {
+                setVwapStore(results);
+                setIsLoading(false);
+            }
         };
 
-        loadVwapData();
+        if (tickers.length > 0) loadVwapData();
+        return () => { cancelled = true; };
     }, [tickers.length > 0]); // Reload only if ticker list changes significantly
 
     // Compute scanner results with 4-level logic

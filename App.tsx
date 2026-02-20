@@ -166,33 +166,50 @@ const App: React.FC = () => {
   useEffect(() => {
     if (activeView !== 'decision' && activeView !== 'anchoredVWAP' && activeView !== 'ecosystems') return;
 
-    const mainTickers = cexTickers.filter(t => t.volume24h > 1000000).slice(0, 150);
+    let cancelled = false;
+    const mainTickers = cexTickers.filter(t => t.volume24h > 500000).slice(0, 80);
 
     const fetchSignals = async () => {
       setVwapLoading(true);
       const newVwapStore: Record<string, VwapData> = { ...vwapStore };
       const newFirstSeen: Record<string, number> = { ...firstSeenTimes };
 
-      for (const t of mainTickers) {
-        try {
-          const data = await fetchWeeklyVwapData(t.symbol);
-          if (data) {
-            newVwapStore[t.id] = data;
-            if (!newFirstSeen[t.id]) {
-              newFirstSeen[t.id] = Date.now();
+      const CHUNK_SIZE = 5;
+      const DELAY_MS = 600;
+
+      for (let i = 0; i < mainTickers.length; i += CHUNK_SIZE) {
+        if (cancelled) break;
+        const chunk = mainTickers.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map(async (t) => {
+          try {
+            const data = await fetchWeeklyVwapData(t.symbol);
+            if (data) {
+              newVwapStore[t.id] = data;
+              if (!newFirstSeen[t.id]) {
+                newFirstSeen[t.id] = Date.now();
+              }
             }
-          }
-        } catch (e) { }
+          } catch (e) { }
+        }));
+
+        // Incremental update so signals appear as they load
+        if (!cancelled) {
+          setVwapStore({ ...newVwapStore });
+          setFirstSeenTimes({ ...newFirstSeen });
+        }
+
+        // Rate-limit delay
+        if (i + CHUNK_SIZE < mainTickers.length) {
+          await new Promise(r => setTimeout(r, DELAY_MS));
+        }
       }
 
-      setVwapStore(newVwapStore);
-      setFirstSeenTimes(newFirstSeen);
-      setVwapLoading(false);
+      if (!cancelled) setVwapLoading(false);
     };
 
     fetchSignals();
-    const signalInterval = setInterval(fetchSignals, 60000);
-    return () => clearInterval(signalInterval);
+    const signalInterval = setInterval(fetchSignals, 120000); // Poll every 2 min instead of 1
+    return () => { cancelled = true; clearInterval(signalInterval); };
   }, [cexTickers, activeView]);
 
   // ─── Watchlist Handlers ─────────────────────────
