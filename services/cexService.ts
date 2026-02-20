@@ -1,6 +1,6 @@
 import { CexTicker, VwapData, OHLCV } from '../types';
-// Binance Public API
-const BINANCE_REST_API = 'https://api.binance.com/api/v3/ticker/24hr';
+// Binance Public API (data-api.binance.vision for global access, no geo-block)
+const BINANCE_REST_API = 'https://data-api.binance.vision/api/v3/ticker/24hr';
 const BINANCE_WS_URL = 'wss://stream.binance.com:9443/ws/!ticker@arr';
 
 // KuCoin Public API (Fallback/Alternative)
@@ -316,7 +316,7 @@ export async function fetchBinanceKlines(
 
     const binanceInterval = intervalMap[interval] || interval;
     const pair = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
-    const url = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${binanceInterval}&limit=${limit}`;
+    const url = `https://data-api.binance.vision/api/v3/klines?symbol=${pair}&interval=${binanceInterval}&limit=${limit}`;
 
     try {
         const res = await fetch(url);
