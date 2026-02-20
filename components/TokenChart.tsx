@@ -26,6 +26,7 @@ interface TokenChartProps {
     customScript?: string | null;
     activeView?: 'price' | 'flow' | 'vwap_weekly';
     onDivergenceDetected?: (type: 'absorption' | 'trend' | 'none') => void;
+    hideTmaPanel?: boolean;
 }
 
 const INTERVALS = [
@@ -38,7 +39,7 @@ const INTERVALS = [
 ];
 
 export const TokenChart: React.FC<TokenChartProps> = ({
-    address, symbol, isCex = true, customScript, activeView = 'price', onDivergenceDetected
+    address, symbol, isCex = true, customScript, activeView = 'price', onDivergenceDetected, hideTmaPanel = false
 }) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -69,7 +70,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
     const [showVolume, setShowVolume] = useState(false);
     const [showVolumeCurve, setShowVolumeCurve] = useState(false);
     const [showWeeklyVwap, setShowWeeklyVwap] = useState(true);
-    const [showTma, setShowTma] = useState(true);
+    const [showTma, setShowTma] = useState(!hideTmaPanel);
     const [tmaState, setTmaState] = useState<TmaState | null>(null);
     const [vwapArchState, setVwapArchState] = useState<VwapArchState | null>(null);
     const [loading, setLoading] = useState(false);
@@ -469,7 +470,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                     <div className="flex items-center gap-2">
                         <IndicatorToggle active={showWeeklyVwap} onClick={() => setShowWeeklyVwap(!showWeeklyVwap)} icon={Layers} label="VWAP WEEKLY" color="text-emerald-400" />
                         <IndicatorToggle active={showVwap} onClick={() => setShowVwap(!showVwap)} icon={Zap} label="VWAP" color="text-blue-500" />
-                        <IndicatorToggle active={showTma} onClick={() => setShowTma(!showTma)} icon={LayoutTemplate} label="ARCHITECTURE (TMA)" color="text-indigo-400" />
+                        {!hideTmaPanel && <IndicatorToggle active={showTma} onClick={() => setShowTma(!showTma)} icon={LayoutTemplate} label="ARCHITECTURE (TMA)" color="text-indigo-400" />}
                         <IndicatorToggle active={showVolume} onClick={() => setShowVolume(!showVolume)} icon={BarChart2} label="VOL" color="text-gray-400" />
                         <IndicatorToggle active={showVolumeCurve} onClick={() => setShowVolumeCurve(!showVolumeCurve)} icon={TrendingUp} label="VOL-AVG" color="text-amber-500" />
                     </div>

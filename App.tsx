@@ -91,6 +91,7 @@ const VwapArchView: React.FC<{
           symbol={sym}
           isCex={true}
           activeView="price"
+          hideTmaPanel={true}
         />
       </div>
       {/* VWAP Architecture Indicator (Always Visible) */}
