@@ -167,7 +167,7 @@ const App: React.FC = () => {
     if (activeView !== 'decision' && activeView !== 'anchoredVWAP' && activeView !== 'ecosystems') return;
 
     let cancelled = false;
-    const mainTickers = cexTickers.filter(t => t.volume24h > 500000).slice(0, 80);
+    const mainTickers = cexTickers.filter(t => t.volume24h > 500000).slice(0, 150);
 
     const fetchSignals = async () => {
       setVwapLoading(true);

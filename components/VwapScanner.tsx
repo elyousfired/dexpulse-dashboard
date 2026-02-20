@@ -32,8 +32,8 @@ export const VwapScanner: React.FC<VwapScannerProps> = ({ tickers, onTickerClick
             setIsLoading(true);
             const results: Record<string, VwapData> = {};
 
-            // Top 80 by volume to limit API calls
-            const targetSymbols = tickers.filter(t => t.volume24h > 500000).slice(0, 80);
+            // Top 120 by volume
+            const targetSymbols = tickers.filter(t => t.volume24h > 500000).slice(0, 120);
 
             const CHUNK_SIZE = 5;
             const DELAY_MS = 600; // Avoid Binance rate limits
