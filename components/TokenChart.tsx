@@ -111,8 +111,8 @@ export const TokenChart: React.FC<TokenChartProps> = ({
         vwapSeriesRef.current = chart.addLineSeries({ color: '#3b82f6', lineWidth: 2, priceLineVisible: false, title: 'VWAP (1D)' });
         volumeCurveSeriesRef.current = chart.addLineSeries({ color: '#f59e0b', lineWidth: 1, priceLineVisible: false, priceScaleId: '', title: 'Vol Curve' });
 
-        weeklyMaxSeriesRef.current = chart.addLineSeries({ color: '#10b981', lineWidth: 2, lineStyle: LineStyle.Dashed, priceLineVisible: true, title: 'WEEKLY MAX' });
-        weeklyMinSeriesRef.current = chart.addLineSeries({ color: '#f43f5e', lineWidth: 2, lineStyle: LineStyle.Dashed, priceLineVisible: true, title: 'WEEKLY MIN' });
+        weeklyMaxSeriesRef.current = chart.addLineSeries({ color: '#10b981', lineWidth: 2, lineStyle: LineStyle.Dashed, priceLineVisible: true, title: 'W_RANGE_TOP' });
+        weeklyMinSeriesRef.current = chart.addLineSeries({ color: '#f43f5e', lineWidth: 2, lineStyle: LineStyle.Dashed, priceLineVisible: true, title: 'W_RANGE_BOT' });
 
         customSeriesRef.current = chart.addLineSeries({ color: '#a855f7', lineWidth: 2, priceLineVisible: false, title: 'Indicator' });
         netFlowSeriesRef.current = chart.addHistogramSeries({ color: '#22c55e', priceFormat: { type: 'volume' }, title: 'Net Flow' });
@@ -139,14 +139,22 @@ export const TokenChart: React.FC<TokenChartProps> = ({
             priceLineVisible: false
         });
 
-        // VWAP Fibonacci TP Lines
+        // VWAP Fibonacci Lines (inner range + extensions)
         const fibLevels = [
-            { label: 'TP3↑ (200%)', color: 'rgba(168,85,247,0.7)', style: LineStyle.Dashed },
-            { label: 'TP2↑ (161.8%)', color: 'rgba(99,102,241,0.7)', style: LineStyle.Dashed },
-            { label: 'TP1↑ (127.2%)', color: 'rgba(6,182,212,0.8)', style: LineStyle.Dashed },
-            { label: 'TP1↓ (-27.2%)', color: 'rgba(6,182,212,0.8)', style: LineStyle.Dashed },
-            { label: 'TP2↓ (-61.8%)', color: 'rgba(99,102,241,0.7)', style: LineStyle.Dashed },
-            { label: 'TP3↓ (-100%)', color: 'rgba(168,85,247,0.7)', style: LineStyle.Dashed },
+            // Extensions above
+            { label: 'W_EXT_2.0', color: 'rgba(168,85,247,0.6)', style: LineStyle.Dashed },
+            { label: 'W_EXT_1.618', color: 'rgba(99,102,241,0.6)', style: LineStyle.Dashed },
+            { label: 'W_EXT_1.272', color: 'rgba(6,182,212,0.7)', style: LineStyle.Dashed },
+            // Inner range levels
+            { label: 'W_FIB_0.786', color: 'rgba(234,179,8,0.5)', style: LineStyle.Dotted },
+            { label: 'W_FIB_0.618', color: 'rgba(234,179,8,0.6)', style: LineStyle.Dotted },
+            { label: 'W_MID', color: 'rgba(255,255,255,0.5)', style: LineStyle.SparseDotted },
+            { label: 'W_FIB_0.382', color: 'rgba(234,179,8,0.6)', style: LineStyle.Dotted },
+            { label: 'W_FIB_0.236', color: 'rgba(234,179,8,0.5)', style: LineStyle.Dotted },
+            // Extensions below
+            { label: 'W_EXT_-0.272', color: 'rgba(6,182,212,0.7)', style: LineStyle.Dashed },
+            { label: 'W_EXT_-0.618', color: 'rgba(99,102,241,0.6)', style: LineStyle.Dashed },
+            { label: 'W_EXT_-1.0', color: 'rgba(168,85,247,0.6)', style: LineStyle.Dashed },
         ];
         vwapFibRefs.current = fibLevels.map(level =>
             chart.addLineSeries({ color: level.color, lineWidth: 1, lineStyle: level.style, priceLineVisible: false, title: level.label })
@@ -375,9 +383,13 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                             weeklyMaxSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: weekly.max })));
                             weeklyMinSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: weekly.min })));
 
-                            // VWAP Fibonacci TP Levels
+                            // VWAP Fibonacci Levels (inner + extensions)
                             const wRange = weekly.max - weekly.min;
-                            const fibRatios = [2.0, 1.618, 1.272, -0.272, -0.618, -1.0];
+                            const fibRatios = [
+                                2.0, 1.618, 1.272,           // extensions above
+                                0.786, 0.618, 0.5, 0.382, 0.236, // inner range
+                                -0.272, -0.618, -1.0          // extensions below
+                            ];
                             vwapFibRefs.current.forEach((series, i) => {
                                 const level = weekly.min + wRange * fibRatios[i];
                                 series.setData(data.map(d => ({ time: d.time as any, value: level })));
