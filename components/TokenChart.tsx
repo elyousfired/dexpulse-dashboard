@@ -70,7 +70,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
     const [showVolume, setShowVolume] = useState(false);
     const [showVolumeCurve, setShowVolumeCurve] = useState(false);
     const [showWeeklyVwap, setShowWeeklyVwap] = useState(true);
-    const [showTma, setShowTma] = useState(false);
+    const [showTma, setShowTma] = useState(true);
     const [tmaState, setTmaState] = useState<TmaState | null>(null);
     const [vwapArchState, setVwapArchState] = useState<VwapArchState | null>(null);
     const [loading, setLoading] = useState(false);
@@ -481,7 +481,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                     ))}
                 </div>
             </div>
-            <div className="flex-1 flex overflow-hidden group">
+            <div className="flex-1 flex flex-wrap xl:flex-nowrap overflow-hidden group">
                 <div className="flex-1 relative">
                     {loading && (
                         <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#0d0f14]/80 backdrop-blur-sm">
@@ -516,7 +516,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                 </div>
 
                 {showTma && (
-                    <div className="w-[380px] border-l border-gray-800 bg-[#06080c]/50 backdrop-blur-xl overflow-y-auto p-6 hidden xl:block">
+                    <div className="w-full xl:w-[380px] xl:border-l border-t xl:border-t-0 border-gray-800 bg-[#06080c]/50 backdrop-blur-xl overflow-y-auto p-6 max-h-[600px] xl:max-h-none">
                         <TmaPanel symbol={symbol} state={tmaState} isLoading={loading} />
                         <VwapArchPanel symbol={symbol} state={vwapArchState} isLoading={loading} />
                     </div>
