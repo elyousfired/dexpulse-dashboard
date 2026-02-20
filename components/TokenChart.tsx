@@ -14,7 +14,6 @@ import {
     runVwapScenarioEngine, VwapArchState
 } from '../services/vwapArchService';
 import { TmaPanel } from './TmaPanel';
-import { VwapArchPanel } from './VwapArchPanel';
 import {
     RefreshCcw, Activity, BarChart2, Zap, TrendingUp,
     Layers, Eye, EyeOff, LayoutTemplate
@@ -518,7 +517,6 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                 {showTma && (
                     <div className="w-full xl:w-[380px] xl:border-l border-t xl:border-t-0 border-gray-800 bg-[#06080c]/50 backdrop-blur-xl overflow-y-auto p-6 max-h-[600px] xl:max-h-none">
                         <TmaPanel symbol={symbol} state={tmaState} isLoading={loading} />
-                        <VwapArchPanel symbol={symbol} state={vwapArchState} isLoading={loading} />
                     </div>
                 )}
             </div>

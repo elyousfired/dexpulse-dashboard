@@ -1,14 +1,14 @@
 
 import React from 'react';
-import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, BookOpen, Users, Repeat, Newspaper, Layers, Bot, Compass } from 'lucide-react';
+import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, BookOpen, Users, Repeat, Newspaper, Layers, Bot, Compass, Waves } from 'lucide-react';
 
 interface DashboardHeaderProps {
     searchTerm: string;
     onSearchChange: (term: string) => void;
     isScanning: boolean;
     lastUpdated: Date;
-    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma';
-    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma') => void;
+    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch';
+    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch') => void;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -106,7 +106,14 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                         className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'tma' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <Compass className="w-3.5 h-3.5" />
-                        TMA ARCHITECTURE
+                        TMA
+                    </button>
+                    <button
+                        onClick={() => onViewChange('vwapArch')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'vwapArch' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Waves className="w-3.5 h-3.5" />
+                        VWAP ARCH
                     </button>
                 </div>
 

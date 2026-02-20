@@ -78,11 +78,11 @@ const VwapArchView: React.FC<{
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Market Architecture</h2>
-          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Deep Structural Analysis & PD Liquidity Engine</p>
+          <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">VWAP Architecture</h2>
+          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Weekly VWAP Structural Engine & Liquidity Sweep Detector</p>
         </div>
         <div className="flex bg-[#12141c] rounded-xl p-1 border border-gray-800">
-          <span className="px-4 py-1.5 text-xs font-black text-indigo-400 uppercase tracking-widest">Active Ticker: {sym}</span>
+          <span className="px-4 py-1.5 text-xs font-black text-cyan-400 uppercase tracking-widest">Active Ticker: {sym}</span>
         </div>
       </div>
       <div className="h-[750px] relative">
@@ -108,7 +108,7 @@ const App: React.FC = () => {
   const [selectedCexTicker, setSelectedCexTicker] = useState<CexTicker | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma'>('grid');
+  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch'>('grid');
   const [watchlist, setWatchlist] = useState<WatchlistTrade[]>(() => {
     const saved = localStorage.getItem('dex_cex_watchlist');
     return saved ? JSON.parse(saved) : [];
@@ -303,6 +303,26 @@ const App: React.FC = () => {
           ) : activeView === 'ecosystems' ? (
             <EcosystemGrid tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />
           ) : activeView === 'tma' ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Market Architecture</h2>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Deep Structural Analysis & PD Liquidity Engine</p>
+                </div>
+                <div className="flex bg-[#12141c] rounded-xl p-1 border border-gray-800">
+                  <span className="px-4 py-1.5 text-xs font-black text-indigo-400 uppercase tracking-widest">Active Ticker: {selectedCexTicker?.symbol || 'BTC'}</span>
+                </div>
+              </div>
+              <div className="h-[750px] relative">
+                <TokenChart
+                  address={selectedCexTicker?.id || 'BTCUSDT'}
+                  symbol={selectedCexTicker?.symbol || 'BTC'}
+                  isCex={true}
+                  activeView="price"
+                />
+              </div>
+            </div>
+          ) : activeView === 'vwapArch' ? (
             <VwapArchView
               selectedCexTicker={selectedCexTicker}
               vwapArchState={vwapArchState}
