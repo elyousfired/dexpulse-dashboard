@@ -65,6 +65,9 @@ export const TokenChart: React.FC<TokenChartProps> = ({
     const buyZoneSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
     const sellZoneSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
 
+    // VWAP Fibonacci TP Refs
+    const vwapFibRefs = useRef<ISeriesApi<"Line">[]>([]);
+
     const [interval, setInterval] = useState('15m');
     const [showVwap, setShowVwap] = useState(true);
     const [showVolume, setShowVolume] = useState(false);
@@ -135,6 +138,19 @@ export const TokenChart: React.FC<TokenChartProps> = ({
             lineVisible: false,
             priceLineVisible: false
         });
+
+        // VWAP Fibonacci TP Lines
+        const fibLevels = [
+            { label: 'TP3↑ (200%)', color: 'rgba(168,85,247,0.7)', style: LineStyle.Dashed },
+            { label: 'TP2↑ (161.8%)', color: 'rgba(99,102,241,0.7)', style: LineStyle.Dashed },
+            { label: 'TP1↑ (127.2%)', color: 'rgba(6,182,212,0.8)', style: LineStyle.Dashed },
+            { label: 'TP1↓ (-27.2%)', color: 'rgba(6,182,212,0.8)', style: LineStyle.Dashed },
+            { label: 'TP2↓ (-61.8%)', color: 'rgba(99,102,241,0.7)', style: LineStyle.Dashed },
+            { label: 'TP3↓ (-100%)', color: 'rgba(168,85,247,0.7)', style: LineStyle.Dashed },
+        ];
+        vwapFibRefs.current = fibLevels.map(level =>
+            chart.addLineSeries({ color: level.color, lineWidth: 1, lineStyle: level.style, priceLineVisible: false, title: level.label })
+        );
 
         volumeSeriesRef.current.priceScale().applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
         volumeCurveSeriesRef.current.priceScale().applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
@@ -359,6 +375,14 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                             weeklyMaxSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: weekly.max })));
                             weeklyMinSeriesRef.current.setData(data.map(d => ({ time: d.time as any, value: weekly.min })));
 
+                            // VWAP Fibonacci TP Levels
+                            const wRange = weekly.max - weekly.min;
+                            const fibRatios = [2.0, 1.618, 1.272, -0.272, -0.618, -1.0];
+                            vwapFibRefs.current.forEach((series, i) => {
+                                const level = weekly.min + wRange * fibRatios[i];
+                                series.setData(data.map(d => ({ time: d.time as any, value: level })));
+                            });
+
                             const last = data[data.length - 1];
                             let bg = '#0d0f14';
                             if (last) {
@@ -371,6 +395,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                         } else {
                             weeklyMaxSeriesRef.current.setData([]);
                             weeklyMinSeriesRef.current.setData([]);
+                            vwapFibRefs.current.forEach(s => s.setData([]));
                             chartRef.current.applyOptions({ layout: { background: { type: ColorType.Solid, color: '#0d0f14' } } });
                         }
                     }
