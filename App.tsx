@@ -164,7 +164,7 @@ const App: React.FC = () => {
 
   // ─── VWAP Signal Polling ────────────────────────
   useEffect(() => {
-    if (activeView !== 'decision' && activeView !== 'anchoredVWAP' && activeView !== 'ecosystems') return;
+    if (activeView !== 'decision' && activeView !== 'anchoredVWAP' && activeView !== 'ecosystems' && activeView !== 'vwapArch') return;
 
     let cancelled = false;
     const mainTickers = cexTickers.filter(t => t.volume24h > 500000).slice(0, 150);
