@@ -523,101 +523,132 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             </div>
 
             {/* ─── Golden Signal Performance Tracker ─── */}
-            {trackedGoldens.length > 0 && (
-                <div className="border-t border-amber-500/20 bg-gradient-to-b from-amber-900/5 to-transparent">
-                    <div className="p-5 pb-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/20">
-                                <Target className="w-5 h-5 text-amber-400" />
+            {trackedGoldens.length > 0 && (() => {
+                const winners = trackedGoldens.filter(t => ((t.lastPrice - t.entryPrice) / t.entryPrice) * 100 >= 0)
+                    .sort((a, b) => ((b.lastPrice - b.entryPrice) / b.entryPrice) - ((a.lastPrice - a.entryPrice) / a.entryPrice));
+                const losers = trackedGoldens.filter(t => ((t.lastPrice - t.entryPrice) / t.entryPrice) * 100 < 0)
+                    .sort((a, b) => ((a.lastPrice - a.entryPrice) / a.entryPrice) - ((b.lastPrice - b.entryPrice) / b.entryPrice));
+                const avgPnl = trackedGoldens.reduce((s, t) => s + ((t.lastPrice - t.entryPrice) / t.entryPrice) * 100, 0) / trackedGoldens.length;
+                const winRate = (winners.length / trackedGoldens.length) * 100;
+
+                const renderRow = (t: TrackedGolden) => {
+                    const pnl = ((t.lastPrice - t.entryPrice) / t.entryPrice) * 100;
+                    const elapsed = currentTime - t.signalTime;
+                    const hoursAgo = Math.floor(elapsed / 3600000);
+                    const minsAgo = Math.floor((elapsed % 3600000) / 60000);
+                    const isPositive = pnl >= 0;
+                    return (
+                        <div key={t.symbol} className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${t.stillActive
+                                ? isPositive ? 'bg-emerald-500/5 border-emerald-500/15 hover:border-emerald-500/30' : 'bg-rose-500/5 border-rose-500/15 hover:border-rose-500/30'
+                                : 'bg-gray-800/30 border-gray-800 opacity-60'
+                            }`}>
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm ${t.stillActive ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-400'
+                                }`}>
+                                {t.symbol[0]}
                             </div>
-                            <div>
-                                <h3 className="text-sm font-black text-white uppercase tracking-tighter">Golden Signal Tracker</h3>
-                                <p className="text-[9px] text-amber-400/50 font-bold uppercase tracking-widest">24H Performance • {trackedGoldens.length} Tracked</p>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-black text-white uppercase tracking-tight">{t.symbol}</span>
+                                    {t.stillActive ? (
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-emerald-500/20 text-emerald-400 uppercase">Active</span>
+                                    ) : (
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-gray-600/30 text-gray-500 uppercase">Expired</span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-3 mt-0.5">
+                                    <span className="text-[9px] text-gray-500 font-bold">Entry: ${formatPrice(t.entryPrice)}</span>
+                                    <span className="text-[9px] text-gray-500 font-bold">Now: ${formatPrice(t.lastPrice)}</span>
+                                    <span className="text-[9px] text-gray-600 font-bold">{hoursAgo}h {minsAgo}m ago</span>
+                                </div>
                             </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="text-right">
-                                <div className="text-[9px] font-black text-gray-600 uppercase">Avg P&L</div>
-                                {(() => {
-                                    const avgPnl = trackedGoldens.reduce((s, t) => s + ((t.lastPrice - t.entryPrice) / t.entryPrice) * 100, 0) / trackedGoldens.length;
-                                    return <span className={`text-sm font-black ${avgPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{avgPnl >= 0 ? '+' : ''}{avgPnl.toFixed(2)}%</span>;
-                                })()}
-                            </div>
-                            <div className="text-right">
-                                <div className="text-[9px] font-black text-gray-600 uppercase">Win Rate</div>
-                                <span className="text-sm font-black text-amber-400">
-                                    {((trackedGoldens.filter(t => t.lastPrice > t.entryPrice).length / trackedGoldens.length) * 100).toFixed(0)}%
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="px-4 pb-4 space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
-                        {[...trackedGoldens]
-                            .sort((a, b) => {
-                                const pnlA = ((a.lastPrice - a.entryPrice) / a.entryPrice) * 100;
-                                const pnlB = ((b.lastPrice - b.entryPrice) / b.entryPrice) * 100;
-                                return pnlB - pnlA;
-                            })
-                            .map(t => {
-                                const pnl = ((t.lastPrice - t.entryPrice) / t.entryPrice) * 100;
-                                const elapsed = currentTime - t.signalTime;
-                                const hoursAgo = Math.floor(elapsed / 3600000);
-                                const minsAgo = Math.floor((elapsed % 3600000) / 60000);
-                                const isPositive = pnl >= 0;
-                                return (
-                                    <div key={t.symbol} className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${t.stillActive
-                                            ? 'bg-amber-500/5 border-amber-500/15 hover:border-amber-500/30'
-                                            : 'bg-gray-800/30 border-gray-800 opacity-70'
-                                        }`}>
-                                        {/* Symbol */}
-                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm ${t.stillActive ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-400'
-                                            }`}>
-                                            {t.symbol[0]}
-                                        </div>
-                                        {/* Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm font-black text-white uppercase tracking-tight">{t.symbol}</span>
-                                                {t.stillActive ? (
-                                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-emerald-500/20 text-emerald-400 uppercase">Active</span>
-                                                ) : (
-                                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-gray-600/30 text-gray-500 uppercase">Expired</span>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-3 mt-0.5">
-                                                <span className="text-[9px] text-gray-500 font-bold">Entry: ${formatPrice(t.entryPrice)}</span>
-                                                <span className="text-[9px] text-gray-500 font-bold">Now: ${formatPrice(t.lastPrice)}</span>
-                                                <span className="text-[9px] text-gray-600 font-bold">{hoursAgo}h {minsAgo}m ago</span>
-                                            </div>
-                                        </div>
-                                        {/* P&L */}
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-right">
-                                                <div className="text-[8px] font-black text-gray-600 uppercase">P&L</div>
-                                                <div className={`text-base font-black flex items-center gap-1 ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                    {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                                    {isPositive ? '+' : ''}{pnl.toFixed(2)}%
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="text-[8px] font-black text-gray-600 uppercase">Max</div>
-                                                <div className="text-sm font-black text-amber-400">+{t.maxGainPct.toFixed(2)}%</div>
-                                            </div>
-                                            {/* Visual bar */}
-                                            <div className="w-16 h-6 bg-black/40 rounded-md overflow-hidden relative">
-                                                <div
-                                                    className={`absolute left-0 top-0 h-full rounded-md transition-all duration-500 ${isPositive ? 'bg-emerald-500/40' : 'bg-rose-500/40'}`}
-                                                    style={{ width: `${Math.min(100, Math.abs(pnl) * 10)}%` }}
-                                                />
-                                            </div>
-                                        </div>
+                            <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <div className="text-[8px] font-black text-gray-600 uppercase">P&L</div>
+                                    <div className={`text-base font-black flex items-center gap-1 ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                        {isPositive ? '+' : ''}{pnl.toFixed(2)}%
                                     </div>
-                                );
-                            })
-                        }
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-[8px] font-black text-gray-600 uppercase">Max</div>
+                                    <div className="text-sm font-black text-amber-400">+{t.maxGainPct.toFixed(2)}%</div>
+                                </div>
+                                <div className="w-16 h-6 bg-black/40 rounded-md overflow-hidden relative">
+                                    <div
+                                        className={`absolute left-0 top-0 h-full rounded-md transition-all duration-500 ${isPositive ? 'bg-emerald-500/40' : 'bg-rose-500/40'}`}
+                                        style={{ width: `${Math.min(100, Math.abs(pnl) * 10)}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    );
+                };
+
+                return (
+                    <div className="border-t border-amber-500/20">
+                        {/* Header */}
+                        <div className="p-5 pb-3 flex items-center justify-between bg-gradient-to-r from-amber-900/10 to-transparent">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                                    <Target className="w-5 h-5 text-amber-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black text-white uppercase tracking-tighter">Golden Signal Tracker — 24H</h3>
+                                    <p className="text-[9px] text-amber-400/50 font-bold uppercase tracking-widest">{trackedGoldens.length} Tokens Tracked • {winners.length} Winners • {losers.length} Losers</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="text-center px-3 py-1.5 bg-black/40 rounded-xl border border-gray-800">
+                                    <div className="text-[8px] font-black text-gray-600 uppercase">Avg P&L</div>
+                                    <span className={`text-sm font-black ${avgPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{avgPnl >= 0 ? '+' : ''}{avgPnl.toFixed(2)}%</span>
+                                </div>
+                                <div className="text-center px-3 py-1.5 bg-black/40 rounded-xl border border-gray-800">
+                                    <div className="text-[8px] font-black text-gray-600 uppercase">Win Rate</div>
+                                    <span className={`text-sm font-black ${winRate >= 50 ? 'text-emerald-400' : 'text-rose-400'}`}>{winRate.toFixed(0)}%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-0">
+                            {/* WINNERS Column */}
+                            <div className="border-r border-gray-800/50">
+                                <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500/5 border-b border-emerald-500/10">
+                                    <TrendingUp className="w-4 h-4 text-emerald-400" />
+                                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Winners ({winners.length})</span>
+                                    {winners.length > 0 && (
+                                        <span className="ml-auto text-[10px] font-black text-emerald-400">
+                                            +{(winners.reduce((s, t) => s + ((t.lastPrice - t.entryPrice) / t.entryPrice) * 100, 0) / winners.length).toFixed(2)}% avg
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="p-3 space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar">
+                                    {winners.length > 0 ? winners.map(renderRow) : (
+                                        <div className="flex items-center justify-center p-8 text-gray-600 italic text-xs">No winners yet</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* LOSERS Column */}
+                            <div>
+                                <div className="flex items-center gap-2 px-4 py-2.5 bg-rose-500/5 border-b border-rose-500/10">
+                                    <TrendingDown className="w-4 h-4 text-rose-400" />
+                                    <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Losers ({losers.length})</span>
+                                    {losers.length > 0 && (
+                                        <span className="ml-auto text-[10px] font-black text-rose-400">
+                                            {(losers.reduce((s, t) => s + ((t.lastPrice - t.entryPrice) / t.entryPrice) * 100, 0) / losers.length).toFixed(2)}% avg
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="p-3 space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar">
+                                    {losers.length > 0 ? losers.map(renderRow) : (
+                                        <div className="flex items-center justify-center p-8 text-gray-600 italic text-xs">No losers — all winning! 🎯</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Footer Notice */}
             <div className="p-4 bg-purple-900/5 border-t border-purple-500/10 flex items-center gap-3">
