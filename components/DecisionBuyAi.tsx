@@ -14,6 +14,7 @@ interface TrackedGolden {
     maxGainPct: number;
     lastPrice: number;
     stillActive: boolean;
+    history?: number[]; // Added for sparklines
 }
 
 const GOLDEN_TRACKER_KEY = 'dexpulse_golden_tracker';
@@ -266,7 +267,8 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                         maxPrice: sig.ticker.priceUsd,
                         maxGainPct: 0,
                         lastPrice: sig.ticker.priceUsd,
-                        stillActive: true
+                        stillActive: true,
+                        history: [sig.ticker.priceUsd]
                     });
                 }
             });
@@ -281,12 +283,18 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                 const newMax = Math.max(t.maxPrice, currentPrice);
                 const newMaxGain = Math.max(t.maxGainPct, pnl);
 
+                // Update history every 10 minutes (limit to 144 points for 24h)
+                const history = t.history || [t.entryPrice];
+                const lastPoint = history[history.length - 1];
+                const shouldAddPoint = history.length < 144 && (Date.now() - (t.signalTime + (history.length - 1) * 10 * 60 * 1000) > 10 * 60 * 1000);
+
                 return {
                     ...t,
                     lastPrice: currentPrice,
                     maxPrice: newMax,
                     maxGainPct: newMaxGain,
-                    stillActive: goldenSymbols.has(t.symbol)
+                    stillActive: goldenSymbols.has(t.symbol),
+                    history: shouldAddPoint ? [...history, currentPrice] : history
                 };
             });
 
@@ -537,47 +545,76 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     const hoursAgo = Math.floor(elapsed / 3600000);
                     const minsAgo = Math.floor((elapsed % 3600000) / 60000);
                     const isPositive = pnl >= 0;
+
+                    // Sparkline logic (normalized price path)
+                    const history = t.history || [t.entryPrice, t.lastPrice];
+                    const minPrice = Math.min(...history);
+                    const maxPrice = Math.max(...history);
+                    const range = (maxPrice - minPrice) || (t.entryPrice * 0.01);
+                    const points = history.map((p, i) => {
+                        const x = (i / Math.max(1, history.length - 1)) * 100;
+                        const y = 30 - ((p - minPrice) / range) * 25;
+                        return `${x},${y}`;
+                    }).join(' ');
+
                     return (
                         <div key={t.symbol} className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${t.stillActive
-                                ? isPositive ? 'bg-emerald-500/5 border-emerald-500/15 hover:border-emerald-500/30' : 'bg-rose-500/5 border-rose-500/15 hover:border-rose-500/30'
-                                : 'bg-gray-800/30 border-gray-800 opacity-60'
+                            ? isPositive ? 'bg-emerald-500/5 border-emerald-500/15 hover:border-emerald-500/30' : 'bg-rose-500/5 border-rose-500/15 hover:border-rose-500/30'
+                            : 'bg-gray-800/20 border-gray-800/40 opacity-70'
                             }`}>
-                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm ${t.stillActive ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-400'
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm shrink-0 ${t.stillActive ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-400'
                                 }`}>
                                 {t.symbol[0]}
                             </div>
+
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-black text-white uppercase tracking-tight">{t.symbol}</span>
-                                    {t.stillActive ? (
-                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-emerald-500/20 text-emerald-400 uppercase">Active</span>
-                                    ) : (
-                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-gray-600/30 text-gray-500 uppercase">Expired</span>
-                                    )}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-black text-white uppercase tracking-tight">{t.symbol}</span>
+                                        {t.stillActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                                    </div>
+                                    <span className="text-[8px] text-gray-600 font-bold uppercase">{hoursAgo}h {minsAgo}m ago</span>
                                 </div>
-                                <div className="flex items-center gap-3 mt-0.5">
-                                    <span className="text-[9px] text-gray-500 font-bold">Entry: ${formatPrice(t.entryPrice)}</span>
-                                    <span className="text-[9px] text-gray-500 font-bold">Now: ${formatPrice(t.lastPrice)}</span>
-                                    <span className="text-[9px] text-gray-600 font-bold">{hoursAgo}h {minsAgo}m ago</span>
+
+                                <div className="flex items-center gap-4 mt-1.5">
+                                    <div className="flex flex-col">
+                                        <span className="text-[8px] text-gray-600 font-black uppercase">Entry</span>
+                                        <span className="text-[10px] text-gray-400 font-mono">${formatPrice(t.entryPrice)}</span>
+                                    </div>
+                                    <div className="flex-1 h-[30px] relative px-2">
+                                        <svg width="100%" height="30" viewBox="0 0 100 30" preserveAspectRatio="none" className="overflow-visible">
+                                            <polyline
+                                                points={points}
+                                                fill="none"
+                                                stroke={isPositive ? '#10b981' : '#f43f5e'}
+                                                strokeWidth="1.5"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                className="opacity-40"
+                                            />
+                                            {/* Take Profit Target Line (+5%) */}
+                                            <line x1="0" y1="0" x2="100" y2="0" stroke="#10b981" strokeWidth="0.5" strokeDasharray="2,2" className="opacity-10" />
+                                            {/* Stop Loss Target Line (-2%) */}
+                                            <line x1="0" y1="28" x2="100" y2="28" stroke="#f43f5e" strokeWidth="0.5" strokeDasharray="2,2" className="opacity-10" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex flex-col text-right">
+                                        <span className="text-[8px] text-gray-600 font-black uppercase">Now</span>
+                                        <span className={`text-[10px] font-mono ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>${formatPrice(t.lastPrice)}</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4">
+
+                            <div className="flex items-center gap-5 shrink-0 pl-4 border-l border-gray-800/50">
                                 <div className="text-right">
                                     <div className="text-[8px] font-black text-gray-600 uppercase">P&L</div>
-                                    <div className={`text-base font-black flex items-center gap-1 ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                        {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                    <div className={`text-base font-black ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
                                         {isPositive ? '+' : ''}{pnl.toFixed(2)}%
                                     </div>
                                 </div>
                                 <div className="text-right">
                                     <div className="text-[8px] font-black text-gray-600 uppercase">Max</div>
-                                    <div className="text-sm font-black text-amber-400">+{t.maxGainPct.toFixed(2)}%</div>
-                                </div>
-                                <div className="w-16 h-6 bg-black/40 rounded-md overflow-hidden relative">
-                                    <div
-                                        className={`absolute left-0 top-0 h-full rounded-md transition-all duration-500 ${isPositive ? 'bg-emerald-500/40' : 'bg-rose-500/40'}`}
-                                        style={{ width: `${Math.min(100, Math.abs(pnl) * 10)}%` }}
-                                    />
+                                    <div className="text-sm font-black text-emerald-400">+{t.maxGainPct.toFixed(2)}%</div>
                                 </div>
                             </div>
                         </div>
