@@ -9,7 +9,12 @@ import {
     calculatePDMetrics, classifyDay, calculateLiquidityZones,
     analyzeIntraday, runScenarioEngine, TmaState, calculateATR
 } from '../services/tmaService';
+import {
+    buildVwapMetrics, classifyVwapTrend, analyzeVwapIntraday,
+    runVwapScenarioEngine, VwapArchState
+} from '../services/vwapArchService';
 import { TmaPanel } from './TmaPanel';
+import { VwapArchPanel } from './VwapArchPanel';
 import {
     RefreshCcw, Activity, BarChart2, Zap, TrendingUp,
     Layers, Eye, EyeOff, LayoutTemplate
@@ -60,12 +65,6 @@ export const TokenChart: React.FC<TokenChartProps> = ({
     const buyZoneSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
     const sellZoneSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
 
-    // New VWAP Structural Refs
-    const vpdhSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-    const vpdlSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-    const vpdoSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-    const vpdcSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-
     const [interval, setInterval] = useState('15m');
     const [showVwap, setShowVwap] = useState(true);
     const [showVolume, setShowVolume] = useState(false);
@@ -73,6 +72,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
     const [showWeeklyVwap, setShowWeeklyVwap] = useState(true);
     const [showTma, setShowTma] = useState(false);
     const [tmaState, setTmaState] = useState<TmaState | null>(null);
+    const [vwapArchState, setVwapArchState] = useState<VwapArchState | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [vwapData, setVwapData] = useState<VwapData | null>(null);
@@ -136,12 +136,6 @@ export const TokenChart: React.FC<TokenChartProps> = ({
             priceLineVisible: false
         });
 
-        // Initialize VWAP Structural Series
-        vpdhSeriesRef.current = chart.addLineSeries({ color: 'rgba(239, 68, 68, 0.4)', lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'W-PDH(V)' });
-        vpdlSeriesRef.current = chart.addLineSeries({ color: 'rgba(34, 197, 94, 0.4)', lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'W-PDL(V)' });
-        vpdoSeriesRef.current = chart.addLineSeries({ color: 'rgba(59, 130, 246, 0.4)', lineWidth: 1, lineStyle: LineStyle.Dotted, title: 'W-PDO(V)' });
-        vpdcSeriesRef.current = chart.addLineSeries({ color: 'rgba(168, 85, 247, 0.4)', lineWidth: 1, lineStyle: LineStyle.Dotted, title: 'W-PDC(V)' });
-
         volumeSeriesRef.current.priceScale().applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
         volumeCurveSeriesRef.current.priceScale().applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
 
@@ -172,7 +166,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                 // TMA Logic Integration
                 if (dailyKlines.length >= 2) {
                     const yesterday = dailyKlines[dailyKlines.length - 2];
-                    const metrics = calculatePDMetrics(yesterday, weekly);
+                    const metrics = calculatePDMetrics(yesterday);
                     const classification = classifyDay(metrics);
 
                     // Calculate ATR for zone sizing
@@ -203,6 +197,31 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                     };
                     setTmaState(newState);
 
+                    // ─── VWAP Architecture Computation ─────────
+                    if (weekly) {
+                        const vwapMetrics = buildVwapMetrics(weekly);
+                        const vwapTrend = classifyVwapTrend(vwapMetrics);
+                        const today15mForVwap = interval === '15m' ? data : [];
+                        const vwapDetection = analyzeVwapIntraday(vwapMetrics, today15mForVwap);
+                        const vwapProbs = runVwapScenarioEngine(vwapMetrics, vwapDetection, today15mForVwap);
+
+                        let vwapBias: VwapArchState['current']['bias'] = 'Neutral';
+                        if (vwapProbs.reversal > 50) vwapBias = vwapDetection.mss === 'Long' ? 'Reversal Long' : 'Reversal Short';
+                        else if (vwapProbs.continuation > 50) vwapBias = vwapDetection.acceptance === 'Above W-Max' ? 'Bullish' : 'Bearish';
+
+                        setVwapArchState({
+                            metrics: vwapMetrics,
+                            trend: vwapTrend,
+                            liquidityTaken: vwapDetection.liquidityTaken,
+                            current: {
+                                ...vwapDetection,
+                                bias: vwapBias,
+                                confidence: Math.max(vwapProbs.reversal, vwapProbs.continuation, vwapProbs.range)
+                            },
+                            probabilities: vwapProbs
+                        });
+                    }
+
                     // Update TMA markers (Sweeps & MSS)
                     if (candlestickSeriesRef.current && today15m.length > 0) {
                         const markers: any[] = [];
@@ -214,14 +233,6 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                             // Sell side sweep
                             if (k.low < metrics.pdl && k.close > metrics.pdl) {
                                 markers.push({ time: k.time as any, position: 'belowBar', color: '#22c55e', shape: 'arrowUp', text: '🧲 PDL SWEEP' });
-                            }
-
-                            // VWAP Sweeps
-                            if (k.high > metrics.vwap_pdh && k.close < metrics.vwap_pdh) {
-                                markers.push({ time: k.time as any, position: 'aboveBar', color: '#ff7e33', shape: 'circle', text: '⚓ VWAP-H SWEEP' });
-                            }
-                            if (k.low < metrics.vwap_pdl && k.close > metrics.vwap_pdl) {
-                                markers.push({ time: k.time as any, position: 'belowBar', color: '#33bcff', shape: 'circle', text: '⚓ VWAP-L SWEEP' });
                             }
                         });
 
@@ -248,12 +259,6 @@ export const TokenChart: React.FC<TokenChartProps> = ({
 
                         buyZoneSeriesRef.current?.setData(data.map(d => ({ time: d.time as any, value: zones.buySide[1], topValue: zones.buySide[1], bottomValue: zones.buySide[0] })));
                         sellZoneSeriesRef.current?.setData(data.map(d => ({ time: d.time as any, value: zones.sellSide[0], topValue: zones.sellSide[1], bottomValue: zones.sellSide[0] })));
-
-                        // New VWAP structural data
-                        vpdhSeriesRef.current?.setData(data.map(d => ({ time: d.time as any, value: metrics.vwap_pdh })));
-                        vpdlSeriesRef.current?.setData(data.map(d => ({ time: d.time as any, value: metrics.vwap_pdl })));
-                        vpdoSeriesRef.current?.setData(data.map(d => ({ time: d.time as any, value: metrics.vwap_pdo })));
-                        vpdcSeriesRef.current?.setData(data.map(d => ({ time: d.time as any, value: metrics.vwap_pdc })));
                     } else {
                         pdhSeriesRef.current?.setData([]);
                         pdlSeriesRef.current?.setData([]);
@@ -262,10 +267,6 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                         midLineSeriesRef.current?.setData([]);
                         buyZoneSeriesRef.current?.setData([]);
                         sellZoneSeriesRef.current?.setData([]);
-                        vpdhSeriesRef.current?.setData([]);
-                        vpdlSeriesRef.current?.setData([]);
-                        vpdoSeriesRef.current?.setData([]);
-                        vpdcSeriesRef.current?.setData([]);
                     }
                 }
 
@@ -517,6 +518,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                 {showTma && (
                     <div className="w-[380px] border-l border-gray-800 bg-[#06080c]/50 backdrop-blur-xl overflow-y-auto p-6 hidden xl:block">
                         <TmaPanel symbol={symbol} state={tmaState} isLoading={loading} />
+                        <VwapArchPanel symbol={symbol} state={vwapArchState} isLoading={loading} />
                     </div>
                 )}
             </div>
