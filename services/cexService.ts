@@ -428,10 +428,30 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     if (wMax === -Infinity) wMax = currentMid;
     if (wMin === Infinity) wMin = currentMid;
 
+    // Determine Yesterday's values (for TMA markers)
+    // Find the candle for yesterday
+    const yesterdayIdx = klines.length - 2;
+    const yesterdayVwap = rawVwap[yesterdayIdx] || currentMid;
+
+    // Calculate Max/Min EXCLUDING today's active candle
+    let prevWMax = -Infinity;
+    let prevWMin = Infinity;
+    klines.slice(0, -1).forEach((k, i) => {
+        if (k.time >= mondayTs) {
+            if (rawVwap[i] > prevWMax) prevWMax = rawVwap[i];
+            if (rawVwap[i] < prevWMin) prevWMin = rawVwap[i];
+        }
+    });
+    if (prevWMax === -Infinity) prevWMax = yesterdayVwap;
+    if (prevWMin === Infinity) prevWMin = yesterdayVwap;
+
     const vwapData: VwapData = {
         max: wMax,
         min: wMin,
         mid: currentMid,
+        yesterdayMid: yesterdayVwap,
+        prevMax: prevWMax,
+        prevMin: prevWMin,
         slope,
         normalizedSlope,
         symbol

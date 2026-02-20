@@ -47,8 +47,8 @@ export const TmaPanel: React.FC<TmaPanelProps> = ({ symbol, state, isLoading }) 
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-xl border ${current.state === 'ACCEPT ABOVE' || current.state === 'ACCEPT BELOW' ? 'bg-red-500/20 border-red-500/40 text-red-400' :
-                                current.state === 'SWEEPING LIQUIDITY' ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' :
-                                    'bg-blue-500/20 border-blue-500/40 text-blue-400'
+                            current.state === 'SWEEPING LIQUIDITY' ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' :
+                                'bg-blue-500/20 border-blue-500/40 text-blue-400'
                             }`}>
                             <Activity className="w-5 h-5" />
                         </div>
@@ -91,34 +91,50 @@ export const TmaPanel: React.FC<TmaPanelProps> = ({ symbol, state, isLoading }) 
                 </div>
 
                 <div className="space-y-4">
-                    <div className="space-y-1.5">
-                        <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter">
-                            <span className="text-gray-500">Distance to PDH (Liquidty Area)</span>
-                            <span className={current.distances.pdh > 0 ? 'text-white' : 'text-emerald-400'}>{current.distances.pdh.toFixed(2)}%</span>
+                    <div className="grid grid-cols-2 gap-4 pb-2">
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between text-[8px] font-black uppercase tracking-tighter">
+                                <span className="text-gray-500">PDH (PRICE)</span>
+                                <span className={current.distances.pdh > 0 ? 'text-white' : 'text-emerald-400'}>{current.distances.pdh.toFixed(2)}%</span>
+                            </div>
+                            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full bg-red-500/50" style={{ width: `${Math.min(100, Math.max(0, 100 - current.distances.pdh * 20))}%` }} />
+                            </div>
                         </div>
-                        <div className="h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/5">
-                            <div
-                                className={`h-full transition-all duration-1000 ${current.distances.pdh < 0.5 ? 'bg-red-500' : 'bg-gray-700'}`}
-                                style={{ width: `${Math.min(100, Math.max(0, 100 - current.distances.pdh * 20))}%` }}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                        <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter">
-                            <span className="text-gray-500">Distance to PDL (Liquidity Area)</span>
-                            <span className={current.distances.pdl > 0 ? 'text-white' : 'text-rose-400'}>{current.distances.pdl.toFixed(2)}%</span>
-                        </div>
-                        <div className="h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/5">
-                            <div
-                                className={`h-full transition-all duration-1000 ${current.distances.pdl < 0.5 ? 'bg-emerald-500' : 'bg-gray-700'}`}
-                                style={{ width: `${Math.min(100, Math.max(0, 100 - current.distances.pdl * 20))}%` }}
-                            />
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between text-[8px] font-black uppercase tracking-tighter">
+                                <span className="text-indigo-400">W-PDH (VWAP)</span>
+                                <span className="text-indigo-300">{current.distances.vwap_pdh.toFixed(2)}%</span>
+                            </div>
+                            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full bg-indigo-500/50" style={{ width: `${Math.min(100, Math.max(0, 100 - current.distances.vwap_pdh * 20))}%` }} />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                        <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter">
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between text-[8px] font-black uppercase tracking-tighter">
+                                <span className="text-gray-500">PDL (PRICE)</span>
+                                <span className={current.distances.pdl > 0 ? 'text-white' : 'text-rose-400'}>{current.distances.pdl.toFixed(2)}%</span>
+                            </div>
+                            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500/50" style={{ width: `${Math.min(100, Math.max(0, 100 - current.distances.pdl * 20))}%` }} />
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between text-[8px] font-black uppercase tracking-tighter">
+                                <span className="text-indigo-400">W-PDL (VWAP)</span>
+                                <span className="text-indigo-300">{current.distances.vwap_pdl.toFixed(2)}%</span>
+                            </div>
+                            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full bg-cyan-500/50" style={{ width: `${Math.min(100, Math.max(0, 100 - current.distances.vwap_pdl * 20))}%` }} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-white/5">
+                        <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter mb-1.5">
                             <span className="text-gray-500">Distance to PD-MID (Rebalance)</span>
                             <span className="text-blue-400">{current.distances.mid.toFixed(2)}%</span>
                         </div>
@@ -130,23 +146,45 @@ export const TmaPanel: React.FC<TmaPanelProps> = ({ symbol, state, isLoading }) 
             </div>
 
             {/* 3. Session Liquidity Tracker */}
-            <div className="grid grid-cols-2 gap-3">
-                <div className={`p-4 rounded-3xl border ${liquidityTaken.buySide ? 'bg-red-500/10 border-red-500/20' : 'bg-black/20 border-white/5'}`}>
-                    <div className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Buy-Side Liq.</div>
-                    <div className="flex items-center gap-2">
-                        {liquidityTaken.buySide ? <TrendingDown className="w-4 h-4 text-red-500" /> : <Shield className="w-4 h-4 text-gray-600" />}
-                        <span className={`text-[10px] font-black uppercase ${liquidityTaken.buySide ? 'text-red-400' : 'text-gray-600'}`}>
-                            {liquidityTaken.buySide ? 'Taken (Swept)' : 'Untouched'}
-                        </span>
+            <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                    <div className={`p-4 rounded-3xl border ${liquidityTaken.buySide ? 'bg-red-500/10 border-red-500/20' : 'bg-black/20 border-white/5'}`}>
+                        <div className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Price Buy Liq.</div>
+                        <div className="flex items-center gap-2">
+                            {liquidityTaken.buySide ? <TrendingDown className="w-4 h-4 text-red-500" /> : <Shield className="w-4 h-4 text-gray-600" />}
+                            <span className={`text-[10px] font-black uppercase ${liquidityTaken.buySide ? 'text-red-400' : 'text-gray-600'}`}>
+                                {liquidityTaken.buySide ? 'SWEPT' : 'UNTYPED'}
+                            </span>
+                        </div>
+                    </div>
+                    <div className={`p-4 rounded-3xl border ${liquidityTaken.vwapBuySide ? 'bg-orange-500/10 border-orange-500/20' : 'bg-black/20 border-white/5'}`}>
+                        <div className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-2">VWAP Buy Liq.</div>
+                        <div className="flex items-center gap-2">
+                            {liquidityTaken.vwapBuySide ? <Target className="w-4 h-4 text-orange-500" /> : <Shield className="w-4 h-4 text-gray-600" />}
+                            <span className={`text-[10px] font-black uppercase ${liquidityTaken.vwapBuySide ? 'text-orange-400' : 'text-gray-600'}`}>
+                                {liquidityTaken.vwapBuySide ? 'REJECTED' : 'SAFE'}
+                            </span>
+                        </div>
                     </div>
                 </div>
-                <div className={`p-4 rounded-3xl border ${liquidityTaken.sellSide ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-black/20 border-white/5'}`}>
-                    <div className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Sell-Side Liq.</div>
-                    <div className="flex items-center gap-2">
-                        {liquidityTaken.sellSide ? <TrendingUp className="w-4 h-4 text-emerald-500" /> : <Shield className="w-4 h-4 text-gray-600" />}
-                        <span className={`text-[10px] font-black uppercase ${liquidityTaken.sellSide ? 'text-emerald-400' : 'text-gray-600'}`}>
-                            {liquidityTaken.sellSide ? 'Taken (Swept)' : 'Untouched'}
-                        </span>
+                <div className="grid grid-cols-2 gap-3">
+                    <div className={`p-4 rounded-3xl border ${liquidityTaken.sellSide ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-black/20 border-white/5'}`}>
+                        <div className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Price Sell Liq.</div>
+                        <div className="flex items-center gap-2">
+                            {liquidityTaken.sellSide ? <TrendingUp className="w-4 h-4 text-emerald-500" /> : <Shield className="w-4 h-4 text-gray-600" />}
+                            <span className={`text-[10px] font-black uppercase ${liquidityTaken.sellSide ? 'text-emerald-400' : 'text-gray-600'}`}>
+                                {liquidityTaken.sellSide ? 'SWEPT' : 'UNTYPED'}
+                            </span>
+                        </div>
+                    </div>
+                    <div className={`p-4 rounded-3xl border ${liquidityTaken.vwapSellSide ? 'bg-cyan-500/10 border-cyan-500/20' : 'bg-black/20 border-white/5'}`}>
+                        <div className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-2">VWAP Sell Liq.</div>
+                        <div className="flex items-center gap-2">
+                            {liquidityTaken.vwapSellSide ? <Target className="w-4 h-4 text-cyan-500" /> : <Shield className="w-4 h-4 text-gray-600" />}
+                            <span className={`text-[10px] font-black uppercase ${liquidityTaken.vwapSellSide ? 'text-cyan-400' : 'text-gray-600'}`}>
+                                {liquidityTaken.vwapSellSide ? 'REJECTED' : 'SAFE'}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -171,9 +209,10 @@ export const TmaPanel: React.FC<TmaPanelProps> = ({ symbol, state, isLoading }) 
                             <p className="text-[11px] text-gray-300 font-bold leading-relaxed italic">
                                 {current.state === 'ACCEPT ABOVE' ? "Structure accepting above PDH liquidity. Focus on expansion targets with trend-following bias." :
                                     current.state === 'ACCEPT BELOW' ? "Structure accepting below PDL liquidity. Bearish expansion in progress." :
-                                        current.mss ? `Confirmed MSS ${current.mss} after sweep. Tactical reversal initiated.` :
-                                            current.last15mSweep ? `Liquidity hunt detected (${current.last15mSweep}). Monitor for MSS to confirm high-conviction entry.` :
-                                                "Range-bound consolidation. Waiting for architectural expansion or sweep signature."}
+                                        current.state === 'VWAP REJECTION' ? `Architectural rejection at ${current.vwapSweep === 'Buy-Side' ? 'W-PDH(V)' : 'W-PDL(V)'}. Strong sign of absorption or lack of value participation.` :
+                                            current.mss ? `Confirmed MSS ${current.mss} after sweep. Tactical reversal initiated.` :
+                                                current.last15mSweep ? `Price liquidity hunt detected (${current.last15mSweep}). Monitor for MSS or VWAP rejection to confirm entry.` :
+                                                    "Range-bound consolidation. Waiting for architectural expansion, sweep, or VWAP divergence signature."}
                             </p>
                         </div>
 

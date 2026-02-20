@@ -142,6 +142,9 @@ export interface VwapData {
   max: number;
   min: number;
   mid: number;
+  yesterdayMid?: number;
+  prevMax?: number;
+  prevMin?: number;
   slope: number;
   normalizedSlope: number;
   symbol: string;
