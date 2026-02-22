@@ -213,9 +213,28 @@ const App: React.FC = () => {
       if (!cancelled) setVwapLoading(false);
     };
 
-    fetchSignals();
-    const signalInterval = setInterval(fetchSignals, 120000); // Poll every 2 min instead of 1
-    return () => { cancelled = true; clearInterval(signalInterval); };
+    const scheduleNextFetch = () => {
+      const now = new Date();
+      const mins = now.getMinutes();
+      const secs = now.getSeconds();
+      const ms = now.getMilliseconds();
+
+      // Calculate minutes until next :00, :15, :30, :45
+      const next15 = 15 - (mins % 15);
+
+      // Target: next15 minutes away, minus current seconds/ms, plus 20s buffer
+      const delayMs = (next15 * 60 * 1000) - (secs * 1000) - ms + (20 * 1000);
+
+      console.log(`[Engine] Scheduling next fetch in ${Math.round(delayMs / 1000)}s (Next 15m Candle + Buffer)`);
+      return setTimeout(() => {
+        if (!cancelled) {
+          fetchSignals().then(scheduleNextFetch);
+        }
+      }, delayMs);
+    };
+
+    fetchSignals().then(scheduleNextFetch);
+    return () => { cancelled = true; };
   }, [cexTickers, activeView]);
 
   // ─── Watchlist Handlers ─────────────────────────
