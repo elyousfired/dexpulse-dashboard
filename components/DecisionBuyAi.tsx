@@ -178,8 +178,31 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
 
     // Filtered signals for UI display (Show only GOLDEN Entry signals)
     const displaySignals = useMemo(() => {
-        return signals.filter(s => s.type === 'GOLDEN');
-    }, [signals]);
+        // 1. Current fresh signals
+        const freshGoldens = signals.filter(s => s.type === 'GOLDEN');
+
+        // 2. Sticky Goldens: Tracked tokens that are still active but maybe not in fresh signals
+        const stickyGoldens: BuySignal[] = trackedGoldens
+            .filter(t => t.stillActive && !freshGoldens.some(g => g.ticker.symbol === t.symbol))
+            .map(t => {
+                const ticker = tickers.find(tk => tk.symbol === t.symbol);
+                const vwap = vwapStore[ticker?.id || ''];
+                if (!ticker || !vwap) return null;
+
+                const pnl = ((ticker.priceUsd - t.entryPrice) / t.entryPrice) * 100;
+
+                return {
+                    ticker,
+                    vwap,
+                    score: 90, // Holding score
+                    reason: `Holding Signal: Initial Golden breakout confirmed. Currently ${pnl >= 0 ? 'profit' : 'loss'} of ${Math.abs(pnl).toFixed(2)}%. Watching for +4% Take-Profit target.`,
+                    activeSince: t.signalTime,
+                    type: 'GOLDEN'
+                };
+            }).filter((s): s is BuySignal => s !== null);
+
+        return [...freshGoldens, ...stickyGoldens].sort((a, b) => b.score - a.score);
+    }, [signals, trackedGoldens, tickers, vwapStore]);
 
     // ─── Telegram Alert Trigger ───────────────────
     useEffect(() => {
@@ -293,7 +316,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     lastPrice: currentPrice,
                     maxPrice: newMax,
                     maxGainPct: newMaxGain,
-                    stillActive: goldenSymbols.has(t.symbol),
+                    stillActive: t.stillActive ? (pnl < 4) : goldenSymbols.has(t.symbol),
                     history: shouldAddPoint ? [...history, currentPrice] : history
                 };
             });
