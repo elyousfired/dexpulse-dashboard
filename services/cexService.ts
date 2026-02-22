@@ -382,8 +382,8 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     const last15mClose = klines15m.length >= 2 ? klines15m[klines15m.length - 2].close : 0;
     const prev15mClose = klines15m.length >= 3 ? klines15m[klines15m.length - 3].close : (klines15m.length >= 2 ? klines15m[klines15m.length - 2].close : 0);
 
-    if (last15mClose > max && last15mClose > mid && prev15mClose <= max) {
-        // console.log(`[VWAP Debug] ${symbol} Fresh Cross Detected. Last: ${last15mClose}, Prev: ${prev15mClose}, Max: ${max}`);
+    if (last15mClose > wMax && last15mClose > wMid && prev15mClose <= wMax) {
+        // console.log(`[VWAP Debug] ${symbol} Fresh Cross Detected. Last: ${last15mClose}, Prev: ${prev15mClose}, Max: ${wMax}`);
     }
 
     // Monday 00:00 UTC boundary
