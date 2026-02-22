@@ -378,9 +378,13 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         // But we can still proceed if klines has data, although crossover might be unreliable
     }
 
-    // index 2 is current (incomplete), index 1 is last closed, index 0 is previous closed
-    const last15mClose = klines15m.length >= 2 ? klines15m[1].close : 0;
-    const prev15mClose = klines15m.length >= 3 ? klines15m[0].close : (klines15m.length >= 2 ? klines15m[1].close : 0);
+    // index length-1 is current (incomplete), index length-2 is last closed, index length-3 is previous closed
+    const last15mClose = klines15m.length >= 2 ? klines15m[klines15m.length - 2].close : 0;
+    const prev15mClose = klines15m.length >= 3 ? klines15m[klines15m.length - 3].close : (klines15m.length >= 2 ? klines15m[klines15m.length - 2].close : 0);
+
+    if (last15mClose > max && last15mClose > mid && prev15mClose <= max) {
+        // console.log(`[VWAP Debug] ${symbol} Fresh Cross Detected. Last: ${last15mClose}, Prev: ${prev15mClose}, Max: ${max}`);
+    }
 
     // Monday 00:00 UTC boundary
     const now = new Date();
