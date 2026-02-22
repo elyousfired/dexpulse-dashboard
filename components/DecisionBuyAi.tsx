@@ -141,6 +141,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             const isFreshCrossover = isConfirmedNow && !wasConfirmedPrev;
 
             if (isFreshCrossover && isVwapPositive) {
+                console.log(`[SignalEngine] GOLDEN TRIGGER: ${t.symbol} at $${lastClose} (Fresh Cross)`);
                 return {
                     ticker: t,
                     vwap,
