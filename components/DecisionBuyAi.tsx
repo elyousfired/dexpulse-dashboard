@@ -14,10 +14,29 @@ interface TrackedGolden {
     maxGainPct: number;
     lastPrice: number;
     stillActive: boolean;
-    history?: number[]; // Added for sparklines
+    history?: number[];
+    wasCounted?: boolean; // New: prevents double counting in global stats
+    tpHit?: boolean;      // New: marks if this signal reached +4%
 }
 
+interface GoldenStats {
+    totalSignals: number;
+    successHits: number;
+}
+
+const STAT_KEY = 'dexpulse_golden_stats';
 const GOLDEN_TRACKER_KEY = 'dexpulse_golden_tracker';
+
+function loadGoldenStats(): GoldenStats {
+    try {
+        const raw = localStorage.getItem(STAT_KEY);
+        return raw ? JSON.parse(raw) : { totalSignals: 0, successHits: 0 };
+    } catch { return { totalSignals: 0, successHits: 0 }; }
+}
+
+function saveGoldenStats(stats: GoldenStats) {
+    localStorage.setItem(STAT_KEY, JSON.stringify(stats));
+}
 const TRACKER_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function loadTrackedGoldens(): TrackedGolden[] {
@@ -280,6 +299,9 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             let updated = [...prev];
 
             // 1. Add new golden signals not yet tracked
+            const stats = loadGoldenStats();
+            let statsChanged = false;
+
             goldenSignals.forEach(sig => {
                 const existing = updated.find(t => t.symbol === sig.ticker.symbol);
                 if (!existing) {
@@ -291,8 +313,12 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                         maxGainPct: 0,
                         lastPrice: sig.ticker.priceUsd,
                         stillActive: true,
-                        history: [sig.ticker.priceUsd]
+                        history: [sig.ticker.priceUsd],
+                        wasCounted: true,
+                        tpHit: false
                     });
+                    stats.totalSignals++;
+                    statsChanged = true;
                 }
             });
 
@@ -311,15 +337,40 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                 const lastPoint = history[history.length - 1];
                 const shouldAddPoint = history.length < 144 && (Date.now() - (t.signalTime + (history.length - 1) * 10 * 60 * 1000) > 10 * 60 * 1000);
 
+                const isHittingTp = pnl >= 4 && t.stillActive;
+
+                if (isHittingTp && !t.tpHit) {
+                    stats.successHits++;
+                    statsChanged = true;
+                }
+
+                if (isHittingTp) {
+                    return {
+                        ...t,
+                        lastPrice: currentPrice,
+                        stillActive: false,
+                        exitPrice: currentPrice,
+                        exitTime: Date.now(),
+                        realizedPnl: pnl,
+                        maxPrice: newMax,
+                        maxGainPct: newMaxGain,
+                        history: shouldAddPoint ? [...history, currentPrice] : history,
+                        tpHit: true
+                    };
+                }
+
                 return {
                     ...t,
                     lastPrice: currentPrice,
                     maxPrice: newMax,
                     maxGainPct: newMaxGain,
-                    stillActive: t.stillActive ? (pnl < 4) : goldenSymbols.has(t.symbol),
-                    history: shouldAddPoint ? [...history, currentPrice] : history
+                    stillActive: t.stillActive || goldenSymbols.has(t.symbol), // Stay active if sticky or new golden
+                    history: shouldAddPoint ? [...history, currentPrice] : history,
+                    tpHit: t.tpHit
                 };
             });
+
+            if (statsChanged) saveGoldenStats(stats);
 
             // 3. Filter expired (>24h)
             const now = Date.now();
@@ -595,6 +646,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm font-black text-white uppercase tracking-tight">{t.symbol}</span>
                                         {t.stillActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                                        {t.tpHit && <Target className="w-3 h-3 text-amber-400" />}
                                     </div>
                                     <span className="text-[8px] text-gray-600 font-bold uppercase">{hoursAgo}h {minsAgo}m ago</span>
                                 </div>
@@ -644,6 +696,11 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     );
                 };
 
+                const globalStats = loadGoldenStats();
+                const globalWinRate = globalStats.totalSignals > 0
+                    ? (globalStats.successHits / globalStats.totalSignals) * 100
+                    : 0;
+
                 return (
                     <div className="border-t border-amber-500/20">
                         {/* Header */}
@@ -658,12 +715,17 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
+                                <div className="text-center px-4 py-1.5 bg-amber-500/10 rounded-xl border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+                                    <div className="text-[8px] font-black text-amber-500 uppercase">Site Win Rate (+4% TP)</div>
+                                    <span className="text-sm font-black text-white italic">{globalWinRate.toFixed(1)}%</span>
+                                    <span className="text-[8px] text-white/30 ml-1">({globalStats.successHits}/{globalStats.totalSignals})</span>
+                                </div>
                                 <div className="text-center px-3 py-1.5 bg-black/40 rounded-xl border border-gray-800">
                                     <div className="text-[8px] font-black text-gray-600 uppercase">Avg P&L</div>
                                     <span className={`text-sm font-black ${avgPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{avgPnl >= 0 ? '+' : ''}{avgPnl.toFixed(2)}%</span>
                                 </div>
                                 <div className="text-center px-3 py-1.5 bg-black/40 rounded-xl border border-gray-800">
-                                    <div className="text-[8px] font-black text-gray-600 uppercase">Win Rate</div>
+                                    <div className="text-[8px] font-black text-gray-600 uppercase">24h Win Rate</div>
                                     <span className={`text-sm font-black ${winRate >= 50 ? 'text-emerald-400' : 'text-rose-400'}`}>{winRate.toFixed(0)}%</span>
                                 </div>
                             </div>
