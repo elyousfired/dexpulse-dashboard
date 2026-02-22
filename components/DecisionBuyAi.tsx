@@ -187,14 +187,10 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
         })
             .filter((s): s is BuySignal => s !== null)
             .sort((a, b) => {
-                // EXITs always first
-                if (a.type === 'EXIT' && b.type !== 'EXIT') return -1;
-                if (b.type === 'EXIT' && a.type !== 'EXIT') return 1;
-
                 if (sortBy === 'time') {
                     const aTime = a.activeSince || 0;
                     const bTime = b.activeSince || 0;
-                    return bTime - aTime; // Newest first
+                    return bTime - aTime;
                 }
                 return b.score - a.score;
             });
@@ -555,11 +551,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                             </div>
 
                             <div className="flex items-center gap-3 mb-4">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${sig.type === 'GOLDEN' ? 'bg-yellow-500 text-black' :
-                                    sig.type === 'EXIT' ? 'bg-rose-600 text-white' :
-                                        sig.type === 'MOMENTUM' ? 'bg-purple-600 text-white' :
-                                            'bg-blue-600 text-white'
-                                    }`}>
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${sig.type === 'GOLDEN' ? 'bg-yellow-500 text-black' : 'bg-purple-600 text-white'}`}>
                                     {sig.ticker.symbol[0]}
                                 </div>
                                 <div>
@@ -567,11 +559,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                                         {sig.ticker.symbol} / USDT
                                     </h3>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${sig.type === 'GOLDEN' ? 'bg-yellow-500/20 text-yellow-500' :
-                                            sig.type === 'EXIT' ? 'bg-rose-500/20 text-rose-500' :
-                                                sig.type === 'MOMENTUM' ? 'bg-purple-500/20 text-purple-400' :
-                                                    'bg-blue-500/20 text-blue-400'
-                                            }`}>
+                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${sig.type === 'GOLDEN' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-purple-500/20 text-purple-400'}`}>
                                             {sig.type} SIGNAL
                                         </span>
                                     </div>

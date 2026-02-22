@@ -177,8 +177,14 @@ const App: React.FC = () => {
     let cancelled = false;
 
     const fetchSignals = async () => {
-      const mainTickers = tickersRef.current.filter(t => t.volume24h > 500000).slice(0, 150);
-      if (mainTickers.length === 0) return;
+      const currentTickers = tickersRef.current;
+      if (currentTickers.length === 0) {
+        console.log('[Engine] Tickers not ready, retrying in 3s...');
+        setTimeout(fetchSignals, 3000); // Retry soon
+        return;
+      }
+
+      const mainTickers = currentTickers.filter(t => t.volume24h > 500000).slice(0, 150);
       setVwapLoading(true);
       const newVwapStore: Record<string, VwapData> = { ...vwapStore };
       const newFirstSeen: Record<string, number> = { ...firstSeenTimes };
