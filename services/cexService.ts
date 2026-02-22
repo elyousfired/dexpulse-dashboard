@@ -457,7 +457,8 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         normalizedSlope,
         symbol,
         last15mClose,
-        prev15mClose
+        prev15mClose,
+        isFreshCrossover: last15mClose > wMax && last15mClose > currentMid && prev15mClose <= wMax
     };
 
     vwapCache.set(symbol, { data: vwapData, expires: Date.now() + VWAP_CACHE_TTL });
