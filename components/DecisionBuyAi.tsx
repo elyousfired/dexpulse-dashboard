@@ -132,58 +132,26 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             const isVwapNegative = vwap.normalizedSlope < -0.05;
 
             // ─── GOLDEN SIGNAL LOGIC (Fresh 15m Crossover) ───
-            // Requirement A (Now): Last 15m Candle Close > Weekly Max AND Daily VWAP
             const lastClose = vwap.last15mClose || 0;
             const isConfirmedNow = lastClose > vwap.max && lastClose > vwap.mid;
 
-            // Requirement B (Previous): Previous 15m Candle was BELOW either level (Initial Crossover)
             const prevClose = vwap.prev15mClose || 0;
             const wasConfirmedPrev = prevClose > vwap.max && prevClose > vwap.mid;
 
             const isFreshCrossover = isConfirmedNow && !wasConfirmedPrev;
 
             if (isFreshCrossover && isVwapPositive) {
-                signal = {
+                return {
                     ticker: t,
                     vwap,
                     score: 95 + Math.min(5, vwap.normalizedSlope * 20),
-                    reason: `Fresh 15m Crossover Confirmed: Candle closed at $${formatPrice(lastClose)} (Previously $${formatPrice(prevClose)}). First structural breakout above Weekly Max ($${formatPrice(vwap.max)}) and Daily VWAP.`,
+                    reason: `Fresh 15m Crossover: Confirmed closed at $${formatPrice(lastClose)}. Breakout above Weekly Max ($${formatPrice(vwap.max)}).`,
                     activeSince: firstSeenTimes[t.id] || Date.now(),
                     type: 'GOLDEN'
                 };
             }
-            // ──── EXIT SIGNAL ────
-            else if (isVwapNegative) {
-                signal = {
-                    ticker: t,
-                    vwap,
-                    score: 90, // "Exit priority"
-                    reason: "VWAP Trend reversal. Daily slope turned negative. High risk of redistribution.",
-                    type: 'EXIT'
-                };
-            }
-            // 2. MOMENTUM PUSH: Price > Mid && Price < Max && Trend positive
-            else if (price > vwap.mid && price < vwap.max && isVwapPositive) {
-                signal = {
-                    ticker: t,
-                    vwap,
-                    score: 85 + Math.min(10, vwap.normalizedSlope * 10),
-                    reason: "Momentum buildup. Trend is positive and approaching Weekly Max resistance.",
-                    type: 'MOMENTUM'
-                };
-            }
-            // 3. SUPPORT BOUNCE: Price approx Mid && Pos trend
-            else if (Math.abs(price - vwap.mid) / vwap.mid < 0.02 && isVwapPositive) {
-                signal = {
-                    ticker: t,
-                    vwap,
-                    score: 80,
-                    reason: "Bouncing off Weekly Mid support with positive daily trend confirmation.",
-                    type: 'SUPPORT'
-                };
-            }
 
-            return signal;
+            return null;
         })
             .filter((s): s is BuySignal => s !== null)
             .sort((a, b) => {

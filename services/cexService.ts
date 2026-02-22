@@ -368,11 +368,19 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         fetchBinanceKlines(symbol, '15m', 3)
     ]);
 
-    if (klines.length < 15) return null;
+    if (klines.length < 15) {
+        console.warn(`[VWAP] ${symbol} not enough daily klines: ${klines.length}`);
+        return null;
+    }
+
+    if (klines15m.length < 2) {
+        console.warn(`[VWAP] ${symbol} not enough 15m klines: ${klines15m.length}`);
+        // But we can still proceed if klines has data, although crossover might be unreliable
+    }
 
     // index 2 is current (incomplete), index 1 is last closed, index 0 is previous closed
     const last15mClose = klines15m.length >= 2 ? klines15m[1].close : 0;
-    const prev15mClose = klines15m.length >= 3 ? klines15m[0].close : 0;
+    const prev15mClose = klines15m.length >= 3 ? klines15m[0].close : (klines15m.length >= 2 ? klines15m[1].close : 0);
 
     // Monday 00:00 UTC boundary
     const now = new Date();
