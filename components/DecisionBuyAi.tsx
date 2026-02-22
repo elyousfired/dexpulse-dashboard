@@ -148,8 +148,8 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     score: 95 + Math.min(5, vwap.normalizedSlope * 20),
                     reason: `Fresh 15m Crossover: Confirmed closed at $${formatPrice(lastClose)}. Breakout above Weekly Max ($${formatPrice(vwap.max)}).`,
                     activeSince: (firstSeenTimes[t.id] || Date.now()),
-                    type: 'GOLDEN'
-                } as BuySignal;
+                    type: 'GOLDEN' as const
+                };
             }
 
             return null;
@@ -172,7 +172,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             const track = trackedGoldens.find(t => t.symbol === sig.ticker.symbol);
             return {
                 ...sig,
-                activeSince: track ? track.signalTime : sig.activeSince
+                activeSince: track ? track.signalTime : (sig.activeSince || Date.now())
             };
         });
 
