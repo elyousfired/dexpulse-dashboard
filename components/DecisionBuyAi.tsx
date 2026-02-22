@@ -198,7 +198,13 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
     // Filtered signals for UI display (Show only GOLDEN Entry signals)
     const displaySignals = useMemo(() => {
         // 1. Current fresh signals
-        const freshGoldens = signals.filter(s => s.type === 'GOLDEN');
+        const freshGoldens = signals.filter(s => s.type === 'GOLDEN').map(sig => {
+            const track = trackedGoldens.find(t => t.symbol === sig.ticker.symbol);
+            return {
+                ...sig,
+                activeSince: track ? track.signalTime : sig.activeSince
+            };
+        });
 
         // 2. Sticky Goldens: Tracked tokens that are still active but maybe not in fresh signals
         const stickyGoldens: BuySignal[] = trackedGoldens

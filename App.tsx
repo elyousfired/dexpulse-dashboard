@@ -117,7 +117,12 @@ const App: React.FC = () => {
 
   // ─── AI Signal Engine State ─────────────────────
   const [vwapStore, setVwapStore] = useState<Record<string, VwapData>>({});
-  const [firstSeenTimes, setFirstSeenTimes] = useState<Record<string, number>>({});
+  const [firstSeenTimes, setFirstSeenTimes] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem('dexpulse_first_seen_times');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
   const [vwapLoading, setVwapLoading] = useState(false);
 
   // ─── VWAP Architecture State ────────────────────
@@ -195,7 +200,8 @@ const App: React.FC = () => {
         // Incremental update so signals appear as they load
         if (!cancelled) {
           setVwapStore({ ...newVwapStore });
-          setFirstSeenTimes({ ...newFirstSeen });
+          setFirstSeenTimes(newFirstSeen);
+          localStorage.setItem('dexpulse_first_seen_times', JSON.stringify(newFirstSeen));
         }
 
         // Rate-limit delay
