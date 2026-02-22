@@ -392,6 +392,13 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
         });
     }, [signals, tickers]);
 
+    const handleResetTracker = () => {
+        if (!window.confirm("Clear all active signals and reset site win rate?")) return;
+        setTrackedGoldens([]);
+        localStorage.removeItem('dexpulse_tracked_goldens');
+        localStorage.removeItem('dexpulse_golden_stats');
+    };
+
     const handleSaveConfig = (config: TelegramConfig) => {
         saveTelegramConfig(config);
         setTgConfig(config);
@@ -446,6 +453,14 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                             TIME
                         </button>
                     </div>
+
+                    <button
+                        onClick={handleResetTracker}
+                        title="Reset Tracker & Stats"
+                        className="p-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 rounded-2xl transition-all group/reset"
+                    >
+                        <RefreshCcw className="w-5 h-5 text-red-400 group-hover:rotate-180 transition-transform duration-500" />
+                    </button>
 
                     <button onClick={() => setShowSettings(!showSettings)}
                         className={`p-3 rounded-xl border transition-all ${showSettings ? 'bg-purple-600 border-purple-400 text-white' : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:text-white'}`}>
