@@ -147,4 +147,6 @@ export interface VwapData {
   symbol: string;
   last15mClose?: number;
   prev15mClose?: number;
+  isFreshCrossover?: boolean;
+  volumeRelative?: number;
 }
