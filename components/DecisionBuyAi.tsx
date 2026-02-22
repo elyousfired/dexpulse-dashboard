@@ -146,9 +146,9 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     vwap,
                     score: 95 + Math.min(5, vwap.normalizedSlope * 20),
                     reason: `Fresh 15m Crossover: Confirmed closed at $${formatPrice(lastClose)}. Breakout above Weekly Max ($${formatPrice(vwap.max)}).`,
-                    activeSince: firstSeenTimes[t.id] || Date.now(),
+                    activeSince: (firstSeenTimes[t.id] || Date.now()),
                     type: 'GOLDEN'
-                };
+                } as BuySignal;
             }
 
             return null;
