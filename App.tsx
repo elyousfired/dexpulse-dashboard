@@ -185,6 +185,7 @@ const App: React.FC = () => {
       }
 
       const mainTickers = currentTickers.filter(t => t.volume24h > 500000).slice(0, 150);
+      console.log(`[Engine] Starting signal scan for ${mainTickers.length} tickers...`);
       setVwapLoading(true);
       const newVwapStore: Record<string, VwapData> = { ...vwapStore };
       const newFirstSeen: Record<string, number> = { ...firstSeenTimes };
