@@ -145,4 +145,5 @@ export interface VwapData {
   slope: number;
   normalizedSlope: number;
   symbol: string;
+  last15mClose?: number;
 }

@@ -131,18 +131,17 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             const isVwapPositive = vwap.normalizedSlope > 0.05;
             const isVwapNegative = vwap.normalizedSlope < -0.05;
 
-            // ─── GOLDEN SIGNAL LOGIC ───
-            // Requirement: Price > Max && Daily VWAP Slope is Positive
-            const isPriceAboveMax = price > vwap.max;
+            // ─── GOLDEN SIGNAL LOGIC (15m Confirmation) ───
+            // Requirement: Last 15m Candle Close > Weekly Max AND Last 15m Candle Close > Daily VWAP
+            const lastClose = vwap.last15mClose || 0;
+            const isConfirmed = lastClose > vwap.max && lastClose > vwap.mid;
 
-            if (isPriceAboveMax && isVwapPositive) {
+            if (isConfirmed && isVwapPositive) {
                 signal = {
                     ticker: t,
                     vwap,
                     score: 95 + Math.min(5, vwap.normalizedSlope * 20),
-                    reason: isMonday
-                        ? "Monday Golden: Price above Weekly Max with strong positive trend. High probability start."
-                        : "Golden Breakout: Price holding above Weekly Max with confirmed positive momentum.",
+                    reason: `15m Structural Breakout: Candle closed at $${formatPrice(lastClose)} above Weekly Max ($${formatPrice(vwap.max)}) and Daily VWAP ($${formatPrice(vwap.mid)}). High momentum confirmed.`,
                     activeSince: firstSeenTimes[t.id] || Date.now(),
                     type: 'GOLDEN'
                 };
