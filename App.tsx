@@ -109,6 +109,7 @@ const App: React.FC = () => {
   const [selectedCexTicker, setSelectedCexTicker] = useState<CexTicker | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const tickersRef = React.useRef<CexTicker[]>([]);
   const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch'>('grid');
   const [watchlist, setWatchlist] = useState<WatchlistTrade[]>(() => {
     const saved = localStorage.getItem('dex_cex_watchlist');
@@ -135,6 +136,7 @@ const App: React.FC = () => {
     try {
       const data = await fetchCexTickers();
       setCexTickers(data);
+      tickersRef.current = data;
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Failed to load CEX tickers', err);
@@ -157,6 +159,7 @@ const App: React.FC = () => {
             next.push(upd);
           }
         });
+        tickersRef.current = next;
         return next;
       });
     });
@@ -172,9 +175,10 @@ const App: React.FC = () => {
     if (activeView !== 'decision' && activeView !== 'anchoredVWAP' && activeView !== 'ecosystems' && activeView !== 'vwapArch') return;
 
     let cancelled = false;
-    const mainTickers = cexTickers.filter(t => t.volume24h > 500000).slice(0, 150);
 
     const fetchSignals = async () => {
+      const mainTickers = tickersRef.current.filter(t => t.volume24h > 500000).slice(0, 150);
+      if (mainTickers.length === 0) return;
       setVwapLoading(true);
       const newVwapStore: Record<string, VwapData> = { ...vwapStore };
       const newFirstSeen: Record<string, number> = { ...firstSeenTimes };
@@ -235,7 +239,7 @@ const App: React.FC = () => {
 
     fetchSignals().then(scheduleNextFetch);
     return () => { cancelled = true; };
-  }, [cexTickers, activeView]);
+  }, [activeView]); // Remove cexTickers dependency
 
   // ─── Watchlist Handlers ─────────────────────────
   const handleAddToWatchlist = (ticker: CexTicker) => {
