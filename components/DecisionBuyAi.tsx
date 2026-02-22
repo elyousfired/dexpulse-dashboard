@@ -131,17 +131,23 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             const isVwapPositive = vwap.normalizedSlope > 0.05;
             const isVwapNegative = vwap.normalizedSlope < -0.05;
 
-            // ─── GOLDEN SIGNAL LOGIC (15m Confirmation) ───
-            // Requirement: Last 15m Candle Close > Weekly Max AND Last 15m Candle Close > Daily VWAP
+            // ─── GOLDEN SIGNAL LOGIC (Fresh 15m Crossover) ───
+            // Requirement A (Now): Last 15m Candle Close > Weekly Max AND Daily VWAP
             const lastClose = vwap.last15mClose || 0;
-            const isConfirmed = lastClose > vwap.max && lastClose > vwap.mid;
+            const isConfirmedNow = lastClose > vwap.max && lastClose > vwap.mid;
 
-            if (isConfirmed && isVwapPositive) {
+            // Requirement B (Previous): Previous 15m Candle was BELOW either level (Initial Crossover)
+            const prevClose = vwap.prev15mClose || 0;
+            const wasConfirmedPrev = prevClose > vwap.max && prevClose > vwap.mid;
+
+            const isFreshCrossover = isConfirmedNow && !wasConfirmedPrev;
+
+            if (isFreshCrossover && isVwapPositive) {
                 signal = {
                     ticker: t,
                     vwap,
                     score: 95 + Math.min(5, vwap.normalizedSlope * 20),
-                    reason: `15m Structural Breakout: Candle closed at $${formatPrice(lastClose)} above Weekly Max ($${formatPrice(vwap.max)}) and Daily VWAP ($${formatPrice(vwap.mid)}). High momentum confirmed.`,
+                    reason: `Fresh 15m Crossover Confirmed: Candle closed at $${formatPrice(lastClose)} (Previously $${formatPrice(prevClose)}). First structural breakout above Weekly Max ($${formatPrice(vwap.max)}) and Daily VWAP.`,
                     activeSince: firstSeenTimes[t.id] || Date.now(),
                     type: 'GOLDEN'
                 };

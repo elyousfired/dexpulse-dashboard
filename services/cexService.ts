@@ -362,16 +362,17 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     if (cached && cached.expires > Date.now()) return cached.data;
 
     // Fetch 30 days to have enough for ATR(14) + Slope Lookback(10)
-    // AND fetch 15m klines to get the last closed candle for signal confirmation
+    // AND fetch 15m klines to get the last and previous closed candles for crossover confirmation
     const [klines, klines15m] = await Promise.all([
         fetchBinanceKlines(symbol, '1d', 30),
-        fetchBinanceKlines(symbol, '15m', 2)
+        fetchBinanceKlines(symbol, '15m', 3)
     ]);
 
     if (klines.length < 15) return null;
 
-    // Last closed 15m candle is at index 0 (if limit is 2, index 1 is current)
-    const last15mClose = klines15m.length >= 2 ? klines15m[0].close : 0;
+    // index 2 is current (incomplete), index 1 is last closed, index 0 is previous closed
+    const last15mClose = klines15m.length >= 2 ? klines15m[1].close : 0;
+    const prev15mClose = klines15m.length >= 3 ? klines15m[0].close : 0;
 
     // Monday 00:00 UTC boundary
     const now = new Date();
@@ -443,7 +444,8 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         slope,
         normalizedSlope,
         symbol,
-        last15mClose
+        last15mClose,
+        prev15mClose
     };
 
     vwapCache.set(symbol, { data: vwapData, expires: Date.now() + VWAP_CACHE_TTL });
