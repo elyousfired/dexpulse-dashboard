@@ -222,6 +222,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                         maxGainPct: 0,
                         lastPrice: sig.ticker.priceUsd,
                         stillActive: true,
+                        wasActive: true,
                         history: [sig.ticker.priceUsd],
                         wasCounted: true,
                         tpHit: false
