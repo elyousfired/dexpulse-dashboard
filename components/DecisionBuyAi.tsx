@@ -250,7 +250,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                 const isHittingTp = pnl >= 4 && t.stillActive;
 
                 if (isHittingTp && !t.tpHit) {
-                    stats.successHits++;
+                    stats.successCount++;
                     statsChanged = true;
                 }
 
