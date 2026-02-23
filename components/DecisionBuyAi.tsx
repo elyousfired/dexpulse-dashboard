@@ -1,28 +1,10 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { CexTicker, VwapData } from '../types';
+import { CexTicker, VwapData, BuySignal, BuyType, TrackedGolden, GoldenStats } from '../types';
 import { fetchWeeklyVwapData, formatPrice } from '../services/cexService';
 import { Brain, Star, TrendingUp, TrendingDown, Info, ArrowRight, Zap, Trophy, ShieldCheck, Bell, Settings, Send, CheckCircle, XCircle, Volume2, VolumeX, Timer, Filter, BarChart3, Target } from 'lucide-react';
 import { sendGoldenSignalAlert, wasAlertedToday, loadTelegramConfig, saveTelegramConfig, sendTestAlert, TelegramConfig } from '../services/telegramService';
 
-// ─── Golden Signal Tracker Types ───────────────
-interface TrackedGolden {
-    symbol: string;
-    entryPrice: number;
-    signalTime: number;
-    maxPrice: number;
-    maxGainPct: number;
-    lastPrice: number;
-    stillActive: boolean;
-    history?: number[];
-    wasCounted?: boolean; // New: prevents double counting in global stats
-    tpHit?: boolean;      // New: marks if this signal reached +4%
-}
-
-interface GoldenStats {
-    totalSignals: number;
-    successHits: number;
-}
 
 const STAT_KEY = 'dexpulse_golden_stats';
 const GOLDEN_TRACKER_KEY = 'dexpulse_golden_tracker';
@@ -30,8 +12,8 @@ const GOLDEN_TRACKER_KEY = 'dexpulse_golden_tracker';
 function loadGoldenStats(): GoldenStats {
     try {
         const raw = localStorage.getItem(STAT_KEY);
-        return raw ? JSON.parse(raw) : { totalSignals: 0, successHits: 0 };
-    } catch { return { totalSignals: 0, successHits: 0 }; }
+        return raw ? JSON.parse(raw) : { totalSignals: 0, successCount: 0, successRate: 0, avgGain: 0 };
+    } catch { return { totalSignals: 0, successCount: 0, successRate: 0, avgGain: 0 }; }
 }
 
 function saveGoldenStats(stats: GoldenStats) {
@@ -51,9 +33,7 @@ function loadTrackedGoldens(): TrackedGolden[] {
 }
 
 function saveTrackedGoldens(data: TrackedGolden[]) {
-    const now = Date.now();
-    const filtered = data.filter(t => now - t.signalTime < TRACKER_EXPIRY_MS);
-    localStorage.setItem(GOLDEN_TRACKER_KEY, JSON.stringify(filtered));
+    localStorage.setItem(GOLDEN_TRACKER_KEY, JSON.stringify(data));
 }
 
 interface DecisionBuyAiProps {
