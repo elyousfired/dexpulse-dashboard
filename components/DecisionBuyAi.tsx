@@ -90,17 +90,17 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
         localStorage.setItem('dexpulse_audio_alerts', audioEnabled.toString());
     }, [audioEnabled]);
 
-    // One-time reset for new logic (v6)
+    // One-time reset for new logic (v7)
     useEffect(() => {
-        const hasReset = localStorage.getItem('dexpulse_logic_v6_reset');
+        const hasReset = localStorage.getItem('dexpulse_logic_v7_reset');
         if (!hasReset) {
             localStorage.removeItem(GOLDEN_TRACKER_KEY);
             localStorage.removeItem(STAT_KEY);
-            localStorage.setItem('dexpulse_logic_v6_reset', 'true');
+            localStorage.setItem('dexpulse_logic_v7_reset', 'true');
             setTrackedGoldens([]);
             alertedRef.current.clear();
             exitAlertedRef.current.clear();
-            console.log('[SignalEngine] Force-reset (v6): Absolute history purge.');
+            console.log('[SignalEngine] Force-reset (v7): Absolute history purge.');
         }
     }, [setTrackedGoldens]);
 
@@ -153,7 +153,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     ticker: t,
                     vwap,
                     score: 100,
-                    reason: `GOLDEN SIGNAL: Confirmed 6-point breakout. Price $${lastClose} cleared structural levels with ${(volatility * 100).toFixed(1)}% weekly range volatility.`,
+                    reason: `[v7] GOLDEN SIGNAL: Confirmed 6-point breakout. Price $${lastClose} cleared structural levels with ${(volatility * 100).toFixed(1)}% weekly range volatility.`,
                     activeSince: (firstSeenTimes[t.id] || Date.now()),
                     type: 'GOLDEN' as const
                 };
@@ -179,19 +179,27 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
 
         // 2. Sticky Goldens: Tracked tokens that are still active but maybe not in fresh signals
         const stickyGoldens: (BuySignal & { activeSince: number })[] = trackedGoldens
-            .filter(t => t.stillActive && !freshGoldens.some(g => g.ticker.symbol === t.symbol))
-            .map(t => {
+            .filter(t => {
                 const ticker = tickers.find(tk => tk.symbol === t.symbol);
                 const vwap = vwapStore[ticker?.id || ''];
-                if (!ticker || !vwap) return null;
+                if (!t.stillActive || !ticker || !vwap) return false;
 
+                // CRITICAL: Even sticky signals must maintain the 2% volatility hurdle to be visible
+                const rangeDist = Math.abs(vwap.max - vwap.min);
+                const volatility = rangeDist / ticker.priceUsd;
+                return volatility > 0.02;
+            })
+            .filter(t => !freshGoldens.some(g => g.ticker.symbol === t.symbol))
+            .map(t => {
+                const ticker = tickers.find(tk => tk.symbol === t.symbol)!;
+                const vwap = vwapStore[ticker.id];
                 const pnl = ((ticker.priceUsd - t.entryPrice) / t.entryPrice) * 100;
 
                 return {
                     ticker,
                     vwap,
                     score: 90, // Holding score
-                    reason: `Holding Signal: Initial Golden breakout confirmed. Currently ${pnl >= 0 ? 'profit' : 'loss'} of ${Math.abs(pnl).toFixed(2)}%. Watching for +4% Take-Profit target.`,
+                    reason: `[v7] Holding Signal: Initial Golden breakout confirmed. Currently ${pnl >= 0 ? 'profit' : 'loss'} of ${Math.abs(pnl).toFixed(2)}%. Watching for +4% Take-Profit target. Vol: ${((Math.abs(vwap.max - vwap.min) / ticker.priceUsd) * 100).toFixed(1)}%.`,
                     activeSince: t.signalTime,
                     type: 'GOLDEN' as const
                 };
