@@ -89,30 +89,60 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
     useEffect(() => {
         localStorage.setItem('dexpulse_audio_alerts', audioEnabled.toString());
     }, [audioEnabled]);
+
+    // One-time reset for new logic
+    useEffect(() => {
+        const hasReset = localStorage.getItem('dexpulse_logic_v2_reset');
+        if (!hasReset) {
+            localStorage.removeItem(GOLDEN_TRACKER_KEY);
+            localStorage.removeItem(STAT_KEY);
+            localStorage.setItem('dexpulse_logic_v2_reset', 'true');
+            setTrackedGoldens([]);
+            console.log('[SignalEngine] Legacy signals and stats cleared for new 6-point logic.');
+        }
+    }, []);
+
     const signals = useMemo(() => {
         const filtered = tickers.map(t => {
             const vwap = vwapStore[t.id];
             if (!vwap) return null;
 
-            // Trend strength (0.05 threshold same as chart coloring)
-            const isVwapPositive = vwap.normalizedSlope > 0.05;
-
-            // ─── GOLDEN SIGNAL LOGIC (Fresh 15m Crossover) ───
-            const lastClose = vwap.last15mClose || 0;
-            const isConfirmedNow = lastClose > vwap.max && lastClose > vwap.mid;
-
+            const lastClose = vwap.last15mClose || t.priceUsd;
             const prevClose = vwap.prev15mClose || 0;
-            const wasConfirmedPrev = prevClose > vwap.max && prevClose > vwap.mid;
 
-            const isFreshCrossover = isConfirmedNow && !wasConfirmedPrev;
+            // ─── NEW GOLDEN SIGNAL LOGIC (6 CONDITIONS) ───
 
-            if (isFreshCrossover && isVwapPositive) {
-                console.log(`[SignalEngine] GOLDEN TRIGGER: ${t.symbol} at $${lastClose} (Fresh Cross)`);
+            // 1. Price above previous week VWAP
+            const isAbovePrevWeek = lastClose > (vwap.prevWeekVwap || 0);
+
+            // 2. Price above current week cumulative VWAP
+            const isAboveCurrWeek = lastClose > (vwap.currentWeekVwap || 0);
+
+            // 3. Price above structural Weekly Max
+            const isAboveWeeklyMax = lastClose > vwap.max;
+
+            // 4. Trend: Current Week VWAP > Previous Week VWAP
+            const isVwapTrendBullish = (vwap.currentWeekVwap || 0) > (vwap.prevWeekVwap || 0);
+
+            // 5. Volatility Filter: (W_Max - W_Min) / Price > 2%
+            const rangeVolatility = (vwap.max - vwap.min) / lastClose;
+            const hasEnoughVolatility = rangeVolatility > 0.02;
+
+            // 6. Fresh 15m Crossover: Prev candle was below Max, Current is above Max
+            const isFreshCrossover = lastClose > vwap.max && prevClose <= vwap.max && prevClose !== 0;
+
+            // Score calculation (90 base + components)
+            const volScore = Math.min(5, (vwap.volumeRelative || 1) * 2);
+            const trendScore = Math.min(5, vwap.normalizedSlope * 20);
+            const finalScore = 90 + volScore + trendScore;
+
+            if (isAbovePrevWeek && isAboveCurrWeek && isAboveWeeklyMax && isVwapTrendBullish && hasEnoughVolatility && isFreshCrossover) {
+                console.log(`[SignalEngine] GOLDEN TRIGGER: ${t.symbol} at $${lastClose} (Refactored 6-Point Check)`);
                 return {
                     ticker: t,
                     vwap,
-                    score: 95 + Math.min(5, vwap.normalizedSlope * 20),
-                    reason: `Fresh 15m Crossover: Confirmed closed at $${formatPrice(lastClose)}. Breakout above Weekly Max ($${formatPrice(vwap.max)}).`,
+                    score: finalScore,
+                    reason: `Refactored GOLDEN: Price ($${formatPrice(lastClose)}) cleared Weekly Max ($${formatPrice(vwap.max)}) with fresh 15m crossover. Trend is structural (CurrV > PrevV). Volatility at ${(rangeVolatility * 100).toFixed(1)}%.`,
                     activeSince: (firstSeenTimes[t.id] || Date.now()),
                     type: 'GOLDEN' as const
                 };

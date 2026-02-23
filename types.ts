@@ -149,6 +149,8 @@ export interface VwapData {
   prev15mClose?: number;
   isFreshCrossover?: boolean;
   volumeRelative?: number;
+  prevWeekVwap?: number;
+  currentWeekVwap?: number;
 }
 
 export type BuyType = 'GOLDEN';

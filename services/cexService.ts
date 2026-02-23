@@ -445,6 +445,29 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     if (wMax === -Infinity) wMax = currentMid;
     if (wMin === Infinity) wMin = currentMid;
 
+    // Calculate Previous Week VWAP & Current Week cumulative VWAP
+    const prevMonday = new Date(monday);
+    prevMonday.setUTCDate(monday.getUTCDate() - 7);
+    const prevMondayTs = Math.floor(prevMonday.getTime() / 1000);
+
+    let prevWeekQVol = 0;
+    let prevWeekBVol = 0;
+    let currWeekQVol = 0;
+    let currWeekBVol = 0;
+
+    klines.forEach(k => {
+        if (k.time >= prevMondayTs && k.time < mondayTs) {
+            prevWeekQVol += k.quoteVolume || (k.close * k.volume);
+            prevWeekBVol += k.volume;
+        } else if (k.time >= mondayTs) {
+            currWeekQVol += k.quoteVolume || (k.close * k.volume);
+            currWeekBVol += k.volume;
+        }
+    });
+
+    const prevWeekVwap = prevWeekBVol > 0 ? prevWeekQVol / prevWeekBVol : 0;
+    const currentWeekVwap = currWeekBVol > 0 ? currWeekQVol / currWeekBVol : currentMid;
+
     const vwapData: VwapData = {
         max: wMax,
         min: wMin,
@@ -454,7 +477,9 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         symbol,
         last15mClose,
         prev15mClose,
-        isFreshCrossover: last15mClose > wMax && last15mClose > currentMid && prev15mClose <= wMax
+        isFreshCrossover: last15mClose > wMax && last15mClose > currentMid && prev15mClose <= wMax,
+        prevWeekVwap,
+        currentWeekVwap
     };
 
     vwapCache.set(symbol, { data: vwapData, expires: Date.now() + VWAP_CACHE_TTL });
