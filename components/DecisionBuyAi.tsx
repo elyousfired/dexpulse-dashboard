@@ -45,14 +45,6 @@ interface DecisionBuyAiProps {
     onAddToWatchlist: (ticker: CexTicker) => void;
 }
 
-interface BuySignal {
-    ticker: CexTicker;
-    vwap: VwapData;
-    score: number;
-    reason: string;
-    type: 'GOLDEN' | 'MOMENTUM' | 'SUPPORT' | 'EXIT';
-    activeSince?: number; // timestamp
-}
 
 export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
     tickers,
