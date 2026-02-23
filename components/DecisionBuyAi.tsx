@@ -90,17 +90,17 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
         localStorage.setItem('dexpulse_audio_alerts', audioEnabled.toString());
     }, [audioEnabled]);
 
-    // One-time reset for new logic (v5)
+    // One-time reset for new logic (v6)
     useEffect(() => {
-        const hasReset = localStorage.getItem('dexpulse_logic_v5_reset');
+        const hasReset = localStorage.getItem('dexpulse_logic_v6_reset');
         if (!hasReset) {
             localStorage.removeItem(GOLDEN_TRACKER_KEY);
             localStorage.removeItem(STAT_KEY);
-            localStorage.setItem('dexpulse_logic_v5_reset', 'true');
+            localStorage.setItem('dexpulse_logic_v6_reset', 'true');
             setTrackedGoldens([]);
             alertedRef.current.clear();
             exitAlertedRef.current.clear();
-            console.log('[SignalEngine] Force-reset (v5): Absolute history purge.');
+            console.log('[SignalEngine] Force-reset (v6): Absolute history purge.');
         }
     }, [setTrackedGoldens]);
 

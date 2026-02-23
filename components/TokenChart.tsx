@@ -404,10 +404,21 @@ export const TokenChart: React.FC<TokenChartProps> = ({
 
                         const last = data[data.length - 1];
                         let bg = '#0d0f14';
-                        if (last) {
-                            if (last.close > weekly.max && last.close > weekly.mid) bg = 'rgba(16, 185, 129, 0.08)';
-                            else if (last.close > weekly.mid) bg = 'rgba(234, 179, 8, 0.08)';
-                            else if (last.close > weekly.min) bg = 'rgba(59, 130, 246, 0.08)';
+                        if (last && weekly) {
+                            const rangeDist = Math.abs(weekly.max - weekly.min);
+                            const volatility = rangeDist / last.close;
+                            const prevV = weekly.prevWeekVwap || 0;
+                            const currV = weekly.currentWeekVwap || 0;
+
+                            const isGolden = last.close > weekly.max &&
+                                last.close > currV &&
+                                last.close > prevV &&
+                                volatility > 0.02 &&
+                                currV > prevV;
+
+                            if (isGolden) bg = 'rgba(16, 185, 129, 0.08)';
+                            else if (last.close > (weekly.mid || weekly.max)) bg = 'rgba(234, 179, 8, 0.08)';
+                            else if (last.close > (weekly.min || weekly.mid)) bg = 'rgba(59, 130, 246, 0.08)';
                             else bg = 'rgba(239, 68, 68, 0.08)';
                         }
                         chartRef.current.applyOptions({ layout: { background: { type: ColorType.Solid, color: bg } } });
@@ -454,13 +465,29 @@ useEffect(() => {
         if (!isFlowMode) {
             let candleColor = kline.close >= kline.open ? '#22c55e' : '#ef4444';
 
-            // Real-time Traffic Light
+            // Real-time Traffic Light (Synced with 6-Point Logic)
             if ((showWeeklyVwap || isVwapWeeklyView) && vwapData) {
                 let bg = '#0d0f14';
-                if (kline.close > vwapData.max && kline.close > vwapData.mid) { bg = 'rgba(16, 185, 129, 0.08)'; candleColor = '#10b981'; }
-                else if (kline.close > vwapData.mid) bg = 'rgba(234, 179, 8, 0.08)';
-                else if (kline.close > vwapData.min) bg = 'rgba(59, 130, 246, 0.08)';
-                else bg = 'rgba(239, 68, 68, 0.08)';
+                const rangeDist = Math.abs(vwapData.max - vwapData.min);
+                const volatility = rangeDist / kline.close;
+                const prevV = vwapData.prevWeekVwap || 0;
+                const currV = vwapData.currentWeekVwap || 0;
+
+                const isGolden = kline.close > vwapData.max &&
+                    kline.close > currV &&
+                    kline.close > prevV &&
+                    volatility > 0.02 &&
+                    currV > prevV;
+
+                if (isGolden) {
+                    bg = 'rgba(16, 185, 129, 0.08)'; candleColor = '#10b981';
+                } else if (kline.close > vwapData.mid) {
+                    bg = 'rgba(234, 179, 8, 0.08)'; candleColor = '#facc15';
+                } else if (kline.close > vwapData.min) {
+                    bg = 'rgba(59, 130, 246, 0.08)'; candleColor = '#3b82f6';
+                } else {
+                    bg = 'rgba(239, 68, 68, 0.08)'; candleColor = '#f43f5e';
+                }
                 chartRef.current.applyOptions({ layout: { background: { type: ColorType.Solid, color: bg } } });
             }
 
