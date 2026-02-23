@@ -130,6 +130,26 @@ const App: React.FC = () => {
   const [vwapArchState, setVwapArchState] = useState<VwapArchState | null>(null);
   const [vwapArchLoading, setVwapArchLoading] = useState(false);
 
+  // ─── Global Reset for New Logic (v4) ────────────
+  useEffect(() => {
+    const hasReset = localStorage.getItem('dexpulse_global_reset_v4');
+    if (!hasReset) {
+      const keysToClear = [
+        'dexpulse_golden_tracker',
+        'dexpulse_golden_stats',
+        'dexpulse_first_seen_times',
+        'dexpulse_logic_v3_reset',
+        'dexpulse_logic_v2_reset'
+      ];
+      keysToClear.forEach(k => localStorage.removeItem(k));
+      localStorage.setItem('dexpulse_global_reset_v4', 'true');
+      console.log('[Global] History purged for v4 logic update.');
+      // Update state to reflect purge
+      setFirstSeenTimes({});
+      setVwapStore({});
+    }
+  }, []);
+
   // ─── Initial Data Fetch ─────────────────────────
   const loadCexData = useCallback(async () => {
     setCexLoading(true);
