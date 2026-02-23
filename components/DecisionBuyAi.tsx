@@ -90,15 +90,15 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
         localStorage.setItem('dexpulse_audio_alerts', audioEnabled.toString());
     }, [audioEnabled]);
 
-    // One-time reset for new logic
+    // One-time reset for new logic (v3)
     useEffect(() => {
-        const hasReset = localStorage.getItem('dexpulse_logic_v2_reset');
+        const hasReset = localStorage.getItem('dexpulse_logic_v3_reset');
         if (!hasReset) {
             localStorage.removeItem(GOLDEN_TRACKER_KEY);
             localStorage.removeItem(STAT_KEY);
-            localStorage.setItem('dexpulse_logic_v2_reset', 'true');
+            localStorage.setItem('dexpulse_logic_v3_reset', 'true');
             setTrackedGoldens([]);
-            console.log('[SignalEngine] Legacy signals and stats cleared for new 6-point logic.');
+            console.log('[SignalEngine] Force-reset (v3): Cleared all legacy history and stats.');
         }
     }, []);
 
