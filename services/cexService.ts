@@ -382,14 +382,20 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     const last15mClose = klines15m.length >= 2 ? klines15m[klines15m.length - 2].close : 0;
     const prev15mClose = klines15m.length >= 3 ? klines15m[klines15m.length - 3].close : (klines15m.length >= 2 ? klines15m[klines15m.length - 2].close : 0);
 
-    // Monday 00:00 UTC boundary
-    const now = new Date();
-    const dayOfWeek = now.getUTCDay(); // 0 = Sunday
-    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const monday = new Date(now);
-    monday.setUTCHours(0, 0, 0, 0);
-    monday.setUTCDate(now.getUTCDate() - diffToMonday);
-    const mondayTs = Math.floor(monday.getTime() / 1000);
+    // Unified Monday 00:00 UTC boundary detection
+    const getMonTs = (ts: number) => {
+        const d = new Date(ts * 1000);
+        const day = d.getUTCDay();
+        const diff = (day === 0 ? 6 : day - 1);
+        const mon = new Date(ts * 1000);
+        mon.setUTCHours(0, 0, 0, 0);
+        mon.setUTCDate(mon.getUTCDate() - diff);
+        return Math.floor(mon.getTime() / 1000);
+    };
+
+    const nowTs = Math.floor(Date.now() / 1000);
+    const mondayTs = getMonTs(nowTs);
+    const prevMondayTs = mondayTs - (7 * 24 * 3600);
 
     let wMax = -Infinity;
     let wMin = Infinity;
@@ -401,7 +407,8 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     klines.forEach((k, index) => {
         const dailyVwap = rawVwap[index];
         const isCompletedDay = index < klines.length - 1;
-        const isSinceMonday = k.time >= mondayTs;
+        const kMonTs = getMonTs(k.time);
+        const isSinceMonday = kMonTs === mondayTs;
 
         // Max/Min: only from COMPLETED daily candles since Monday (structural levels)
         if (isSinceMonday && isCompletedDay) {
@@ -456,10 +463,11 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     let currWeekBVol = 0;
 
     klines.forEach(k => {
-        if (k.time >= prevMondayTs && k.time < mondayTs) {
+        const kMonTs = getMonTs(k.time);
+        if (kMonTs === prevMondayTs) {
             prevWeekQVol += k.quoteVolume || (k.close * k.volume);
             prevWeekBVol += k.volume;
-        } else if (k.time >= mondayTs) {
+        } else if (kMonTs === mondayTs) {
             currWeekQVol += k.quoteVolume || (k.close * k.volume);
             currWeekBVol += k.volume;
         }
