@@ -453,10 +453,6 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     if (wMin === Infinity) wMin = currentMid;
 
     // Calculate Previous Week VWAP & Current Week cumulative VWAP
-    const prevMonday = new Date(monday);
-    prevMonday.setUTCDate(monday.getUTCDate() - 7);
-    const prevMondayTs = Math.floor(prevMonday.getTime() / 1000);
-
     let prevWeekQVol = 0;
     let prevWeekBVol = 0;
     let currWeekQVol = 0;
@@ -525,14 +521,18 @@ export function calculateWeeklyVwapSeries(klines: OHLCV[]): { time: number, valu
     let bVol = 0;
     let lastMondayTs = -1;
 
+    const getMonTs = (ts: number) => {
+        const d = new Date(ts * 1000);
+        const day = d.getUTCDay();
+        const diff = (day === 0 ? 6 : day - 1);
+        const mon = new Date(ts * 1000);
+        mon.setUTCHours(0, 0, 0, 0);
+        mon.setUTCDate(mon.getUTCDate() - diff);
+        return Math.floor(mon.getTime() / 1000);
+    };
+
     return klines.map(k => {
-        const date = new Date(k.time * 1000);
-        const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 1 = Monday
-        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const monday = new Date(date);
-        monday.setUTCHours(0, 0, 0, 0);
-        monday.setUTCDate(date.getUTCDate() - diffToMonday);
-        const currentMondayTs = Math.floor(monday.getTime() / 1000);
+        const currentMondayTs = getMonTs(k.time);
 
         if (lastMondayTs !== -1 && currentMondayTs !== lastMondayTs) {
             qVol = 0;
