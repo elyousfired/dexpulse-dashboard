@@ -153,7 +153,7 @@ export interface VwapData {
   currentWeekVwap?: number;
 }
 
-export type BuyType = 'GOLDEN';
+export type BuyType = 'GOLDEN' | 'STEALTH';
 
 export interface BuySignal {
   ticker: CexTicker;

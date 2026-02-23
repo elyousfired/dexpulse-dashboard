@@ -2,8 +2,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CexTicker, VwapData, BuySignal, BuyType, TrackedGolden, GoldenStats } from '../types';
 import { fetchWeeklyVwapData, formatPrice } from '../services/cexService';
-import { Brain, Star, TrendingUp, TrendingDown, Info, ArrowRight, Zap, Trophy, ShieldCheck, Bell, Settings, Send, CheckCircle, XCircle, Volume2, VolumeX, Timer, Filter, BarChart3, Target, RefreshCcw } from 'lucide-react';
+import { Brain, Star, TrendingUp, TrendingDown, Info, ArrowRight, Zap, Trophy, ShieldCheck, Bell, Settings, Send, CheckCircle, XCircle, Volume2, VolumeX, Timer, Filter, BarChart3, Target, RefreshCcw, Radar } from 'lucide-react';
 import { sendGoldenSignalAlert, wasAlertedToday, loadTelegramConfig, saveTelegramConfig, sendTestAlert, TelegramConfig } from '../services/telegramService';
+import { StealthRadar } from './StealthRadar';
 
 
 const STAT_KEY = 'dexpulse_golden_stats';
@@ -57,6 +58,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
     const [showSettings, setShowSettings] = useState(false);
     const [tgConfig, setTgConfig] = useState<TelegramConfig>(loadTelegramConfig);
     const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle');
+    const [activeTab, setActiveTab] = useState<'golden' | 'stealth'>('golden');
     const [alertCount, setAlertCount] = useState(0);
     const [audioEnabled, setAudioEnabled] = useState(() => {
         const saved = localStorage.getItem('dexpulse_audio_alerts');
@@ -160,7 +162,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             }
 
             return null;
-        }).filter((s): s is (BuySignal & { activeSince: number }) => s !== null);
+        }).filter((s): s is (BuySignal & { type: 'GOLDEN'; activeSince: number }) => s !== null);
 
         console.log(`[SignalEngine] Processed ${tickers.length} tickers. Found ${filtered.length} fresh signals.`);
         return filtered;
@@ -203,7 +205,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     activeSince: t.signalTime,
                     type: 'GOLDEN' as const
                 };
-            }).filter((s): s is (BuySignal & { activeSince: number }) => s !== null);
+            }).filter((s): s is (BuySignal & { type: 'GOLDEN'; activeSince: number }) => s !== null);
 
         return [...freshGoldens, ...stickyGoldens].sort((a, b) => b.score - a.score);
     }, [signals, trackedGoldens, tickers, vwapStore, sortBy]);
@@ -385,6 +387,23 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <div className="flex bg-black/40 rounded-xl p-1 border border-purple-500/20 mr-4">
+                        <button
+                            onClick={() => setActiveTab('golden')}
+                            className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'golden' ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'text-gray-500 hover:text-gray-300'}`}
+                        >
+                            <Zap className="w-3.5 h-3.5" />
+                            GOLDEN ENTRY
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('stealth')}
+                            className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${activeTab === 'stealth' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-gray-500 hover:text-gray-300'}`}
+                        >
+                            <Radar className="w-3.5 h-3.5" />
+                            STEALTH RADAR
+                        </button>
+                    </div>
+
                     <div className="flex items-center bg-black/40 rounded-xl p-1 border border-purple-500/20 mr-2">
                         <button
                             onClick={() => setSortBy('score')}
@@ -483,92 +502,103 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
 
             {/* Signal List */}
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    {displaySignals.map((sig) => (
-                        <button
-                            key={sig.ticker.id}
-                            onClick={() => onTickerClick(sig.ticker)}
-                            className="group relative flex flex-col p-5 bg-[#12141c] rounded-2xl border border-gray-800 hover:border-purple-500/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(168,85,247,0.1)] active:scale-[0.99]"
-                        >
-                            {/* Score Badge */}
-                            <div className="absolute top-4 right-4 flex flex-col items-end">
-                                <div className="text-[10px] font-black text-gray-500 uppercase mb-1">Buy Score</div>
-                                <div className="flex items-center gap-2">
-                                    <Trophy className={`w-4 h-4 ${sig.score > 90 ? 'text-yellow-500' : 'text-purple-400'}`} />
-                                    <span className="text-2xl font-black text-white italic">{sig.score.toFixed(0)}</span>
-                                </div>
-                                {sig.type === 'GOLDEN' && sig.activeSince && (
-                                    <span className="text-[9px] font-black text-amber-500/70 mt-1 uppercase tracking-tighter bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10">
-                                        ⏱️ {Math.floor((currentTime - sig.activeSince) / 1000 / 60)}m {Math.floor((currentTime - sig.activeSince) / 1000) % 60}s
-                                    </span>
-                                )}
-                            </div>
-
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${sig.type === 'GOLDEN' ? 'bg-yellow-500 text-black' : 'bg-purple-600 text-white'}`}>
-                                    {sig.ticker.symbol[0]}
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-black text-white group-hover:text-purple-400 transition-colors uppercase tracking-tighter">
-                                        {sig.ticker.symbol} / USDT
-                                    </h3>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${sig.type === 'GOLDEN' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-purple-500/20 text-purple-400'}`}>
-                                            {sig.type} SIGNAL
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-black/40 rounded-xl p-4 border border-white/5 mb-4">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <ShieldCheck className="w-4 h-4 text-purple-400" />
-                                    <span className="text-xs font-black text-gray-300 uppercase tracking-widest">AI Verdict</span>
-                                </div>
-                                <p className="text-sm text-gray-400 leading-relaxed font-medium">
-                                    {sig.reason}
-                                </p>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black text-gray-600 uppercase mb-1">Price</span>
-                                    <span className="text-sm font-mono font-bold text-white">${formatPrice(sig.ticker.priceUsd)}</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black text-gray-600 uppercase mb-1">Target (Max)</span>
-                                    <span className="text-sm font-mono font-bold text-green-400">${formatPrice(sig.vwap.max)}</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black text-gray-600 uppercase mb-1">Stop (Mid)</span>
-                                    <span className="text-sm font-mono font-bold text-rose-400">${formatPrice(sig.vwap.mid)}</span>
-                                </div>
-                            </div>
-
-                            <div className="mt-6 flex items-center justify-between">
+                {activeTab === 'golden' ? (
+                    <>
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                            {displaySignals.map((sig) => (
                                 <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onAddToWatchlist(sig.ticker);
-                                    }}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-600/10 text-blue-400 border border-blue-600/20 rounded-xl text-[10px] font-black hover:bg-blue-600 hover:text-white transition-all"
+                                    key={sig.ticker.id}
+                                    onClick={() => onTickerClick(sig.ticker)}
+                                    className="group relative flex flex-col p-5 bg-[#12141c] rounded-2xl border border-gray-800 hover:border-purple-500/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(168,85,247,0.1)] active:scale-[0.99]"
                                 >
-                                    <Star className="w-3 h-3" />
-                                    ADD TO WATCHLIST
-                                </button>
-                                <div className="flex items-center gap-1 text-purple-400 font-black text-xs group-hover:gap-2 transition-all uppercase">
-                                    Investigate <ArrowRight className="w-4 h-4" />
-                                </div>
-                            </div>
-                        </button>
-                    ))}
-                </div>
+                                    {/* Score Badge */}
+                                    <div className="absolute top-4 right-4 flex flex-col items-end">
+                                        <div className="text-[10px] font-black text-gray-500 uppercase mb-1">Buy Score</div>
+                                        <div className="flex items-center gap-2">
+                                            <Trophy className={`w-4 h-4 ${sig.score > 90 ? 'text-yellow-500' : 'text-purple-400'}`} />
+                                            <span className="text-2xl font-black text-white italic">{sig.score.toFixed(0)}</span>
+                                        </div>
+                                        {sig.type === 'GOLDEN' && sig.activeSince && (
+                                            <span className="text-[9px] font-black text-amber-500/70 mt-1 uppercase tracking-tighter bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10">
+                                                ⏱️ {Math.floor((currentTime - sig.activeSince) / 1000 / 60)}m {Math.floor((currentTime - sig.activeSince) / 1000) % 60}s
+                                            </span>
+                                        )}
+                                    </div>
 
-                {displaySignals.length === 0 && (
-                    <div className="flex flex-col items-center justify-center p-20 text-gray-500 italic">
-                        <Zap className="w-12 h-12 opacity-10 mb-4" />
-                        <p>Scanning markets for low-risk Golden Entry opportunities...</p>
-                    </div>
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${sig.type === 'GOLDEN' ? 'bg-yellow-500 text-black' : 'bg-purple-600 text-white'}`}>
+                                            {sig.ticker.symbol[0]}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-black text-white group-hover:text-purple-400 transition-colors uppercase tracking-tighter">
+                                                {sig.ticker.symbol} / USDT
+                                            </h3>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${sig.type === 'GOLDEN' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-purple-500/20 text-purple-400'}`}>
+                                                    {sig.type} SIGNAL
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-black/40 rounded-xl p-4 border border-white/5 mb-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <ShieldCheck className="w-4 h-4 text-purple-400" />
+                                            <span className="text-xs font-black text-gray-300 uppercase tracking-widest">AI Verdict</span>
+                                        </div>
+                                        <p className="text-sm text-gray-400 leading-relaxed font-medium">
+                                            {sig.reason}
+                                        </p>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-gray-600 uppercase mb-1">Price</span>
+                                            <span className="text-sm font-mono font-bold text-white">${formatPrice(sig.ticker.priceUsd)}</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-gray-600 uppercase mb-1">Target (Max)</span>
+                                            <span className="text-sm font-mono font-bold text-green-400">${formatPrice(sig.vwap.max)}</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-gray-600 uppercase mb-1">Stop (Mid)</span>
+                                            <span className="text-sm font-mono font-bold text-rose-400">${formatPrice(sig.vwap.mid)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 flex items-center justify-between">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onAddToWatchlist(sig.ticker);
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600/10 text-blue-400 border border-blue-600/20 rounded-xl text-[10px] font-black hover:bg-blue-600 hover:text-white transition-all"
+                                        >
+                                            <Star className="w-3 h-3" />
+                                            ADD TO WATCHLIST
+                                        </button>
+                                        <div className="flex items-center gap-1 text-purple-400 font-black text-xs group-hover:gap-2 transition-all uppercase">
+                                            Investigate <ArrowRight className="w-4 h-4" />
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+
+                        {displaySignals.length === 0 && (
+                            <div className="flex flex-col items-center justify-center p-20 text-gray-500 italic">
+                                <Zap className="w-12 h-12 opacity-10 mb-4" />
+                                <p>Scanning markets for low-risk Golden Entry opportunities...</p>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <StealthRadar
+                        tickers={tickers}
+                        vwapStore={vwapStore}
+                        onTickerClick={onTickerClick}
+                        onAddToWatchlist={onAddToWatchlist}
+                    />
                 )}
             </div>
 
