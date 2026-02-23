@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, ISeriesApi, LineStyle } from 'lightweight-charts';
 
-import { fetchBinanceKlines, subscribeToKlines, fetchWeeklyVwapData } from '../services/cexService';
+import { fetchBinanceKlines, subscribeToKlines, fetchWeeklyVwapData, calculateWeeklyVwapSeries } from '../services/cexService';
 import { VwapData, OHLCV as TypesOHLCV } from '../types';
 import { executeIndicatorScript, OHLCV } from '../services/scriptEngine';
 import {
@@ -46,6 +46,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
     const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
     const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
     const vwapSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const weeklyVwapCurveSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const volumeCurveSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
 
     // Structural Analytics Refs
@@ -113,6 +114,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
 
         weeklyMaxSeriesRef.current = chart.addLineSeries({ color: '#10b981', lineWidth: 2, lineStyle: LineStyle.Dashed, priceLineVisible: true, title: 'W_RANGE_TOP' });
         weeklyMinSeriesRef.current = chart.addLineSeries({ color: '#f43f5e', lineWidth: 2, lineStyle: LineStyle.Dashed, priceLineVisible: true, title: 'W_RANGE_BOT' });
+        weeklyVwapCurveSeriesRef.current = chart.addLineSeries({ color: '#10b981', lineWidth: 2, priceLineVisible: false, title: 'Weekly VWAP Curve' });
 
         customSeriesRef.current = chart.addLineSeries({ color: '#a855f7', lineWidth: 2, priceLineVisible: false, title: 'Indicator' });
         netFlowSeriesRef.current = chart.addHistogramSeries({ color: '#22c55e', priceFormat: { type: 'volume' }, title: 'Net Flow' });
@@ -182,7 +184,7 @@ export const TokenChart: React.FC<TokenChartProps> = ({
 
             try {
                 const [data, weekly, dailyKlines] = await Promise.all([
-                    fetchBinanceKlines(symbol, interval),
+                    fetchBinanceKlines(symbol, interval, 1000), // Increase limit to see multiple weeks
                     fetchWeeklyVwapData(symbol),
                     fetchBinanceKlines(symbol, '1d', 2)
                 ]);
@@ -405,10 +407,20 @@ export const TokenChart: React.FC<TokenChartProps> = ({
                             }
                             chartRef.current.applyOptions({ layout: { background: { type: ColorType.Solid, color: bg } } });
                         } else {
-                            weeklyMaxSeriesRef.current.setData([]);
-                            weeklyMinSeriesRef.current.setData([]);
+                            weeklyMaxSeriesRef.current?.setData([]);
+                            weeklyMinSeriesRef.current?.setData([]);
                             vwapFibRefs.current.forEach(s => s.setData([]));
                             chartRef.current.applyOptions({ layout: { background: { type: ColorType.Solid, color: '#0d0f14' } } });
+                        }
+
+                        // 6. Continuous Weekly VWAP Curve
+                        if (weeklyVwapCurveSeriesRef.current) {
+                            if (!isFlowMode && showWeeklyVwap) {
+                                const weeklySeries = calculateWeeklyVwapSeries(data);
+                                weeklyVwapCurveSeriesRef.current.setData(weeklySeries.map(p => ({ time: p.time as any, value: p.value })));
+                            } else {
+                                weeklyVwapCurveSeriesRef.current.setData([]);
+                            }
                         }
                     }
 

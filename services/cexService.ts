@@ -484,6 +484,39 @@ export function getMondayStartUTC(): number {
     return monday.getTime();
 }
 
+/**
+ * Calculates a continuous VWAP series that resets every Monday 00:00 UTC.
+ */
+export function calculateWeeklyVwapSeries(klines: OHLCV[]): { time: number, value: number }[] {
+    let qVol = 0;
+    let bVol = 0;
+    let lastMondayTs = -1;
+
+    return klines.map(k => {
+        const date = new Date(k.time * 1000);
+        const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 1 = Monday
+        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const monday = new Date(date);
+        monday.setUTCHours(0, 0, 0, 0);
+        monday.setUTCDate(date.getUTCDate() - diffToMonday);
+        const currentMondayTs = Math.floor(monday.getTime() / 1000);
+
+        if (lastMondayTs !== -1 && currentMondayTs !== lastMondayTs) {
+            qVol = 0;
+            bVol = 0;
+        }
+        lastMondayTs = currentMondayTs;
+
+        qVol += k.quoteVolume || (k.close * k.volume);
+        bVol += k.volume;
+
+        return {
+            time: k.time,
+            value: bVol > 0 ? qVol / bVol : k.close
+        };
+    });
+}
+
 export function formatPrice(price: number): string {
     if (price >= 1000) return price.toLocaleString('en-US', { maximumFractionDigits: 2 });
     if (price >= 1) return price.toFixed(2);
