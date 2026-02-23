@@ -123,13 +123,8 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             const vwap = vwapStore[t.id];
             if (!vwap) return null;
 
-            const price = t.priceUsd;
-            let signal: BuySignal | null = null;
-            const isMonday = new Date().getUTCDay() === 1;
-
             // Trend strength (0.05 threshold same as chart coloring)
             const isVwapPositive = vwap.normalizedSlope > 0.05;
-            const isVwapNegative = vwap.normalizedSlope < -0.05;
 
             // ─── GOLDEN SIGNAL LOGIC (Fresh 15m Crossover) ───
             const lastClose = vwap.last15mClose || 0;
@@ -153,16 +148,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
             }
 
             return null;
-        })
-            .filter((s): s is BuySignal => s !== null)
-            .sort((a, b) => {
-                if (sortBy === 'time') {
-                    const aTime = a.activeSince || 0;
-                    const bTime = b.activeSince || 0;
-                    return bTime - aTime;
-                }
-                return b.score - a.score;
-            });
+        }).filter((s): s is (BuySignal & { activeSince: number }) => s !== null);
     }, [tickers, vwapStore, firstSeenTimes, sortBy]);
 
     // Filtered signals for UI display (Show only GOLDEN Entry signals)
@@ -177,7 +163,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
         });
 
         // 2. Sticky Goldens: Tracked tokens that are still active but maybe not in fresh signals
-        const stickyGoldens: BuySignal[] = trackedGoldens
+        const stickyGoldens: (BuySignal & { activeSince: number })[] = trackedGoldens
             .filter(t => t.stillActive && !freshGoldens.some(g => g.ticker.symbol === t.symbol))
             .map(t => {
                 const ticker = tickers.find(tk => tk.symbol === t.symbol);
@@ -192,12 +178,12 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     score: 90, // Holding score
                     reason: `Holding Signal: Initial Golden breakout confirmed. Currently ${pnl >= 0 ? 'profit' : 'loss'} of ${Math.abs(pnl).toFixed(2)}%. Watching for +4% Take-Profit target.`,
                     activeSince: t.signalTime,
-                    type: 'GOLDEN'
+                    type: 'GOLDEN' as const
                 };
-            }).filter((s): s is BuySignal => s !== null);
+            }).filter((s): s is (BuySignal & { activeSince: number }) => s !== null);
 
         return [...freshGoldens, ...stickyGoldens].sort((a, b) => b.score - a.score);
-    }, [signals, trackedGoldens, tickers, vwapStore]);
+    }, [signals, trackedGoldens, tickers, vwapStore, sortBy]);
 
     // ─── Telegram Alert Trigger ───────────────────
     useEffect(() => {
@@ -223,38 +209,13 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     });
                     playAlarm();
                     alertedRef.current.add(symbol);
-                    exitAlertedRef.current.delete(symbol); // Reset exit alert if it becomes golden again
                     sent++;
-                }
-            } else if (sig.type === 'EXIT') {
-                if (!exitAlertedRef.current.has(symbol)) {
-                    sendGoldenSignalAlert({
-                        symbol,
-                        price: sig.ticker.priceUsd,
-                        change24h: sig.ticker.priceChangePercent24h,
-                        score: sig.score,
-                        vwapMax: sig.vwap.max,
-                        vwapMid: sig.vwap.mid,
-                        reason: sig.reason,
-                        type: 'EXIT'
-                    });
-                    // Only play alarm for EXIT if it was previously a known positive signal
-                    if (alertedRef.current.has(symbol)) playAlarm();
-
-                    exitAlertedRef.current.add(symbol);
-                    alertedRef.current.delete(symbol);
-                    sent++;
-                }
-            } else {
-                // Not golden or exit: if it was alerted before, clear it so it can re-trigger
-                if (alertedRef.current.has(symbol)) {
-                    alertedRef.current.delete(symbol);
                 }
             }
         });
 
         // Cleanup: tokens that completely fell out of signals
-        const cleanupList = [alertedRef, exitAlertedRef];
+        const cleanupList = [alertedRef];
         cleanupList.forEach(ref => {
             ref.current.forEach(symbol => {
                 if (!allActiveSymbols.has(symbol)) {
