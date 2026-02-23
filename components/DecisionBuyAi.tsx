@@ -90,67 +90,70 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
         localStorage.setItem('dexpulse_audio_alerts', audioEnabled.toString());
     }, [audioEnabled]);
 
-    // One-time reset for new logic (v4)
+    // One-time reset for new logic (v5)
     useEffect(() => {
-        const hasReset = localStorage.getItem('dexpulse_logic_v4_reset');
+        const hasReset = localStorage.getItem('dexpulse_logic_v5_reset');
         if (!hasReset) {
             localStorage.removeItem(GOLDEN_TRACKER_KEY);
             localStorage.removeItem(STAT_KEY);
-            localStorage.setItem('dexpulse_logic_v4_reset', 'true');
+            localStorage.setItem('dexpulse_logic_v5_reset', 'true');
             setTrackedGoldens([]);
-            console.log('[SignalEngine] Force-reset (v4): Global purge of legacy history.');
+            alertedRef.current.clear();
+            exitAlertedRef.current.clear();
+            console.log('[SignalEngine] Force-reset (v5): Absolute history purge.');
         }
-    }, []);
+    }, [setTrackedGoldens]);
 
     const signals = useMemo(() => {
         const filtered = tickers.map(t => {
             const vwap = vwapStore[t.id];
             if (!vwap) return null;
 
-            // ─── STRICT GOLDEN SIGNAL LOGIC (6 CONDITIONS) ───
+            // ─── STRICT 6-POINT GOLDEN CHECK ───
             const lastClose = vwap.last15mClose || t.priceUsd;
             const prevClose = vwap.prev15mClose || 0;
 
-            // 1. Price above previous week VWAP
-            const prevW = vwap.prevWeekVwap || 0;
-            const isAbovePrevWeek = lastClose > prevW;
+            // Condition 1: Price > Previous Week's Full VWAP
+            const prevVWAP = vwap.prevWeekVwap || 0;
+            const cond1 = lastClose > prevVWAP;
 
-            // 2. Price above current week cumulative VWAP
-            const currW = vwap.currentWeekVwap || 0;
-            const isAboveCurrWeek = lastClose > currW;
+            // Condition 2: Price > Current Week's Cumulative VWAP
+            const currVWAP = vwap.currentWeekVwap || 0;
+            const cond2 = lastClose > currVWAP;
 
-            // 3. Price above structural Weekly Max
-            const isAboveWeeklyMax = lastClose > vwap.max;
+            // Condition 3: Price > Structural Weekly Max (Completed days)
+            const cond3 = lastClose > vwap.max;
 
-            // 4. Trend: Current Week VWAP > Previous Week VWAP
-            const isVwapTrendBullish = currW > prevW && prevW !== 0;
+            // Condition 4: Current Week VWAP > Previous Week VWAP (Bulish Structure)
+            const cond4 = currVWAP > prevVWAP && prevVWAP > 0;
 
-            // 5. Volatility Filter: (W_Max - W_Min) / Price > 2%
-            const rangeVolatility = (vwap.max - vwap.min) / lastClose;
-            const hasEnoughVolatility = rangeVolatility > 0.02;
+            // Condition 5: Volatility Hurdle (W_Max - W_Min) / Price > 2%
+            const rangeDist = Math.abs(vwap.max - vwap.min);
+            const volatility = rangeDist / lastClose;
+            const cond5 = volatility > 0.02;
 
-            // 6. Fresh 15m Crossover: Prev candle <= Max, Current > Max
-            const isFreshCrossover = lastClose > vwap.max && prevClose <= vwap.max && prevClose !== 0;
+            // Condition 6: Fresh 15m structural break (Prev candle <= Max, Current > Max)
+            const cond6 = lastClose > vwap.max && prevClose <= vwap.max && prevClose > 0;
 
-            // Debug Logging for investigation
-            if (t.symbol === 'BCH' || (isAboveWeeklyMax && isAboveCurrWeek)) {
-                console.log(`[SignalEngine] ${t.symbol} Check:
-                    Price: ${lastClose} vs W-Max: ${vwap.max} (${isAboveWeeklyMax})
-                    Price vs PrevW (${prevW}): ${isAbovePrevWeek}
-                    Price vs CurrW (${currW}): ${isAboveCurrWeek}
-                    CurrW > PrevW: ${isVwapTrendBullish}
-                    Volatility: ${(rangeVolatility * 100).toFixed(2)}% > 2%: ${hasEnoughVolatility}
-                    Fresh Cross (Prev: ${prevClose} -> Curr: ${lastClose}): ${isFreshCrossover}
+            // Investigative Debug Log
+            if (t.symbol === 'TAO' || t.symbol === 'FXS' || (cond3 && cond2)) {
+                console.log(`[GoldenCheck] ${t.symbol}:
+                    P($${lastClose}) > PrevV($${prevVWAP.toFixed(4)}): ${cond1}
+                    P($${lastClose}) > CurrV($${currVWAP.toFixed(4)}): ${cond2}
+                    P($${lastClose}) > WMax($${vwap.max.toFixed(4)}): ${cond3}
+                    CurrV > PrevV: ${cond4}
+                    Vol(${(volatility * 100).toFixed(2)}%) > 2%: ${cond5}
+                    Fresh Cross (Prev: $${prevClose.toFixed(4)}): ${cond6}
                 `);
             }
 
-            if (isAbovePrevWeek && isAboveCurrWeek && isAboveWeeklyMax && isVwapTrendBullish && hasEnoughVolatility && isFreshCrossover) {
+            if (cond1 && cond2 && cond3 && cond4 && cond5 && cond6) {
                 console.log(`[SignalEngine] ✅ GOLDEN TRIGGER: ${t.symbol}`);
                 return {
                     ticker: t,
                     vwap,
-                    score: 95 + Math.min(5, vwap.normalizedSlope * 20),
-                    reason: `GOLDEN: P($${formatPrice(lastClose)}) > MAX($${formatPrice(vwap.max)}) & CURR_V > PREV_V. Vol: ${(rangeVolatility * 100).toFixed(1)}%.`,
+                    score: 100,
+                    reason: `GOLDEN SIGNAL: Confirmed 6-point breakout. Price $${lastClose} cleared structural levels with ${(volatility * 100).toFixed(1)}% weekly range volatility.`,
                     activeSince: (firstSeenTimes[t.id] || Date.now()),
                     type: 'GOLDEN' as const
                 };

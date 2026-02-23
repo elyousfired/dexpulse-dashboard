@@ -130,21 +130,18 @@ const App: React.FC = () => {
   const [vwapArchState, setVwapArchState] = useState<VwapArchState | null>(null);
   const [vwapArchLoading, setVwapArchLoading] = useState(false);
 
-  // ─── Global Reset for New Logic (v4) ────────────
+  // ─── Global Reset for New Logic (v5) ────────────
   useEffect(() => {
-    const hasReset = localStorage.getItem('dexpulse_global_reset_v4');
+    const hasReset = localStorage.getItem('dexpulse_global_reset_v5');
     if (!hasReset) {
-      const keysToClear = [
-        'dexpulse_golden_tracker',
-        'dexpulse_golden_stats',
-        'dexpulse_first_seen_times',
-        'dexpulse_logic_v3_reset',
-        'dexpulse_logic_v2_reset'
-      ];
-      keysToClear.forEach(k => localStorage.removeItem(k));
-      localStorage.setItem('dexpulse_global_reset_v4', 'true');
-      console.log('[Global] History purged for v4 logic update.');
-      // Update state to reflect purge
+      const allKeys = Object.keys(localStorage);
+      allKeys.forEach(k => {
+        if (k.startsWith('dexpulse_') || k.startsWith('dex_')) {
+          localStorage.removeItem(k);
+        }
+      });
+      localStorage.setItem('dexpulse_global_reset_v5', 'true');
+      console.log('[Global] Emergency History Purge (v5) executed.');
       setFirstSeenTimes({});
       setVwapStore({});
     }
