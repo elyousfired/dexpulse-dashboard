@@ -151,7 +151,7 @@ export interface VwapData {
   volumeRelative?: number;
 }
 
-export type BuyType = 'GOLDEN' | 'MOMENTUM' | 'SUPPORT' | 'EXIT';
+export type BuyType = 'GOLDEN';
 
 export interface BuySignal {
   ticker: CexTicker;

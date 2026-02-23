@@ -615,7 +615,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
 
                 const globalStats = loadGoldenStats();
                 const globalWinRate = globalStats.totalSignals > 0
-                    ? (globalStats.successHits / globalStats.totalSignals) * 100
+                    ? (globalStats.successCount / globalStats.totalSignals) * 100
                     : 0;
 
                 return (
@@ -635,7 +635,7 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                                 <div className="text-center px-4 py-1.5 bg-amber-500/10 rounded-xl border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
                                     <div className="text-[8px] font-black text-amber-500 uppercase">Site Win Rate (+4% TP)</div>
                                     <span className="text-sm font-black text-white italic">{globalWinRate.toFixed(1)}%</span>
-                                    <span className="text-[8px] text-white/30 ml-1">({globalStats.successHits}/{globalStats.totalSignals})</span>
+                                    <span className="text-[8px] text-white/30 ml-1">({globalStats.successCount}/{globalStats.totalSignals})</span>
                                 </div>
                                 <div className="text-center px-3 py-1.5 bg-black/40 rounded-xl border border-gray-800">
                                     <div className="text-[8px] font-black text-gray-600 uppercase">Avg P&L</div>
