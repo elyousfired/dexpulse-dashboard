@@ -150,3 +150,35 @@ export interface VwapData {
   isFreshCrossover?: boolean;
   volumeRelative?: number;
 }
+
+export type BuyType = 'GOLDEN' | 'MOMENTUM' | 'SUPPORT' | 'EXIT';
+
+export interface BuySignal {
+  ticker: CexTicker;
+  vwap: VwapData;
+  score: number;
+  reason: string;
+  activeSince?: number;
+  type: BuyType;
+}
+
+export interface TrackedGolden {
+  symbol: string;
+  entryPrice: number;
+  signalTime: number;
+  maxPrice: number;
+  maxGainPct: number;
+  lastPrice: number;
+  stillActive: boolean;
+  wasActive: boolean;
+  history: number[];
+  wasCounted: boolean;
+  tpHit: boolean;
+}
+
+export interface GoldenStats {
+  totalSignals: number;
+  successCount: number; // reached +4%
+  successRate: number;
+  avgGain: number;
+}
