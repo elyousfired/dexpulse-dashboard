@@ -452,7 +452,12 @@ export const TokenChart: React.FC<TokenChartProps> = ({
 
                 chartRef.current.timeScale().fitContent();
             }
-        } catch (err: any) { setError(err.message); } finally { setLoading(false); }
+        } catch (err: any) {
+            console.error('[ChartEngine] Error:', err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     };
     fetchData();
 }, [address, interval, symbol, showVwap, showVolume, showVolumeCurve, showWeeklyVwap, showTma, activeView]);
