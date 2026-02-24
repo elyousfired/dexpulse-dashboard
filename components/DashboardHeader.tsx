@@ -1,14 +1,14 @@
 
 import React from 'react';
-import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, BookOpen, Users, Repeat, Newspaper, Layers, Bot, Compass, Waves } from 'lucide-react';
+import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, BookOpen, Users, Repeat, Newspaper, Layers, Bot, Compass, Waves, Globe } from 'lucide-react';
 
 interface DashboardHeaderProps {
     searchTerm: string;
     onSearchChange: (term: string) => void;
     isScanning: boolean;
     lastUpdated: Date;
-    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch';
-    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch') => void;
+    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure';
+    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure') => void;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -114,6 +114,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     >
                         <Waves className="w-3.5 h-3.5" />
                         VWAP ARCH
+                    </button>
+                    <button
+                        onClick={() => onViewChange('structure')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'structure' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Globe className="w-3.5 h-3.5" />
+                        Structure
                     </button>
                 </div>
 

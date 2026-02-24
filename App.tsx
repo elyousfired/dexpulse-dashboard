@@ -20,6 +20,7 @@ import { VwapMultiTF } from './components/VwapMultiTF';
 import { VwapAnchorBot } from './components/VwapAnchorBot';
 import { EcosystemGrid } from './components/EcosystemGrid';
 import { TokenChart } from './components/TokenChart';
+import { MarketStructureDashboard } from './components/MarketStructureDashboard';
 
 // ─── VWAP Architecture View (Chart + VWAP Indicator) ──────
 const VwapArchView: React.FC<{
@@ -110,7 +111,7 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const tickersRef = React.useRef<CexTicker[]>([]);
-  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch'>('grid');
+  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure'>('grid');
   const [watchlist, setWatchlist] = useState<WatchlistTrade[]>(() => {
     const saved = localStorage.getItem('dex_cex_watchlist');
     return saved ? JSON.parse(saved) : [];
@@ -401,6 +402,8 @@ const App: React.FC = () => {
               setVwapArchState={setVwapArchState}
               setVwapArchLoading={setVwapArchLoading}
             />
+          ) : activeView === 'structure' ? (
+            <MarketStructureDashboard onTickerClick={setSelectedCexTicker} />
           ) : (
             <WatchlistPanel
               trades={watchlist}
