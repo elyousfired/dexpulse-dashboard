@@ -126,6 +126,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                         <Globe className="w-3.5 h-3.5" />
                         Structure
                     </button>
+                    <button
+                        onClick={() => onViewChange('arbitrage')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'arbitrage' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Zap className="w-3.5 h-3.5" />
+                        Nexus Arb
+                    </button>
                 </div>
 
                 {/* Search & Stats */}
