@@ -56,9 +56,21 @@ export function loadTelegramConfig(): TelegramConfig {
     }
 }
 
-/** Save Telegram config to localStorage */
-export function saveTelegramConfig(config: TelegramConfig) {
+/** Save Telegram config to localStorage and sync to Server */
+export async function saveTelegramConfig(config: TelegramConfig) {
     localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+
+    // Sync to backend for 24/7 background scanning
+    try {
+        await fetch('http://localhost:3001/api/config/telegram', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        });
+        console.log('[TelegramService] Config synced to backend.');
+    } catch (err) {
+        console.error('[TelegramService] Backend sync failed:', err);
+    }
 }
 
 /** Parse comma-separated chat IDs */

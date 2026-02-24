@@ -7,6 +7,8 @@ import path from 'path';
 import os from 'os';
 // @ts-ignore - node:sqlite is experimental
 import { DatabaseSync } from 'node:sqlite';
+import fs from 'fs';
+import { runSignalScanner } from './signalScanner';
 
 dotenv.config();
 
@@ -19,6 +21,7 @@ app.use(express.json());
 // Simple memory cache
 const cache = new Map();
 const CACHE_DURATION = 30 * 1000; // 30 seconds
+const CONFIG_FILE = path.join(process.cwd(), 'server', 'bot_config.json');
 
 // ─── Existing: Birdeye OHLCV Proxy ──────────────────────────
 
@@ -166,6 +169,32 @@ app.get('/api/antfarm/status/:runId', (req, res) => {
     }
 });
 
+// ─── New: Telegram Bot Configuration Sync ──────────────────
+
+app.get('/api/config/telegram', (req, res) => {
+    try {
+        if (fs.existsSync(CONFIG_FILE)) {
+            const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+            res.json(config);
+        } else {
+            res.json({ botToken: '', chatId: '', enabled: false });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to read bot config' });
+    }
+});
+
+app.post('/api/config/telegram', (req, res) => {
+    try {
+        const config = req.body;
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+        console.log('[Proxy] Telegram Bot config updated.');
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to save bot config' });
+    }
+});
+
 function pruneCache() {
     if (cache.size > 200) {
         const oldestKey = cache.keys().next().value;
@@ -175,4 +204,9 @@ function pruneCache() {
 
 app.listen(PORT, () => {
     console.log(`Proxy server running on http://localhost:${PORT}`);
+
+    // Start 24/7 background scanner
+    console.log('[Proxy] Initializing 24/7 background scanner bot...');
+    runSignalScanner(); // Initial run
+    setInterval(runSignalScanner, 10 * 60 * 1000); // Every 10 minutes
 });
