@@ -22,6 +22,7 @@ import { EcosystemGrid } from './components/EcosystemGrid';
 import { TokenChart } from './components/TokenChart';
 import { MarketStructureDashboard } from './components/MarketStructureDashboard';
 import { ArbitrageTerminal } from './components/ArbitrageTerminal';
+import { StructureRadar } from './components/StructureRadar';
 
 // ─── VWAP Architecture View (Chart + VWAP Indicator) ──────
 const VwapArchView: React.FC<{
@@ -117,6 +118,7 @@ const App: React.FC = () => {
     | 'vwapArch'
     | 'structure'
     | 'arbitrage'
+    | 'bullStructure'
   >('grid');
   const [watchlist, setWatchlist] = useState<WatchlistTrade[]>(() => {
     const saved = localStorage.getItem('dex_cex_watchlist');
@@ -412,6 +414,8 @@ const App: React.FC = () => {
             <MarketStructureDashboard onTickerClick={setSelectedCexTicker} />
           ) : activeView === 'arbitrage' ? (
             <ArbitrageTerminal tickers={cexTickers} />
+          ) : activeView === 'bullStructure' ? (
+            <StructureRadar tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
           ) : (
             <WatchlistPanel
               trades={watchlist}
