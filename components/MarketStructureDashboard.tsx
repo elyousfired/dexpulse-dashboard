@@ -5,8 +5,10 @@ import { fetchCexTickers, fetchBinanceKlines } from '../services/cexService';
 import {
     partitionKlinesBySession,
     analyzeSessionPhase,
+    predictNextBias,
     MarketStructure,
-    MarketPhase
+    MarketPhase,
+    Verdict
 } from '../services/structureService';
 import {
     Globe,
@@ -193,6 +195,7 @@ export const MarketStructureDashboard: React.FC<MarketStructureDashboardProps> =
                             <th className="px-6 py-4 text-[10px] font-black text-blue-400 uppercase tracking-widest text-center">Asia Session</th>
                             <th className="px-6 py-4 text-[10px] font-black text-purple-400 uppercase tracking-widest text-center">London Open</th>
                             <th className="px-6 py-4 text-[10px] font-black text-orange-400 uppercase tracking-widest text-center">NY Dominance</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Verdict Prediction</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/[0.02]">
@@ -241,6 +244,32 @@ export const MarketStructureDashboard: React.FC<MarketStructureDashboardProps> =
                                         </td>
                                     );
                                 })}
+
+                                {/* Verdict Column */}
+                                {(() => {
+                                    const verdict = predictNextBias(sig.asia, sig.london, sig.ny);
+                                    return (
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col items-center">
+                                                <div
+                                                    title={verdict.description}
+                                                    className={`
+                                                        px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-tighter
+                                                        transition-all duration-500 cursor-help
+                                                        ${verdict.color} bg-white/5 border-white/10
+                                                        ${verdict.isHot ? 'animate-pulse shadow-[0_0_20px_rgba(251,146,60,0.2)] border-orange-500/40' : 'opacity-80'}
+                                                    `}
+                                                >
+                                                    {verdict.label}
+                                                </div>
+                                                <div className="flex items-center gap-1 mt-1.5 grayscale opacity-50">
+                                                    <TrendingUp className="w-2.5 h-2.5" />
+                                                    <span className="text-[8px] font-black uppercase">{verdict.confidence}% Conf</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    );
+                                })()}
                             </tr>
                         ))}
                     </tbody>

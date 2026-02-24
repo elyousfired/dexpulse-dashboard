@@ -81,6 +81,84 @@ export function analyzeSessionPhase(klines: OHLCV[], sessionStartPrice: number):
     return { vwap, volatility, phase, volumeSpike, distanceToVwap };
 }
 
+export interface Verdict {
+    label: string;
+    description: string;
+    confidence: number;
+    color: string;
+    isHot: boolean;
+}
+
+/**
+ * Predict the next likely market bias based on session sequences
+ */
+export function predictNextBias(asia: SessionData, london: SessionData, ny: SessionData): Verdict {
+    const sequence = [asia.phase, london.phase, ny.phase].filter(p => p !== 'SCANNING' && p !== 'UNKNOWN');
+
+    // 1. IGNITION READY (Accumulation -> Accumulation)
+    if (sequence.length >= 2 && sequence[0] === 'ACCUMULATION' && sequence[1] === 'ACCUMULATION') {
+        return {
+            label: 'IGNITION READY',
+            description: 'Major institutional coiling detected. Expansion highly probable.',
+            confidence: 92,
+            color: 'text-orange-400',
+            isHot: true
+        };
+    }
+
+    // 2. TREND CONTINUATION (Accumulation -> Expansion)
+    if (sequence.length >= 2 && sequence[0] === 'ACCUMULATION' && sequence[1] === 'EXPANSION') {
+        return {
+            label: 'CONTINUATION',
+            description: 'Breakout phase active. Trend expected to sustain.',
+            confidence: 75,
+            color: 'text-purple-400',
+            isHot: false
+        };
+    }
+
+    // 3. FLUSH RISK (Distribution -> Distribution)
+    if (sequence.length >= 2 && sequence[0] === 'DISTRIBUTION' && sequence[1] === 'DISTRIBUTION') {
+        return {
+            label: 'FLUSH RISK',
+            description: 'Liquidity exhaustion. Strong reversal or drop expected.',
+            confidence: 68,
+            color: 'text-red-400',
+            isHot: true
+        };
+    }
+
+    // 4. RE-ACCUMULATION (Distribution -> Accumulation)
+    if (sequence.length >= 2 && sequence[0] === 'DISTRIBUTION' && sequence[1] === 'ACCUMULATION') {
+        return {
+            label: 'RE-ACCUM',
+            description: 'Selling pressure absorbed. Potential bottom-building.',
+            confidence: 80,
+            color: 'text-cyan-400',
+            isHot: false
+        };
+    }
+
+    // 5. MEAN REVERSION (Expansion -> Distribution)
+    if (sequence.length >= 2 && sequence[0] === 'EXPANSION' && sequence[1] === 'DISTRIBUTION') {
+        return {
+            label: 'MEAN REVERSION',
+            description: 'Trend overextended. Expecting retracement to VWAP.',
+            confidence: 72,
+            color: 'text-blue-400',
+            isHot: false
+        };
+    }
+
+    return {
+        label: 'NEUTRAL',
+        description: 'No significant structural sequence detected yet.',
+        confidence: 50,
+        color: 'text-gray-500',
+        isHot: false
+    };
+}
+
 /**
  * Checks if a timestamp (seconds) falls within a UTC hour range
  */
