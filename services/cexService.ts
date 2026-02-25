@@ -472,6 +472,14 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
     const prevWeekVwap = prevWeekBVol > 0 ? prevWeekQVol / prevWeekBVol : 0;
     const currentWeekVwap = currWeekBVol > 0 ? currWeekQVol / currWeekBVol : currentMid;
 
+    // Detect if breakout happened at any point today (since 00:00 UTC)
+    const todayKlines = klines15m.filter(k => k.time >= getTodayStartUTC() / 1000);
+    const crossedToday = todayKlines.some((k, i) => {
+        if (i === 0) return false;
+        const prevK = todayKlines[i - 1];
+        return k.close > wMax && prevK.close <= wMax;
+    }) || (last15mClose > wMax && prev15mClose <= wMax);
+
     const vwapData: VwapData = {
         max: wMax,
         min: wMin,
@@ -481,7 +489,8 @@ export async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | nu
         symbol,
         last15mClose,
         prev15mClose,
-        isFreshCrossover: last15mClose > wMax && last15mClose > currentMid && prev15mClose <= wMax,
+        isFreshCrossover: last15mClose > wMax && prev15mClose <= wMax,
+        isRecentBreakout: crossedToday && last15mClose > wMax, // Still above after crossing today
         prevWeekVwap,
         currentWeekVwap
     };

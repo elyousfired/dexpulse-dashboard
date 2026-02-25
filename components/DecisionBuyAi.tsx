@@ -149,13 +149,18 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                 `);
             }
 
-            if (cond1 && cond2 && cond3 && cond4 && cond5 && cond6) {
-                console.log(`[SignalEngine] ✅ GOLDEN TRIGGER: ${t.symbol}`);
+            const isFresh = lastClose > vwap.max && prevClose <= vwap.max && prevClose > 0;
+            const isRecent = vwap.isRecentBreakout;
+
+            if (cond1 && cond2 && cond3 && cond4 && cond5 && (isFresh || isRecent)) {
+                console.log(`[SignalEngine] ✅ GOLDEN TRIGGER: ${t.symbol} (Fresh: ${isFresh}, Recent: ${isRecent})`);
                 return {
                     ticker: t,
                     vwap,
-                    score: 100,
-                    reason: `[v7] GOLDEN SIGNAL: Confirmed 6-point breakout. Price $${lastClose} cleared structural levels with ${(volatility * 100).toFixed(1)}% weekly range volatility.`,
+                    score: isFresh ? 100 : 95,
+                    reason: isFresh
+                        ? `[v7] FRESH BREAKOUT: Price $${lastClose} just cleared structural levels.`
+                        : `[v7] SUSTAINED BREAKOUT: Price $${lastClose} holding above structural levels after today's breakout.`,
                     activeSince: (firstSeenTimes[t.id] || Date.now()),
                     type: 'GOLDEN' as const
                 };

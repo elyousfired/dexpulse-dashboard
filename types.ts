@@ -148,6 +148,7 @@ export interface VwapData {
   last15mClose?: number;
   prev15mClose?: number;
   isFreshCrossover?: boolean;
+  isRecentBreakout?: boolean;
   volumeRelative?: number;
   prevWeekVwap?: number;
   currentWeekVwap?: number;
