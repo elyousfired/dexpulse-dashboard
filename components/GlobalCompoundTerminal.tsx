@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Zap, Trophy, TrendingUp, Timer, ShieldCheck, Target, RefreshCcw, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import historicalHunts from '../src/data/active_hunts.json';
 
 interface ActiveHunt {
     symbol: string;
@@ -16,13 +17,13 @@ interface ActiveHunt {
 }
 
 export const GlobalCompoundTerminal: React.FC = () => {
-    const [hunts, setHunts] = useState<ActiveHunt[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [hunts, setHunts] = useState<ActiveHunt[]>(historicalHunts as ActiveHunt[]);
+    const [loading, setLoading] = useState(false);
     const [lastSync, setLastSync] = useState(new Date());
 
     const fetchHunts = async () => {
         try {
-            const res = await fetch('http://localhost:3001/api/hunts');
+            const res = await fetch('/api/hunts');
             if (res.ok) {
                 const data = await res.json();
                 setHunts(data);
