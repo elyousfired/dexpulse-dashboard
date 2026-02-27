@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Zap, Trophy, TrendingUp, Timer, ShieldCheck, Target, RefreshCcw, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
-import historicalHunts from '../src/data/active_hunts.json';
+import { historicalHunts } from '../src/data/historicalHunts';
 
 interface ActiveHunt {
     symbol: string;
@@ -26,8 +26,10 @@ export const GlobalCompoundTerminal: React.FC = () => {
             const res = await fetch('/api/hunts');
             if (res.ok) {
                 const data = await res.json();
-                setHunts(data);
-                setLastSync(new Date());
+                if (Array.isArray(data) && data.length > 0) {
+                    setHunts(data);
+                    setLastSync(new Date());
+                }
             }
         } catch (err) {
             console.error('Failed to fetch hunts:', err);
