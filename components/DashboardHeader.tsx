@@ -12,8 +12,9 @@ interface DashboardHeaderProps {
     | 'vwapArch'
     | 'structure'
     | 'arbitrage'
-    | 'bullStructure';
-    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure' | 'arbitrage' | 'bullStructure') => void;
+    | 'bullStructure'
+    | 'compound';
+    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure' | 'arbitrage' | 'bullStructure' | 'compound') => void;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -140,6 +141,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     >
                         <TrendingUp className="w-3.5 h-3.5" />
                         Bull Radar
+                    </button>
+                    <button
+                        onClick={() => onViewChange('compound')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'compound' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Zap className="w-3.5 h-3.5" />
+                        Compound Terminal 💎
                     </button>
                 </div>
 

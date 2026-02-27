@@ -23,6 +23,7 @@ import { TokenChart } from './components/TokenChart';
 import { MarketStructureDashboard } from './components/MarketStructureDashboard';
 import { ArbitrageTerminal } from './components/ArbitrageTerminal';
 import { StructureRadar } from './components/StructureRadar';
+import { GlobalCompoundTerminal } from './components/GlobalCompoundTerminal';
 
 // ─── VWAP Architecture View (Chart + VWAP Indicator) ──────
 const VwapArchView: React.FC<{
@@ -119,6 +120,7 @@ const App: React.FC = () => {
     | 'structure'
     | 'arbitrage'
     | 'bullStructure'
+    | 'compound'
   >('grid');
   const [watchlist, setWatchlist] = useState<WatchlistTrade[]>(() => {
     const saved = localStorage.getItem('dex_cex_watchlist');
@@ -416,6 +418,8 @@ const App: React.FC = () => {
             <ArbitrageTerminal tickers={cexTickers} />
           ) : activeView === 'bullStructure' ? (
             <StructureRadar tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
+          ) : activeView === 'compound' ? (
+            <GlobalCompoundTerminal />
           ) : (
             <WatchlistPanel
               trades={watchlist}

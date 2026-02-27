@@ -1,0 +1,71 @@
+[
+  {
+    "symbol": "DENTUSDT",
+    "entryPrice": 0.000227,
+    "entryTime": "2026-02-26T00:45:00.000Z",
+    "peakPrice": 0.00045,
+    "status": "closed",
+    "capital": 10,
+    "tier": 3,
+    "exitPrice": 0.000256,
+    "exitTime": "2026-02-27T21:32:07.690Z",
+    "pnl": 12.77533039647577
+  },
+  {
+    "symbol": "MIRAUSDT",
+    "entryPrice": 0.1147,
+    "entryTime": "2026-02-27T02:15:00.000Z",
+    "peakPrice": 0.12,
+    "status": "closed",
+    "capital": 10,
+    "tier": 1,
+    "exitPrice": 0.0927,
+    "exitTime": "2026-02-27T21:32:07.691Z",
+    "pnl": -19.180470793374013
+  },
+  {
+    "symbol": "MORPHOUSDT",
+    "entryPrice": 1.861,
+    "entryTime": "2026-02-27T02:15:00.000Z",
+    "peakPrice": 2.34,
+    "status": "closed",
+    "capital": 10,
+    "tier": 2,
+    "exitPrice": 1.819,
+    "exitTime": "2026-02-27T21:32:07.691Z",
+    "pnl": -2.256851155292855
+  },
+  {
+    "symbol": "JSTUSDT",
+    "entryPrice": 0.04557,
+    "entryTime": "2026-02-25T11:15:00.000Z",
+    "peakPrice": 0.057,
+    "status": "closed",
+    "capital": 10,
+    "tier": 2,
+    "exitPrice": 0.04746,
+    "exitTime": "2026-02-27T21:32:07.692Z",
+    "pnl": 4.147465437788025
+  },
+  {
+    "symbol": "PENDLEUSDT",
+    "entryPrice": 1.233,
+    "entryTime": "2026-02-25T01:00:00.000Z",
+    "peakPrice": 1.345,
+    "status": "closed",
+    "capital": 10,
+    "tier": 1,
+    "exitPrice": 1.248,
+    "exitTime": "2026-02-27T21:32:07.692Z",
+    "pnl": 1.216545012165442
+  },
+  {
+    "symbol": "PSGUSDT",
+    "entryPrice": 0.752,
+    "entryTime": "2026-02-27T21:53:36.959Z",
+    "peakPrice": 0.753,
+    "status": "active",
+    "capital": 10,
+    "tier": 1
+  }
+]

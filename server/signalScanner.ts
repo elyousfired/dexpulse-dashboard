@@ -2,6 +2,7 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import { registerNewHunt } from './strategyTracker';
 
 // Types (Mirrored from types.ts to keep server standalone)
 export interface CexTicker {
@@ -165,7 +166,7 @@ export async function runSignalScanner() {
         const topSymbols = res.data
             .filter((t: any) => t.symbol.endsWith('USDT'))
             .sort((a: any, b: any) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
-            .slice(0, 150)
+            .slice(0, 450)
             .map((t: any) => ({
                 symbol: t.symbol.replace('USDT', ''),
                 price: parseFloat(t.lastPrice),
@@ -191,8 +192,14 @@ export async function runSignalScanner() {
             const cond5 = volatility > 0.02;
             const cond6 = lastClose > vwap.max && prevClose <= vwap.max;
 
-            if (cond1 && cond2 && cond3 && cond4 && cond5 && cond6) {
+            // 💎 DIAMOND FILTER: Current Week VWAP must be above Weekly Max (Explosive Momentum)
+            const cond7 = vwap.currentWeekVwap > vwap.max;
+
+            if (cond1 && cond2 && cond3 && cond4 && cond5 && cond6 && cond7) {
                 console.log(`[SignalBot] 🏆 GOLDEN SIGNAL FOUND: ${t.symbol}`);
+
+                // ─── Register in Compound Terminal ───
+                registerNewHunt(t.symbol + "USDT", lastClose);
 
                 const message = [
                     `🏆 <b>⚡ GOLDEN SIGNAL (24/7 Bot)</b>`,

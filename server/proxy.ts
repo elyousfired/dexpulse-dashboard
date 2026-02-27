@@ -9,6 +9,7 @@ import os from 'os';
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'fs';
 import { runSignalScanner } from './signalScanner';
+import { processActiveHunts } from './strategyTracker';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use(express.json());
 const cache = new Map();
 const CACHE_DURATION = 30 * 1000; // 30 seconds
 const CONFIG_FILE = path.join(process.cwd(), 'server', 'bot_config.json');
+const HUNTS_FILE = path.join(process.cwd(), 'server', 'data', 'active_hunts.json');
 
 // ─── Existing: Birdeye OHLCV Proxy ──────────────────────────
 
@@ -195,6 +197,18 @@ app.post('/api/config/telegram', (req, res) => {
     }
 });
 
+app.get('/api/hunts', (req, res) => {
+    try {
+        if (!fs.existsSync(HUNTS_FILE)) {
+            return res.json([]);
+        }
+        const hunts = JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8'));
+        res.json(hunts);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch hunts' });
+    }
+});
+
 function pruneCache() {
     if (cache.size > 200) {
         const oldestKey = cache.keys().next().value;
@@ -205,8 +219,15 @@ function pruneCache() {
 app.listen(PORT, () => {
     console.log(`Proxy server running on http://localhost:${PORT}`);
 
-    // Start 24/7 background scanner
-    console.log('[Proxy] Initializing 24/7 background scanner bot...');
-    runSignalScanner(); // Initial run
-    setInterval(runSignalScanner, 10 * 60 * 1000); // Every 10 minutes
+    // Start 24/7 background processes
+    console.log('[Proxy] Initializing 24/7 background processes...');
+
+    // 1. Signal Scanner (Every 10 minutes)
+    runSignalScanner();
+    setInterval(runSignalScanner, 10 * 60 * 1000);
+
+    // 2. Strategy Tracker (Every 1 minute)
+    console.log('[Proxy] Starting Strategy Tracker (1m interval)...');
+    processActiveHunts();
+    setInterval(processActiveHunts, 1 * 60 * 1000);
 });
