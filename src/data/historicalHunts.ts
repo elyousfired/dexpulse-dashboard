@@ -1,205 +1,162 @@
-
 export const historicalHunts = [
-    {
-        "symbol": "OMUSDT",
-        "entryPrice": 0.17061,
-        "entryTime": "2026-02-25T01:30:00.000Z",
-        "peakPrice": 0.23122,
-        "status": "closed",
-        "pnl": 35.52546744036105,
-        "capital": 10,
-        "tier": 3,
-        "exitTime": "2026-02-27T22:55:52.984Z",
-        "exitPrice": 0.219659
-    },
-    {
-        "symbol": "VIRTUALUSDT",
-        "entryPrice": 0.0461,
-        "entryTime": "2026-02-25T03:30:00.000Z",
-        "peakPrice": 0.165,
-        "status": "closed",
-        "pnl": 257.9175704989153,
-        "capital": 10,
-        "tier": 3,
-        "exitTime": "2026-02-27T22:55:53.000Z",
-        "exitPrice": 0.15675
-    },
-    {
-        "symbol": "WLDUSDT",
-        "entryPrice": 1.488,
-        "entryTime": "2026-02-25T03:15:00.000Z",
-        "peakPrice": 1.621,
-        "status": "closed",
-        "pnl": 8.938172043010752,
-        "capital": 10,
-        "tier": 1,
-        "exitTime": "2026-02-27T22:55:53.000Z",
-        "exitPrice": 1.53995
-    },
-    {
-        "symbol": "GUNUSDT",
-        "entryPrice": 0.0000851,
-        "entryTime": "2026-02-25T11:45:00.000Z",
-        "peakPrice": 0.0001053,
-        "status": "closed",
-        "pnl": 23.736780258519403,
-        "capital": 10,
-        "tier": 2,
-        "exitTime": "2026-02-27T22:55:53.000Z",
-        "exitPrice": 0.000100035
-    },
-    {
-        "symbol": "KSMUSDT",
-        "entryPrice": 1.425,
-        "entryTime": "2026-02-25T07:15:00.000Z",
-        "peakPrice": 2.21,
-        "status": "closed",
-        "pnl": 55.087719298245624,
-        "capital": 10,
-        "tier": 3,
-        "exitTime": "2026-02-27T22:55:53.001Z",
-        "exitPrice": 2.0995
-    },
-    {
-        "symbol": "PENDLEUSDT",
-        "entryPrice": 1.233,
-        "entryTime": "2026-02-25T01:00:00.000Z",
-        "peakPrice": 1.42,
-        "status": "closed",
-        "pnl": 15.166261151662614,
-        "capital": 10,
-        "tier": 2,
-        "exitTime": "2026-02-27T22:55:53.001Z",
-        "exitPrice": 1.349
-    },
-    {
-        "symbol": "JSTUSDT",
-        "entryPrice": 0.04557,
-        "entryTime": "2026-02-25T11:15:00.000Z",
-        "peakPrice": 0.057,
-        "status": "closed",
-        "pnl": 25.082290980908493,
-        "capital": 10,
-        "tier": 2,
-        "exitTime": "2026-02-27T22:55:53.001Z",
-        "exitPrice": 0.05415
-    },
-    {
-        "symbol": "DENTUSDT",
-        "entryPrice": 0.000227,
-        "entryTime": "2026-02-26T00:45:00.000Z",
-        "peakPrice": 0.00045,
-        "status": "closed",
-        "pnl": 98.23788546255506,
-        "capital": 10,
-        "tier": 3,
-        "exitTime": "2026-02-27T22:55:53.001Z",
-        "exitPrice": 0.0004275
-    },
-    {
-        "symbol": "KITEUSDT",
-        "entryPrice": 0.221,
-        "entryTime": "2026-02-25T21:15:00.000Z",
-        "peakPrice": 0.45,
-        "status": "closed",
-        "pnl": 103.61990950226244,
-        "capital": 10,
-        "tier": 3,
-        "exitTime": "2026-02-27T22:55:53.001Z",
-        "exitPrice": 0.4275
-    },
-    {
-        "symbol": "LUNCUSDT",
-        "entryPrice": 0.00003566,
-        "entryTime": "2026-02-25T19:00:00.000Z",
-        "peakPrice": 0.00004947,
-        "status": "closed",
-        "pnl": 38.72686483454851,
-        "capital": 10,
-        "tier": 3,
-        "exitTime": "2026-02-27T22:55:53.001Z",
-        "exitPrice": 0.000046996499999999996
-    },
-    {
-        "symbol": "ZBTUSDT",
-        "entryPrice": 0.074,
-        "entryTime": "2026-02-25T16:45:00.000Z",
-        "peakPrice": 0.0822,
-        "status": "closed",
-        "pnl": 11.08108108108108,
-        "capital": 10,
-        "tier": 2,
-        "exitTime": "2026-02-27T22:55:53.001Z",
-        "exitPrice": 0.07808999999999999
-    },
-    {
-        "symbol": "MIRAUSDT",
-        "entryPrice": 0.0852,
-        "entryTime": "2026-02-25T00:30:00.000Z",
-        "peakPrice": 0.15,
-        "status": "closed",
-        "pnl": 76.05633802816901,
-        "capital": 10,
-        "tier": 3,
-        "exitTime": "2026-02-27T22:55:53.001Z",
-        "exitPrice": 0.1425
-    },
-    {
-        "symbol": "MORPHOUSDT",
-        "entryPrice": 1.829,
-        "entryTime": "2026-02-25T01:15:00.000Z",
-        "peakPrice": 1.965,
-        "status": "closed",
-        "pnl": 7.435757244395852,
-        "capital": 10,
-        "tier": 1,
-        "exitTime": "2026-02-27T22:55:53.001Z",
-        "exitPrice": 1.86675
-    },
-    {
-        "symbol": "DOTUSDT",
-        "entryPrice": 1.329,
-        "entryTime": "2026-02-25T10:00:00.000Z",
-        "peakPrice": 1.752,
-        "status": "closed",
-        "pnl": 31.828442437923254,
-        "capital": 10,
-        "tier": 3,
-        "exitTime": "2026-02-27T22:55:53.001Z",
-        "exitPrice": 1.6643999999999999
-    },
-    {
-        "symbol": "PSGUSDT",
-        "entryPrice": 0.752,
-        "entryTime": "2026-02-27T21:53:36.959Z",
-        "peakPrice": 0.753,
-        "status": "active",
-        "capital": 10,
-        "tier": 1
-    },
-    {
-        "symbol": "SAHARAUSDT",
-        "entryPrice": 0.0225,
-        "entryTime": "2026-02-28T00:00:00.000Z",
-        "peakPrice": 0.0232,
-        "status": "active",
-        "capital": 10,
-        "tier": 1
-    },
-    {
-        "symbol": "DCRUSDT",
-        "entryPrice": 35.09,
-        "entryTime": "2026-02-28T00:33:00.515Z",
-        "peakPrice": 35.09,
-        "status": "active",
-        "capital": 10
-    },
-    {
-        "symbol": "HOLOUSDT",
-        "entryPrice": 0.0663,
-        "entryTime": "2026-02-28T00:33:07.338Z",
-        "peakPrice": 0.0663,
-        "status": "active",
-        "capital": 10
-    }
+  {
+    "symbol": "VIRTUALUSDT",
+    "entryPrice": 0.6399,
+    "entryTime": "2026-02-25T01:15:00.000Z",
+    "peakPrice": 0.7445,
+    "status": "closed",
+    "pnl": 16.346304110017194,
+    "capital": 10,
+    "tier": 2
+  },
+  {
+    "symbol": "WLDUSDT",
+    "entryPrice": 0.3964,
+    "entryTime": "2026-02-25T08:45:00.000Z",
+    "peakPrice": 0.4354,
+    "status": "closed",
+    "pnl": 9.838546922300715,
+    "capital": 10,
+    "tier": 1
+  },
+  {
+    "symbol": "GUNUSDT",
+    "entryPrice": 0.02938,
+    "entryTime": "2026-02-25T02:15:00.000Z",
+    "peakPrice": 0.03376,
+    "status": "closed",
+    "pnl": 14.908100748808709,
+    "capital": 10,
+    "tier": 2
+  },
+  {
+    "symbol": "KSMUSDT",
+    "entryPrice": 4.88,
+    "entryTime": "2026-02-25T01:00:00.000Z",
+    "peakPrice": 5.62,
+    "status": "closed",
+    "pnl": 15.163934426229513,
+    "capital": 10,
+    "tier": 2
+  },
+  {
+    "symbol": "PENDLEUSDT",
+    "entryPrice": 1.248,
+    "entryTime": "2026-02-25T02:00:00.000Z",
+    "peakPrice": 1.377,
+    "status": "closed",
+    "pnl": 10.336538461538462,
+    "capital": 10,
+    "tier": 2
+  },
+  {
+    "symbol": "JSTUSDT",
+    "entryPrice": 0.04638,
+    "entryTime": "2026-02-26T05:30:00.000Z",
+    "peakPrice": 0.04798,
+    "status": "closed",
+    "pnl": 3.449762828805529,
+    "capital": 10,
+    "tier": 1
+  },
+  {
+    "symbol": "DENTUSDT",
+    "entryPrice": 0.000214,
+    "entryTime": "2026-02-25T07:30:00.000Z",
+    "peakPrice": 0.000442,
+    "status": "closed",
+    "pnl": 106.54205607476636,
+    "capital": 10,
+    "tier": 3
+  },
+  {
+    "symbol": "KITEUSDT",
+    "entryPrice": 0.2722,
+    "entryTime": "2026-02-25T08:00:00.000Z",
+    "peakPrice": 0.303,
+    "status": "closed",
+    "pnl": 11.315209404849373,
+    "capital": 10,
+    "tier": 2
+  },
+  {
+    "symbol": "LUNCUSDT",
+    "entryPrice": 0.00003566,
+    "entryTime": "2026-02-25T01:15:00.000Z",
+    "peakPrice": 0.00004947,
+    "status": "closed",
+    "pnl": 38.72686483454851,
+    "capital": 10,
+    "tier": 3
+  },
+  {
+    "symbol": "ZBTUSDT",
+    "entryPrice": 0.074,
+    "entryTime": "2026-02-25T16:45:00.000Z",
+    "peakPrice": 0.0822,
+    "status": "closed",
+    "pnl": 11.08108108108108,
+    "capital": 10,
+    "tier": 2
+  },
+  {
+    "symbol": "MIRAUSDT",
+    "entryPrice": 0.0852,
+    "entryTime": "2026-02-25T00:30:00.000Z",
+    "peakPrice": 0.15,
+    "status": "closed",
+    "pnl": 76.05633802816901,
+    "capital": 10,
+    "tier": 3
+  },
+  {
+    "symbol": "MORPHOUSDT",
+    "entryPrice": 1.829,
+    "entryTime": "2026-02-25T01:15:00.000Z",
+    "peakPrice": 1.965,
+    "status": "closed",
+    "pnl": 7.435757244395852,
+    "capital": 10,
+    "tier": 1
+  },
+  {
+    "symbol": "DOTUSDT",
+    "entryPrice": 1.329,
+    "entryTime": "2026-02-25T10:00:00.000Z",
+    "peakPrice": 1.752,
+    "status": "closed",
+    "pnl": 31.828442437923254,
+    "capital": 10,
+    "tier": 3
+  },
+  {
+    "symbol": "SAHARAUSDT",
+    "entryPrice": 0.01558,
+    "entryTime": "2026-02-25T00:15:00.000Z",
+    "peakPrice": 0.02775,
+    "status": "closed",
+    "pnl": 78.11296534017971,
+    "capital": 10,
+    "tier": 3
+  },
+  {
+    "symbol": "DCRUSDT",
+    "entryPrice": 28.86,
+    "entryTime": "2026-02-25T11:15:00.000Z",
+    "peakPrice": 37,
+    "status": "closed",
+    "pnl": 28.20512820512821,
+    "capital": 10,
+    "tier": 2
+  },
+  {
+    "symbol": "HOLOUSDT",
+    "entryPrice": 0.0634,
+    "entryTime": "2026-02-25T00:00:00.000Z",
+    "peakPrice": 0.075,
+    "status": "closed",
+    "pnl": 18.29652996845426,
+    "capital": 10,
+    "tier": 2
+  }
 ];
