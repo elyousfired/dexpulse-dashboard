@@ -20,19 +20,24 @@ export const GlobalCompoundTerminal: React.FC = () => {
     const [hunts, setHunts] = useState<ActiveHunt[]>(historicalHunts as ActiveHunt[]);
     const [loading, setLoading] = useState(false);
     const [lastSync, setLastSync] = useState(new Date());
+    const [isServerConnected, setIsServerConnected] = useState(false);
 
     const fetchHunts = async () => {
         try {
             const res = await fetch('/api/hunts');
             if (res.ok) {
                 const data = await res.json();
+                setIsServerConnected(true);
                 if (Array.isArray(data) && data.length > 0) {
                     setHunts(data);
                     setLastSync(new Date());
                 }
+            } else {
+                setIsServerConnected(false);
             }
         } catch (err) {
             console.error('Failed to fetch hunts:', err);
+            setIsServerConnected(false);
         } finally {
             setLoading(false);
         }
@@ -40,7 +45,7 @@ export const GlobalCompoundTerminal: React.FC = () => {
 
     useEffect(() => {
         fetchHunts();
-        const interval = setInterval(fetchHunts, 30000); // Sync every 30s
+        const interval = setInterval(fetchHunts, 15000); // Sync every 15s for live feel
         return () => clearInterval(interval);
     }, []);
 
@@ -70,9 +75,17 @@ export const GlobalCompoundTerminal: React.FC = () => {
                         <RefreshCcw className={`w-4 h-4 text-gray-400 group-hover:rotate-180 transition-all duration-700 ${loading ? 'animate-spin' : ''}`} />
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sync Database</span>
                     </button>
-                    <div className="bg-[#12141c] border border-gray-800 rounded-xl px-4 py-2">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block leading-none">Last Update</span>
-                        <span className="text-xs font-mono text-cyan-500">{lastSync.toLocaleTimeString()}</span>
+                    <div className="flex bg-[#12141c] border border-gray-800 rounded-xl px-4 py-2 gap-4">
+                        <div className="flex items-center gap-2 pr-4 border-r border-gray-800/50">
+                            <div className={`w-2 h-2 rounded-full ${isServerConnected ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${isServerConnected ? 'text-green-500' : 'text-red-500'}`}>
+                                {isServerConnected ? 'Satellite Linked' : 'Link Offline'}
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block leading-none">Last Sync</span>
+                            <span className="text-xs font-mono text-cyan-500">{lastSync.toLocaleTimeString()}</span>
+                        </div>
                     </div>
                 </div>
             </div>

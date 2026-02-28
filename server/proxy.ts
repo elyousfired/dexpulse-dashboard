@@ -9,7 +9,7 @@ import os from 'os';
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'fs';
 import { runSignalScanner } from './signalScanner';
-import { processActiveHunts } from './strategyTracker';
+import { processActiveHunts, registerNewHunt } from './strategyTracker';
 
 dotenv.config();
 
@@ -209,6 +209,20 @@ app.get('/api/hunts', (req, res) => {
     }
 });
 
+app.post('/api/hunts/register', (req, res) => {
+    try {
+        const { symbol, price } = req.body;
+        if (!symbol || !price) {
+            return res.status(400).json({ error: 'Missing symbol or price' });
+        }
+        console.log(`[Proxy] API Request: Registering ${symbol} at ${price}`);
+        registerNewHunt(symbol, price);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to register hunt' });
+    }
+});
+
 function pruneCache() {
     if (cache.size > 200) {
         const oldestKey = cache.keys().next().value;
@@ -222,9 +236,9 @@ app.listen(PORT, () => {
     // Start 24/7 background processes
     console.log('[Proxy] Initializing 24/7 background processes...');
 
-    // 1. Signal Scanner (Every 10 minutes)
+    // 1. Signal Scanner (Every 2 minutes for faster live detection)
     runSignalScanner();
-    setInterval(runSignalScanner, 10 * 60 * 1000);
+    setInterval(runSignalScanner, 2 * 60 * 1000);
 
     // 2. Strategy Tracker (Every 1 minute)
     console.log('[Proxy] Starting Strategy Tracker (1m interval)...');

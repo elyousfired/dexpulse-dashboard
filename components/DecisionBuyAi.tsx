@@ -287,6 +287,17 @@ export const DecisionBuyAi: React.FC<DecisionBuyAiProps> = ({
                     });
                     stats.totalSignals++;
                     statsChanged = true;
+
+                    // ⚡ INSTANT BRIDGE: Notify Proxy to start tracking this signal
+                    fetch('/api/hunts/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            symbol: sig.ticker.id, // Full symbol e.g. BTCUSDT
+                            price: sig.ticker.priceUsd
+                        })
+                    }).then(() => console.log(`[SignalEngine] Proxy Registration Sent: ${sig.ticker.symbol}`))
+                        .catch(err => console.error('[SignalEngine] Proxy Registration Failed:', err));
                 }
             });
 
