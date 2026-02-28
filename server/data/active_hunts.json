@@ -175,5 +175,14 @@
     "status": "active",
     "capital": 10,
     "tier": 1
+  },
+  {
+    "symbol": "SAHARAUSDT",
+    "entryPrice": 0.0225,
+    "entryTime": "2026-02-28T00:00:00.000Z",
+    "peakPrice": 0.0232,
+    "status": "active",
+    "capital": 10,
+    "tier": 1
   }
 ]

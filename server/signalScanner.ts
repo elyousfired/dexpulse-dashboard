@@ -195,14 +195,17 @@ export async function runSignalScanner() {
             // 💎 DIAMOND FILTER: Current Week VWAP must be above Weekly Max (Explosive Momentum)
             const cond7 = vwap.currentWeekVwap > vwap.max;
 
-            if (cond1 && cond2 && cond3 && cond4 && cond5 && cond6 && cond7) {
-                console.log(`[SignalBot] 🏆 GOLDEN SIGNAL FOUND: ${t.symbol}`);
+            const isGolden = cond1 && cond2 && cond3 && cond4 && cond5 && cond6;
+            const isDiamond = isGolden && cond7;
 
-                // ─── Register in Compound Terminal ───
+            if (isGolden) {
+                console.log(`[SignalBot] 🏆 GOLDEN SIGNAL FOUND: ${t.symbol} (Diamond: ${isDiamond})`);
+
+                // ─── Register in Compound Terminal (ALL Golden Signals) ───
                 registerNewHunt(t.symbol + "USDT", lastClose);
 
                 const message = [
-                    `🏆 <b>⚡ GOLDEN SIGNAL (24/7 Bot)</b>`,
+                    isDiamond ? `💎 <b>⚡ DIAMOND BREAKOUT (v7 Turbo)</b>` : `🏆 <b>⚡ GOLDEN SIGNAL (24/7 Bot)</b>`,
                     ``,
                     `<b>Token:</b> ${t.symbol}/USDT`,
                     `<b>Price:</b> $${lastClose.toLocaleString()}`,
@@ -212,7 +215,7 @@ export async function runSignalScanner() {
                     `  🟢 Target (Max): $${vwap.max.toLocaleString()}`,
                     `  🔴 Stop (Mid): $${vwap.mid.toLocaleString()}`,
                     ``,
-                    `<b>AI Verdict:</b> [v7-Server] Confirmed 6-point breakout. Price cleared structural levels with ${(volatility * 100).toFixed(1)}% volatility.`,
+                    `<b>AI Verdict:</b> [v7-Server] Confirmed ${isDiamond ? 'Diamond' : '6-point'} breakout. Price cleared structural levels with ${(volatility * 100).toFixed(1)}% volatility.`,
                     ``,
                     `📊 <a href="https://dexpulse-boosted-dashboard.vercel.app">Open Dashboard</a>`
                 ].join('\n');
