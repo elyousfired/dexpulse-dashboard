@@ -45,16 +45,26 @@ export async function processActiveHunts() {
     try {
         const hunts: ActiveHunt[] = JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8'));
         const active = hunts.filter(h => h.status === 'active');
-        if (active.length === 0) return;
+        if (active.length === 0) {
+            console.log('[StrategyTracker] No active hunts to track.');
+            return;
+        }
 
-        // Fetch current prices for all active symbols
-        const symbols = active.map(h => h.symbol);
-        // Binance ticker price for multiple symbols
-        const url = `https://api.binance.com/api/v3/ticker/price`;
+        console.log(`[StrategyTracker] Updating prices for ${active.length} active symbols: ${active.map(h => h.symbol).join(', ')}`);
+
+        // Optimized Binance fetch: Only fetch symbols we are tracking
+        const symbolsParam = JSON.stringify(active.map(h => h.symbol));
+        const url = `https://api.binance.com/api/v3/ticker/price?symbols=${encodeURIComponent(symbolsParam)}`;
+
         const { data: tickerData } = await axios.get(url, { timeout: 10000 });
 
         const priceMap = new Map();
-        tickerData.forEach((t: any) => priceMap.set(t.symbol, parseFloat(t.price)));
+        if (Array.isArray(tickerData)) {
+            tickerData.forEach((t: any) => priceMap.set(t.symbol, parseFloat(t.price)));
+        } else {
+            // If only one symbol, Binance might return an object
+            priceMap.set(tickerData.symbol, parseFloat(tickerData.price));
+        }
 
         let modified = false;
 
