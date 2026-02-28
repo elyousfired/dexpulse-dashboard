@@ -184,5 +184,21 @@
     "status": "active",
     "capital": 10,
     "tier": 1
+  },
+  {
+    "symbol": "DCRUSDT",
+    "entryPrice": 35.09,
+    "entryTime": "2026-02-28T00:33:00.515Z",
+    "peakPrice": 35.09,
+    "status": "active",
+    "capital": 10
+  },
+  {
+    "symbol": "HOLOUSDT",
+    "entryPrice": 0.0663,
+    "entryTime": "2026-02-28T00:33:07.338Z",
+    "peakPrice": 0.0663,
+    "status": "active",
+    "capital": 10
   }
 ]
