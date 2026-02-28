@@ -1,3 +1,4 @@
+
 export const historicalHunts = [
   {
     "symbol": "VIRTUALUSDT",
@@ -174,5 +175,29 @@ export const historicalHunts = [
     "pnl": 18.29652996845426,
     "capital": 10,
     "tier": 2
+  },
+  {
+    "symbol": "USTCUSDT",
+    "entryPrice": 0.00534,
+    "entryTime": "2026-02-28T02:00:15.555Z",
+    "peakPrice": 0.00534,
+    "status": "active",
+    "capital": 10
+  },
+  {
+    "symbol": "DCRUSDT",
+    "entryPrice": 34.95,
+    "entryTime": "2026-02-28T02:01:22.273Z",
+    "peakPrice": 34.95,
+    "status": "active",
+    "capital": 10
+  },
+  {
+    "symbol": "LAYERUSDT",
+    "entryPrice": 0.0969,
+    "entryTime": "2026-02-28T02:01:22.278Z",
+    "peakPrice": 0.0969,
+    "status": "active",
+    "capital": 10
   }
 ];
