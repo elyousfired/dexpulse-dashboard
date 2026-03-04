@@ -8,10 +8,20 @@ async function fetchLatestPrice(symbol) {
     } catch (e) { return null; }
 }
 
+import fs from 'fs';
+import path from 'path';
+
 async function monitorOpenTrades() {
-    const openTrades = [
-        // No active trades. Starting fresh!
-    ];
+    let openTrades = [];
+    try {
+        const filePath = path.join(process.cwd(), 'server', 'data', 'active_hunts.json');
+        if (fs.existsSync(filePath)) {
+            const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            openTrades = data.filter(h => h.status === 'active');
+        }
+    } catch (e) {
+        console.error("Error reading hunts file:", e.message);
+    }
 
     console.log("--- REAL-TIME MONITORING OF OPEN TRADES ---");
     console.log("| Symbol | Entry | Current | PnL % | Status |");
