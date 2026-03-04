@@ -25,3 +25,9 @@ dist-ssr
 .env
 
 .vercel
+
+# Data files (Live trades on VPS)
+server/data/*.json
+server/alerted_tokens.json
+server/bot_config.json
+src/data/active_hunts.json
