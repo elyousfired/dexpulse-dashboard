@@ -46,7 +46,7 @@ export const GlobalCompoundTerminal: React.FC = () => {
 
     useEffect(() => {
         fetchHunts();
-        const interval = setInterval(fetchHunts, 15000); // Sync every 15s for live feel
+        const interval = setInterval(fetchHunts, 5000); // Sync every 5s for ultra-live feel
         return () => clearInterval(interval);
     }, []);
 
