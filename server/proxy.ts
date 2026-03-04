@@ -230,7 +230,7 @@ function pruneCache() {
     }
 }
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Proxy server running on http://localhost:${PORT}`);
 
     // Start 24/7 background processes
