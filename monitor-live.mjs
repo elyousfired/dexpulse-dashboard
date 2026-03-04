@@ -29,4 +29,7 @@ async function monitorOpenTrades() {
     }
 }
 
+// Poll every 30 seconds
+console.log("Starting Live Monitor (30s polling)...");
 monitorOpenTrades();
+setInterval(monitorOpenTrades, 30000);
