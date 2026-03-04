@@ -243,5 +243,5 @@ app.listen(PORT, '0.0.0.0', () => {
     // 2. Strategy Tracker (Every 1 minute)
     console.log('[Proxy] Starting Strategy Tracker (1m interval)...');
     processActiveHunts();
-    setInterval(processActiveHunts, 1 * 60 * 1000);
+    setInterval(processActiveHunts, 15 * 1000);
 });

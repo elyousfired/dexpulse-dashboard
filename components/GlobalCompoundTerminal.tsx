@@ -8,6 +8,7 @@ interface ActiveHunt {
     entryPrice: number;
     entryTime: string;
     peakPrice: number;
+    currentPrice?: number;
     status: 'active' | 'closed';
     exitPrice?: number;
     exitTime?: string;
@@ -192,7 +193,7 @@ const HuntRow: React.FC<{ hunt: ActiveHunt }> = ({ hunt }) => {
             <td className="px-6 py-5">
                 <div className="space-y-1">
                     <div className="text-xs font-mono text-gray-400">IN: ${hunt.entryPrice.toLocaleString()}</div>
-                    {!isClosed && <div className="text-xs font-mono text-white animate-pulse">LIV: ${hunt.peakPrice.toLocaleString()}</div>}
+                    {!isClosed && <div className="text-xs font-mono text-white animate-pulse">LIV: ${(hunt.currentPrice || hunt.peakPrice).toLocaleString()}</div>}
                     {isClosed && <div className="text-xs font-mono text-gray-500 italic">OUT: ${hunt.exitPrice?.toLocaleString()}</div>}
                 </div>
             </td>

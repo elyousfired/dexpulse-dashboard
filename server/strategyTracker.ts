@@ -11,6 +11,7 @@ export interface ActiveHunt {
     entryPrice: number;
     entryTime: string;
     peakPrice: number;
+    currentPrice?: number;
     status: 'active' | 'closed';
     exitPrice?: number;
     exitTime?: string;
@@ -71,6 +72,9 @@ export async function processActiveHunts() {
         for (const hunt of active) {
             const currentPrice = priceMap.get(hunt.symbol);
             if (!currentPrice) continue;
+
+            hunt.currentPrice = currentPrice;
+            modified = true;
 
             // Update Peak
             if (currentPrice > hunt.peakPrice) {
