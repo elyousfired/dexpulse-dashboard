@@ -30,11 +30,11 @@ async function monitorOpenTrades() {
     for (const trade of openTrades) {
         const current = await fetchLatestPrice(trade.symbol);
         if (current) {
-            const pnl = ((current - trade.entry) / trade.entry) * 100;
+            const pnl = ((current - trade.entryPrice) / trade.entryPrice) * 100;
             let status = "HOLDING ⏳";
             if (pnl >= 3) status = "TURBO ACTIVE 🔥";
             if (pnl <= -4) status = "RISK ZONE ⚠️";
-            console.log(`| ${trade.symbol} | $${trade.entry.toFixed(4)} | $${current.toFixed(4)} | ${pnl.toFixed(2)}% | ${status} |`);
+            console.log(`| ${trade.symbol} | $${trade.entryPrice.toFixed(4)} | $${current.toFixed(4)} | ${pnl.toFixed(2)}% | ${status} |`);
         }
     }
 }
