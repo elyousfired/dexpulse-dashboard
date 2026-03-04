@@ -10,12 +10,7 @@ async function fetchLatestPrice(symbol) {
 
 async function monitorOpenTrades() {
     const openTrades = [
-        { symbol: 'WLDUSDT', entry: 0.4114 },
-        { symbol: 'ETHFIUSDT', entry: 0.5210 },
-        { symbol: 'MORPHOUSDT', entry: 1.8590 },
-        { symbol: 'SOMIUSDT', entry: 0.2288 },
-        { symbol: 'GUNUSDT', entry: 0.0312 },
-        { symbol: 'JSTUSDT', entry: 0.0381 }
+        // No active trades. Starting fresh!
     ];
 
     console.log("--- REAL-TIME MONITORING OF OPEN TRADES ---");
