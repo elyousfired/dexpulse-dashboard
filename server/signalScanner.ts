@@ -202,6 +202,7 @@ export async function runSignalScanner() {
                 console.log(`[SignalBot] 🏆 GOLDEN SIGNAL FOUND: ${t.symbol} (Diamond: ${isDiamond})`);
 
                 // ─── Register in Compound Terminal (ALL Golden Signals) ───
+                // Using lastClose (completed candle close) as the definitive entry price
                 registerNewHunt(t.symbol + "USDT", lastClose);
 
                 const message = [
