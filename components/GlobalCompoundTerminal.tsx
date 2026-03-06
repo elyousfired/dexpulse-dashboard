@@ -15,9 +15,20 @@ interface ActiveHunt {
     pnl?: number;
     capital: number;
     tier?: number;
+    strategyId?: string;
 }
 
-export const GlobalCompoundTerminal: React.FC = () => {
+interface TerminalProps {
+    strategyId?: string;
+    title?: string;
+    subtitle?: string;
+}
+
+export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
+    strategyId = 'golden_signal',
+    title = 'Golden Signal Terminal',
+    subtitle = 'Advanced Multi-Tier Trailing & Collective Capital Reinvestment'
+}) => {
     const [hunts, setHunts] = useState<ActiveHunt[]>(historicalHunts as ActiveHunt[]);
     const [loading, setLoading] = useState(false);
     const [lastSync, setLastSync] = useState(new Date());
@@ -29,8 +40,12 @@ export const GlobalCompoundTerminal: React.FC = () => {
             if (res.ok) {
                 const data = await res.json();
                 setIsServerConnected(true);
-                if (Array.isArray(data) && data.length > 0) {
-                    setHunts(data);
+                if (Array.isArray(data)) {
+                    // Filter by strategy if provided
+                    const filtered = strategyId
+                        ? data.filter((h: any) => h.strategyId === strategyId)
+                        : data;
+                    setHunts(filtered);
                     setLastSync(new Date());
                 }
             } else {
@@ -63,10 +78,10 @@ export const GlobalCompoundTerminal: React.FC = () => {
                 <div>
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-8 bg-blue-500 rounded-full animate-pulse" />
-                        <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase">Global Compound Terminal</h2>
+                        <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase">{title}</h2>
                         <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[10px] font-bold border border-blue-500/20 rounded uppercase tracking-widest">v7-Server Linked</span>
                     </div>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1 ml-4">Advanced Multi-Tier Trailing & Collective Capital Reinvestment</p>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1 ml-4">{subtitle}</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button

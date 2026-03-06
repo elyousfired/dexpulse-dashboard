@@ -24,6 +24,7 @@ import { MarketStructureDashboard } from './components/MarketStructureDashboard'
 import { ArbitrageTerminal } from './components/ArbitrageTerminal';
 import { StructureRadar } from './components/StructureRadar';
 import { GlobalCompoundTerminal } from './components/GlobalCompoundTerminal';
+import { Sidebar } from './components/Sidebar';
 
 // ─── VWAP Architecture View (Chart + VWAP Indicator) ──────
 const VwapArchView: React.FC<{
@@ -121,7 +122,9 @@ const App: React.FC = () => {
     | 'arbitrage'
     | 'bullStructure'
     | 'compound'
+    | 'strategy_page'
   >('grid');
+  const [activeStrategy, setActiveStrategy] = useState('golden_signal');
   const [watchlist, setWatchlist] = useState<WatchlistTrade[]>(() => {
     const saved = localStorage.getItem('dex_cex_watchlist');
     return saved ? JSON.parse(saved) : [];
@@ -325,112 +328,122 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#06080c] text-white selection:bg-blue-500/30">
-      <DashboardHeader
-        activeView={activeView}
-        onViewChange={setActiveView}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        lastUpdated={lastUpdated}
-        isScanning={cexLoading}
+      isScanning={cexLoading}
       />
 
-      <main className="max-w-[1600px] mx-auto px-4 py-6 md:px-8">
-        <div className="flex flex-col gap-6">
-          {activeView === 'grid' ? (
-            <CexGrid
-              tickers={cexTickers}
-              loading={cexLoading}
-              onRefresh={loadCexData}
-              onTickerClick={setSelectedCexTicker}
-            />
-          ) : activeView === 'scanner' ? (
-            <VwapScanner
-              tickers={cexTickers}
-              onTickerClick={setSelectedCexTicker}
-            />
-          ) : activeView === 'decision' ? (
-            <DecisionBuyAi
-              tickers={cexTickers}
-              vwapStore={vwapStore}
-              firstSeenTimes={firstSeenTimes}
-              isLoading={vwapLoading}
-              onTickerClick={setSelectedCexTicker}
-              onAddToWatchlist={handleAddToWatchlist}
-            />
-          ) : activeView === 'whale' ? (
-            <WhaleScanner
-              tickers={cexTickers}
-              onTickerClick={setSelectedCexTicker}
-            />
-          ) : activeView === 'correlation' ? (
-            <BtcCorrelation
-              tickers={cexTickers}
-              onTickerClick={setSelectedCexTicker}
-            />
-          ) : activeView === 'playbook' ? (
-            <TradingPlaybook />
-          ) : activeView === 'sentiment' ? (
-            <AntfarmSentiment
-              tickers={cexTickers}
-              onTickerClick={setSelectedCexTicker}
-            />
-          ) : activeView === 'swap' ? (
-            <SwapPanel tickers={cexTickers} />
-          ) : activeView === 'news' ? (
-            <NewsFeed />
-          ) : activeView === 'vwapMulti' ? (
-            <VwapMultiTF tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
-          ) : activeView === 'anchoredVWAP' ? (
-            <VwapAnchorBot tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />
-          ) : activeView === 'ecosystems' ? (
-            <EcosystemGrid tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />
-          ) : activeView === 'tma' ? (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Market Architecture</h2>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Deep Structural Analysis & PD Liquidity Engine</p>
+      <div className="flex">
+        <Sidebar
+          activeStrategy={activeStrategy}
+          onSelectStrategy={(id) => {
+            setActiveStrategy(id);
+            setActiveView('strategy_page');
+          }}
+        />
+
+        <main className="flex-1 max-w-[1600px] px-4 py-6 md:px-8">
+          <div className="flex flex-col gap-6">
+            {activeView === 'grid' ? (
+              <CexGrid
+                tickers={cexTickers}
+                loading={cexLoading}
+                onRefresh={loadCexData}
+                onTickerClick={setSelectedCexTicker}
+              />
+            ) : activeView === 'scanner' ? (
+              <VwapScanner
+                tickers={cexTickers}
+                onTickerClick={setSelectedCexTicker}
+              />
+            ) : activeView === 'decision' ? (
+              <DecisionBuyAi
+                tickers={cexTickers}
+                vwapStore={vwapStore}
+                firstSeenTimes={firstSeenTimes}
+                isLoading={vwapLoading}
+                onTickerClick={setSelectedCexTicker}
+                onAddToWatchlist={handleAddToWatchlist}
+              />
+            ) : activeView === 'whale' ? (
+              <WhaleScanner
+                tickers={cexTickers}
+                onTickerClick={setSelectedCexTicker}
+              />
+            ) : activeView === 'correlation' ? (
+              <BtcCorrelation
+                tickers={cexTickers}
+                onTickerClick={setSelectedCexTicker}
+              />
+            ) : activeView === 'playbook' ? (
+              <TradingPlaybook />
+            ) : activeView === 'sentiment' ? (
+              <AntfarmSentiment
+                tickers={cexTickers}
+                onTickerClick={setSelectedCexTicker}
+              />
+            ) : activeView === 'swap' ? (
+              <SwapPanel tickers={cexTickers} />
+            ) : activeView === 'news' ? (
+              <NewsFeed />
+            ) : activeView === 'vwapMulti' ? (
+              <VwapMultiTF tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
+            ) : activeView === 'anchoredVWAP' ? (
+              <VwapAnchorBot tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />
+            ) : activeView === 'ecosystems' ? (
+              <EcosystemGrid tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />
+            ) : activeView === 'tma' ? (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Market Architecture</h2>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Deep Structural Analysis & PD Liquidity Engine</p>
+                  </div>
+                  <div className="flex bg-[#12141c] rounded-xl p-1 border border-gray-800">
+                    <span className="px-4 py-1.5 text-xs font-black text-indigo-400 uppercase tracking-widest">Active Ticker: {selectedCexTicker?.symbol || 'BTC'}</span>
+                  </div>
                 </div>
-                <div className="flex bg-[#12141c] rounded-xl p-1 border border-gray-800">
-                  <span className="px-4 py-1.5 text-xs font-black text-indigo-400 uppercase tracking-widest">Active Ticker: {selectedCexTicker?.symbol || 'BTC'}</span>
+                <div className="h-[750px] relative">
+                  <TokenChart
+                    address={selectedCexTicker?.id || 'BTCUSDT'}
+                    symbol={selectedCexTicker?.symbol || 'BTC'}
+                    isCex={true}
+                    activeView="price"
+                  />
                 </div>
               </div>
-              <div className="h-[750px] relative">
-                <TokenChart
-                  address={selectedCexTicker?.id || 'BTCUSDT'}
-                  symbol={selectedCexTicker?.symbol || 'BTC'}
-                  isCex={true}
-                  activeView="price"
-                />
-              </div>
-            </div>
-          ) : activeView === 'vwapArch' ? (
-            <VwapArchView
-              selectedCexTicker={selectedCexTicker}
-              vwapArchState={vwapArchState}
-              vwapArchLoading={vwapArchLoading}
-              setVwapArchState={setVwapArchState}
-              setVwapArchLoading={setVwapArchLoading}
-            />
-          ) : activeView === 'structure' ? (
-            <MarketStructureDashboard onTickerClick={setSelectedCexTicker} />
-          ) : activeView === 'arbitrage' ? (
-            <ArbitrageTerminal tickers={cexTickers} />
-          ) : activeView === 'bullStructure' ? (
-            <StructureRadar tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
-          ) : activeView === 'compound' ? (
-            <GlobalCompoundTerminal />
-          ) : (
-            <WatchlistPanel
-              trades={watchlist}
-              tickers={cexTickers}
-              onCloseTrade={handleCloseTrade}
-              onRemoveTrade={handleRemoveTrade}
-              onTickerClick={setSelectedCexTicker}
-            />
-          )}
-        </div>
-      </main>
+            ) : activeView === 'vwapArch' ? (
+              <VwapArchView
+                selectedCexTicker={selectedCexTicker}
+                vwapArchState={vwapArchState}
+                vwapArchLoading={vwapArchLoading}
+                setVwapArchState={setVwapArchState}
+                setVwapArchLoading={setVwapArchLoading}
+              />
+            ) : activeView === 'structure' ? (
+              <MarketStructureDashboard onTickerClick={setSelectedCexTicker} />
+            ) : activeView === 'arbitrage' ? (
+              <ArbitrageTerminal tickers={cexTickers} />
+            ) : activeView === 'bullStructure' ? (
+              <StructureRadar tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
+            ) : activeView === 'strategy_page' ? (
+              <GlobalCompoundTerminal
+                strategyId={activeStrategy}
+                title={activeStrategy.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Hub'}
+                subtitle={`Dedicated Real-Time Execution for ${activeStrategy}`}
+              />
+            ) : activeView === 'compound' ? (
+              <GlobalCompoundTerminal />
+            ) : (
+              <WatchlistPanel
+                trades={watchlist}
+                tickers={cexTickers}
+                onCloseTrade={handleCloseTrade}
+                onRemoveTrade={handleRemoveTrade}
+                onTickerClick={setSelectedCexTicker}
+              />
+            )}
+          </div>
+        </main>
+      </div>
 
       {selectedCexTicker && (
         <CexDetailPanel
