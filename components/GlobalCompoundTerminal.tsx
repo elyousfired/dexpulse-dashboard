@@ -50,6 +50,10 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
                             if (strategyId === 'golden_signal') {
                                 return h.strategyId === 'golden_signal' || !h.strategyId;
                             }
+                            // For rotation hub, only show active trades as requested by user
+                            if (strategyId === 'golden_rotation') {
+                                return h.strategyId === 'golden_rotation' && h.status === 'active';
+                            }
                             return h.strategyId === strategyId;
                         })
                         : data;
