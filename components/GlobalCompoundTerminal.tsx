@@ -8,7 +8,7 @@ interface ActiveHunt {
     entryPrice: number;
     entryTime: string;
     peakPrice: number;
-    currentPrice?: number;
+    lastPrice?: number;
     status: 'active' | 'closed';
     exitPrice?: number;
     exitTime?: string;
@@ -22,12 +22,14 @@ interface TerminalProps {
     strategyId?: string;
     title?: string;
     subtitle?: string;
+    onTickerClick?: (ticker: any) => void;
 }
 
 export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
-    strategyId = 'golden_signal',
-    title = 'Golden Signal Terminal',
-    subtitle = 'Advanced Multi-Tier Trailing & Collective Capital Reinvestment'
+    strategyId = 'all',
+    title = 'Collective Strategy Terminal',
+    subtitle = 'Advanced Multi-Strategy Execution & Combined PnL Performance',
+    onTickerClick
 }) => {
     const [hunts, setHunts] = useState<ActiveHunt[]>(historicalHunts as ActiveHunt[]);
     const [loading, setLoading] = useState(false);
@@ -43,7 +45,7 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
                 if (Array.isArray(data)) {
                     // Filter by strategy if provided.
                     // If golden_signal, include legacy trades (no strategyId).
-                    const filtered = strategyId
+                    const filtered = strategyId && strategyId !== 'all'
                         ? data.filter((h: any) => {
                             if (strategyId === 'golden_signal') {
                                 return h.strategyId === 'golden_signal' || !h.strategyId;
@@ -164,7 +166,19 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
                         </thead>
                         <tbody className="divide-y divide-gray-800/50">
                             {hunts.sort((a, b) => b.entryTime.localeCompare(a.entryTime)).map((hunt, idx) => (
-                                <HuntRow key={idx} hunt={hunt} />
+                                <HuntRow
+                                    key={idx}
+                                    hunt={hunt}
+                                    onClick={() => {
+                                        if (onTickerClick) {
+                                            onTickerClick({
+                                                symbol: hunt.symbol.split('USDT')[0],
+                                                id: hunt.symbol.endsWith('USDT') ? hunt.symbol : `${hunt.symbol}USDT`,
+                                                priceUsd: hunt.lastPrice || hunt.entryPrice
+                                            });
+                                        }
+                                    }}
+                                />
                             ))}
                         </tbody>
                     </table>
@@ -193,13 +207,16 @@ const StatCard: React.FC<{ label: string; value: string; subValue: string; color
     </div>
 );
 
-const HuntRow: React.FC<{ hunt: ActiveHunt }> = ({ hunt }) => {
+const HuntRow: React.FC<{ hunt: ActiveHunt; onClick: () => void }> = ({ hunt, onClick }) => {
     const isClosed = hunt.status === 'closed';
     const pnl = hunt.pnl ?? ((hunt.peakPrice - hunt.entryPrice) / hunt.entryPrice) * 100;
     const isPositive = pnl >= 0;
 
     return (
-        <tr className={`hover:bg-[#12141c]/30 transition-colors ${isClosed ? 'opacity-60' : ''}`}>
+        <tr
+            onClick={onClick}
+            className={`hover:bg-blue-500/5 cursor-pointer transition-colors group/row ${isClosed ? 'opacity-60' : ''}`}
+        >
             <td className="px-6 py-5">
                 <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${isClosed ? 'bg-gray-800 text-gray-500' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>
@@ -214,7 +231,7 @@ const HuntRow: React.FC<{ hunt: ActiveHunt }> = ({ hunt }) => {
             <td className="px-6 py-5">
                 <div className="space-y-1">
                     <div className="text-xs font-mono text-gray-400">IN: ${hunt.entryPrice.toLocaleString()}</div>
-                    {!isClosed && <div className="text-xs font-mono text-white animate-pulse">LIV: ${(hunt.currentPrice || hunt.peakPrice).toLocaleString()}</div>}
+                    {!isClosed && <div className="text-xs font-mono text-white animate-pulse">LIV: ${(hunt.lastPrice || hunt.peakPrice).toLocaleString()}</div>}
                     {isClosed && <div className="text-xs font-mono text-gray-500 italic">OUT: ${hunt.exitPrice?.toLocaleString()}</div>}
                 </div>
             </td>

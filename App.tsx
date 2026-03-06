@@ -425,11 +425,12 @@ const App: React.FC = () => {
           ) : activeView === 'strategy_page' ? (
             <GlobalCompoundTerminal
               strategyId={activeStrategy}
+              onTickerClick={setSelectedCexTicker}
               title={activeStrategy.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Hub'}
               subtitle={`Dedicated Real-Time Execution for ${activeStrategy}`}
             />
           ) : activeView === 'compound' ? (
-            <GlobalCompoundTerminal />
+            <GlobalCompoundTerminal onTickerClick={setSelectedCexTicker} />
           ) : (
             <WatchlistPanel
               trades={watchlist}
