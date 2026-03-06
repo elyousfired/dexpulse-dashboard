@@ -134,12 +134,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                         Nexus Arb
                     </button>
                     <button
-                        onClick={() => onViewChange('bullStructure')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'bullStructure' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                        onClick={() => onViewChange('compound')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'compound' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
-                        <TrendingUp className="w-3.5 h-3.5" />
-                        Bull Radar
+                        <Zap className="w-3.5 h-3.5" />
+                        All-Terminal 🌐
                     </button>
+
                     <div className="w-px h-6 bg-gray-800 mx-2" />
 
                     <button
@@ -147,32 +148,10 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                             onStrategyChange('golden_signal');
                             onViewChange('strategy_page');
                         }}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'strategy_page' && activeStrategy === 'golden_signal' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'strategy_page' && activeStrategy === 'golden_signal' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 shadow-[0_0_20px_rgba(34,211,238,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
-                        <Zap className="w-3.5 h-3.5" />
+                        <Trophy className="w-3.5 h-3.5" />
                         Golden Signal 🏆
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            onStrategyChange('scalper');
-                            onViewChange('strategy_page');
-                        }}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'strategy_page' && activeStrategy === 'scalper' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 shadow-[0_0_20px_rgba(34,211,238,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
-                    >
-                        <Activity className="w-3.5 h-3.5" />
-                        Scalper 5m ⚡
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            onStrategyChange('whale_tracker');
-                            onViewChange('strategy_page');
-                        }}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'strategy_page' && activeStrategy === 'whale_tracker' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
-                    >
-                        <Compass className="w-3.5 h-3.5" />
-                        Whale Tracker 🐋
                     </button>
                 </div>
 
