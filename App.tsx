@@ -328,7 +328,13 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#06080c] text-white selection:bg-blue-500/30">
-      isScanning={cexLoading}
+      <DashboardHeader
+        activeView={activeView}
+        onViewChange={setActiveView}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        lastUpdated={lastUpdated}
+        isScanning={cexLoading}
       />
 
       <div className="flex">
