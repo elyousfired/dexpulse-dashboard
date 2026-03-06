@@ -166,9 +166,9 @@ export async function runSignalScanner() {
         // 1. Fetch Top 150 Symbols
         const res = await axios.get('https://api.binance.com/api/v3/ticker/24hr');
         const topSymbols = res.data
-            .filter((t: any) => t.symbol.endsWith('USDT'))
+            .filter((t: any) => t.symbol.endsWith('USDT') && parseFloat(t.quoteVolume) > 1200000)
             .sort((a: any, b: any) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
-            .slice(0, 450)
+            .slice(0, 400)
             .map((t: any) => ({
                 symbol: t.symbol.replace('USDT', ''),
                 price: parseFloat(t.lastPrice),

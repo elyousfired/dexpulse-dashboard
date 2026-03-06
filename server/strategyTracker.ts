@@ -81,60 +81,72 @@ export async function processActiveHunts() {
                     hunt.peakPrice = decisionPrice;
                 }
 
-                const currentProfitPct = (hunt.peakPrice - hunt.entryPrice) / hunt.entryPrice;
+                const currentProfitPct = (decisionPrice - hunt.entryPrice) / hunt.entryPrice;
+                const peakProfitPct = (hunt.peakPrice - hunt.entryPrice) / hunt.entryPrice;
 
-                // Tiered Trailing Logic
+                // ─── Phase 8: Professional Risk Management ───
+                // 1. Loosened Stop Loss: -8% (Breathing Room)
+                let stopPrice = hunt.entryPrice * 0.92;
+
+                // 2. Break-Even Trigger: If profit >= +6%, move stop to Entry + 0.5%
+                if (peakProfitPct >= 0.06) {
+                    stopPrice = hunt.entryPrice * 1.005;
+                }
+
+                // 3. Tiered Trailing Logic (Enhanced)
                 let trailDist = 0.05;
                 let newTier = 1;
 
-                if (currentProfitPct >= 0.30) {
+                if (peakProfitPct >= 0.30) {
                     trailDist = 0.12;
                     newTier = 3;
-                } else if (currentProfitPct >= 0.10) {
-                    trailDist = 0.07;
+                } else if (peakProfitPct >= 0.15) {
+                    trailDist = 0.08;
                     newTier = 2;
+                }
+
+                // Update Stop Price if Trailing is more protective
+                const trailingStop = hunt.peakPrice * (1 - trailDist);
+                if (peakProfitPct >= 0.10 && trailingStop > stopPrice) {
+                    stopPrice = trailingStop;
                 }
 
                 // Alert on Tier Change
                 if (newTier > (hunt.tier || 1)) {
-                    console.log(`[StrategyTracker] 🆙 ${hunt.symbol} upgraded to Tier ${newTier} (on 15m Close)`);
+                    console.log(`[StrategyTracker] 🆙 ${hunt.symbol} upgraded to Tier ${newTier}`);
                     await sendTelegram([
-                        `💎 <b>COMPOUND ALERT: TIER ${newTier}</b>`,
+                        `💎 <b>STRATEGY UPGRADE: TIER ${newTier}</b>`,
                         ``,
                         `<b>Symbol:</b> #${hunt.symbol}`,
-                        `<b>Confirmed Max Close:</b> +${(currentProfitPct * 100).toFixed(2)}%`,
-                        `<b>New Trail:</b> ${(trailDist * 100).toFixed(0)}%`,
+                        `<b>Peak Profit:</b> +${(peakProfitPct * 100).toFixed(2)}%`,
+                        `<b>Stop Level:</b> $${stopPrice.toLocaleString()} (${stopPrice > hunt.entryPrice ? 'PROTECTED' : 'AT RISK'})`,
                         ``,
                         `<i>Hunting for the Moon... 🚀</i>`
                     ].join('\n'));
                 }
-
                 hunt.tier = newTier;
 
-                const stopPrice = hunt.peakPrice * (1 - trailDist);
-                const hardStopLoss = hunt.entryPrice * 0.95;
-
                 // Check for exit
-                if (decisionPrice <= stopPrice || decisionPrice <= hardStopLoss) {
+                if (decisionPrice <= stopPrice) {
                     hunt.status = 'closed';
                     hunt.exitPrice = decisionPrice;
                     hunt.exitTime = new Date().toISOString();
                     const finalPnl = ((hunt.exitPrice - hunt.entryPrice) / hunt.entryPrice) * 100;
                     hunt.pnl = finalPnl;
 
-                    const reason = decisionPrice <= hardStopLoss ? 'Stop Loss (15m Close)' : `Trailing (15m Close)`;
+                    const reason = stopPrice > hunt.entryPrice ? 'Take Profit/BE' : 'Hard Stop Loss';
 
                     await sendTelegram([
                         `🔴 <b>HUNT CLOSED: #${hunt.symbol}</b>`,
                         ``,
                         `<b>PNL:</b> ${finalPnl >= 0 ? '+' : ''}${finalPnl.toFixed(2)}%`,
                         `<b>Exit Price:</b> $${hunt.exitPrice.toLocaleString()}`,
-                        `<b>Reason:</b> ${reason}`,
+                        `<b>Reason:</b> ${reason} (15m Close)`,
                         ``,
-                        `💰 Compounding capital reinvested.`
+                        `💰 Rebalancing capital...`
                     ].join('\n'));
 
-                    console.log(`[StrategyTracker] 🔴 CLOSED ${hunt.symbol} | PnL: ${finalPnl.toFixed(2)}% (Confirmed 15m Close)`);
+                    console.log(`[StrategyTracker] 🔴 CLOSED ${hunt.symbol} | PnL: ${finalPnl.toFixed(2)}% | Reason: ${reason}`);
                 }
 
                 // Small delay to prevent Binance rate limit
