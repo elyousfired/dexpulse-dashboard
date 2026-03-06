@@ -164,6 +164,17 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                         <Zap className="w-3.5 h-3.5" />
                         Golden Pro 💎
                     </button>
+
+                    <button
+                        onClick={() => {
+                            onStrategyChange('golden_rotation');
+                            onViewChange('strategy_page');
+                        }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'strategy_page' && activeStrategy === 'golden_rotation' ? 'bg-purple-600/20 text-purple-400 border border-purple-600/20 shadow-[0_0_20px_rgba(147,51,234,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Activity className="w-3.5 h-3.5" />
+                        VWAP Rotation 🛰️
+                    </button>
                 </div>
 
                 {/* Search & Stats */}

@@ -10,6 +10,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'fs';
 import { runSignalScanner } from './signalScanner';
 import { processActiveHunts, registerNewHunt } from './strategyTracker';
+import { runRotationEngine } from './rotationEngine';
 
 dotenv.config();
 
@@ -240,8 +241,13 @@ app.listen(PORT, '0.0.0.0', () => {
     runSignalScanner();
     setInterval(runSignalScanner, 2 * 60 * 1000);
 
-    // 2. Strategy Tracker (Every 1 minute)
-    console.log('[Proxy] Starting Strategy Tracker (1m interval)...');
+    // 2. Strategy Tracker (Every 5 seconds)
+    console.log('[Proxy] Starting Strategy Tracker (5s interval)...');
     processActiveHunts();
     setInterval(processActiveHunts, 5 * 1000);
+
+    // 3. Rotation Engine (Every 5 minutes)
+    console.log('[Proxy] Starting Rotation Engine (5m interval)...');
+    runRotationEngine();
+    setInterval(runRotationEngine, 5 * 60 * 1000);
 });
