@@ -81,10 +81,25 @@ export async function runRotationEngine() {
         const currentActive = fs.existsSync(HUNTS_FILE) ? JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8')) : [];
         const rotationActive = currentActive.filter((h: ActiveHunt) => h.status === 'active' && h.strategyId === 'golden_rotation');
 
-        // 2. Scan for candidates
+        // 2. Scan for candidates and check exits for currently active
         const candidates: { symbol: string, price: number }[] = [];
+        const toClose: string[] = [];
 
+        // Check existing for exits
+        for (const hunt of rotationActive) {
+            const vwap = await getVwapData(hunt.symbol);
+            if (!vwap) continue;
+            const isFullLong = vwap.last15mClose > vwap.max && vwap.last15mClose > vwap.mid && vwap.last15mClose > vwap.min;
+            if (!isFullLong) {
+                console.log(`[RotationEngine] 🚨 Lost Full Long status for ${hunt.symbol}. Preparing to exit.`);
+                toClose.push(hunt.symbol);
+            }
+        }
+
+        // Scan top symbols for new entries
         for (const symbol of topSymbols) {
+            if (rotationActive.find(h => h.symbol === symbol)) continue; // Already active
+
             const vwap = await getVwapData(symbol);
             if (!vwap) continue;
 
@@ -100,18 +115,29 @@ export async function runRotationEngine() {
 
         console.log(`[RotationEngine] Found ${candidates.length} Full Long candidates.`);
 
-        // 3. Logic: Keep Top 3 Rotation Slots
-        const MAX_SLOTS = 3;
+        // 3. Apply Exits
+        if (toClose.length > 0) {
+            const hunts = JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8'));
+            hunts.forEach((h: any) => {
+                if (toClose.includes(h.symbol) && h.strategyId === 'golden_rotation' && h.status === 'active') {
+                    h.status = 'closed';
+                    h.exitPrice = h.lastPrice || h.entryPrice;
+                    h.exitTime = new Date().toISOString();
+                    h.reason = 'Lost Full Long Status (Rotation)';
+                    console.log(`[RotationEngine] 💸 CLOSED ${h.symbol} (Rotation Exit)`);
+                }
+            });
+            fs.writeFileSync(HUNTS_FILE, JSON.stringify(hunts, null, 2));
+        }
 
-        // Auto-Register new ones if slots available
-        for (const cand of candidates) {
-            if (rotationActive.length >= MAX_SLOTS) break;
-            if (!rotationActive.find((h: any) => h.symbol === cand.symbol)) {
-                console.log(`[RotationEngine] 🛰️ Rotating Capital into: ${cand.symbol}`);
-                registerNewHunt(cand.symbol, cand.price, 'golden_rotation');
-                // Refresh local list
-                rotationActive.push({ symbol: cand.symbol } as any);
-            }
+        // 4. Apply Entries (Maintain Top Slots)
+        const MAX_SLOTS = 3;
+        const remainingSlots = MAX_SLOTS - (rotationActive.length - toClose.length);
+
+        for (let i = 0; i < Math.min(candidates.length, remainingSlots); i++) {
+            const cand = candidates[i];
+            console.log(`[RotationEngine] 🛰️ Rotating Capital into: ${cand.symbol}`);
+            registerNewHunt(cand.symbol, cand.price, 'golden_rotation');
         }
 
     } catch (err: any) {
