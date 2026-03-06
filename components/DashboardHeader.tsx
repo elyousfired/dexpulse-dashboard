@@ -5,6 +5,11 @@ import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, B
 interface DashboardHeaderProps {
     activeStrategy: string;
     onStrategyChange: (id: string) => void;
+    searchTerm: string;
+    onSearchChange: (term: string) => void;
+    isScanning: boolean;
+    lastUpdated: Date;
+    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure' | 'arbitrage' | 'bullStructure' | 'compound' | 'strategy_page';
     onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure' | 'arbitrage' | 'bullStructure' | 'compound' | 'strategy_page') => void;
 }
 
@@ -12,7 +17,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     activeView,
     onViewChange,
     activeStrategy,
-    onStrategyChange
+    onStrategyChange,
+    searchTerm,
+    onSearchChange,
+    isScanning,
+    lastUpdated
 }) => {
     return (
         <header className="dashboard-header text-white">
