@@ -13,8 +13,9 @@ interface DashboardHeaderProps {
     | 'structure'
     | 'arbitrage'
     | 'bullStructure'
-    | 'compound';
-    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure' | 'arbitrage' | 'bullStructure' | 'compound') => void;
+    | 'compound'
+    | 'strategy_page';
+    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure' | 'arbitrage' | 'bullStructure' | 'compound' | 'strategy_page') => void;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
