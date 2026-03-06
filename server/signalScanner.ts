@@ -32,6 +32,7 @@ export interface VwapData {
     currentWeekVwap: number;
     last15mClose: number;
     prev15mClose: number;
+    history15m: number[]; // Added to support Catch-up logic
 }
 
 const ALERTED_FILE = path.join(process.cwd(), 'server', 'alerted_tokens.json');
@@ -61,13 +62,14 @@ async function fetchBinanceKlines(symbol: string, interval: string, limit: numbe
 async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | null> {
     const [klines, klines15m] = await Promise.all([
         fetchBinanceKlines(symbol, '1d', 30),
-        fetchBinanceKlines(symbol, '15m', 3)
+        fetchBinanceKlines(symbol, '15m', 20)
     ]);
 
     if (klines.length < 15 || klines15m.length < 2) return null;
 
     const last15mClose = klines15m[klines15m.length - 2].close;
     const prev15mClose = klines15m[klines15m.length - 3]?.close || last15mClose;
+    const history15m = klines15m.map(k => k.close);
 
     const getMonTs = (ts: number) => {
         const d = new Date(ts * 1000);
@@ -119,7 +121,7 @@ async function fetchWeeklyVwapData(symbol: string): Promise<VwapData | null> {
     if (wMax === -Infinity) wMax = currentMid;
     if (wMin === Infinity) wMin = currentMid;
 
-    return { max: wMax, min: wMin, mid: currentMid, prevWeekVwap, currentWeekVwap, last15mClose, prev15mClose };
+    return { max: wMax, min: wMin, mid: currentMid, prevWeekVwap, currentWeekVwap, last15mClose, prev15mClose, history15m };
 }
 
 // ─── Bot Implementation ──────────────────────────────────────
@@ -196,14 +198,20 @@ export async function runSignalScanner() {
             const cond7 = vwap.currentWeekVwap > vwap.max;
 
             const isGolden = cond1 && cond2 && cond3 && cond4 && cond5 && cond6;
+
+            // --- Catch-up Entry Logic ---
+            // If we missed the exact cross (cond6), but we ARE above max and WERE below max in the last 4 candles (1 hour)
+            const wasBelowRecently = vwap.history15m.slice(-5, -1).some(price => price <= vwap.max);
+            const isCatchUp = cond1 && cond2 && cond3 && cond4 && cond5 && wasBelowRecently;
+
             const isDiamond = isGolden && cond7;
 
-            if (isGolden) {
-                console.log(`[SignalBot] 🏆 GOLDEN SIGNAL FOUND: ${t.symbol} (Diamond: ${isDiamond})`);
+            if (isGolden || isCatchUp) {
+                const entryType = isGolden ? (isDiamond ? 'Diamond' : 'Golden') : 'Catch-up';
+                console.log(`[SignalBot] 🏆 ${entryType} SIGNAL: ${t.symbol}`);
 
-                // ─── Register in Compound Terminal (ALL Golden Signals) ───
-                // Using lastClose (completed candle close) as the definitive entry price
-                registerNewHunt(t.symbol + "USDT", lastClose);
+                // ─── Register in Compound Terminal with strategy tag ───
+                registerNewHunt(t.symbol + "USDT", lastClose, 'golden_signal');
 
                 const message = [
                     isDiamond ? `💎 <b>⚡ DIAMOND BREAKOUT (v7 Turbo)</b>` : `🏆 <b>⚡ GOLDEN SIGNAL (24/7 Bot)</b>`,

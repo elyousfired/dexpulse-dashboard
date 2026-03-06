@@ -18,6 +18,7 @@ export interface ActiveHunt {
     pnl?: number;
     capital: number;
     tier?: number;
+    strategyId?: string;
 }
 
 async function sendTelegram(text: string) {
@@ -153,12 +154,12 @@ export async function processActiveHunts() {
     }
 }
 
-export function registerNewHunt(symbol: string, entryPrice: number) {
+export function registerNewHunt(symbol: string, entryPrice: number, strategyId: string = 'golden_signal') {
     try {
         const hunts: ActiveHunt[] = fs.existsSync(HUNTS_FILE) ? JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8')) : [];
 
-        // Prevent duplicates
-        if (hunts.find(h => h.symbol === symbol && h.status === 'active')) {
+        // Prevent duplicates for the same strategy
+        if (hunts.find(h => h.symbol === symbol && h.status === 'active' && h.strategyId === strategyId)) {
             return;
         }
 
@@ -168,7 +169,8 @@ export function registerNewHunt(symbol: string, entryPrice: number) {
             entryTime: new Date().toISOString(),
             peakPrice: entryPrice,
             status: 'active',
-            capital: 10.0 // Default starting capital
+            capital: 10.0, // Default starting capital
+            strategyId
         };
 
         hunts.push(newHunt);
