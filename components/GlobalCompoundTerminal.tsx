@@ -41,9 +41,15 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
                 const data = await res.json();
                 setIsServerConnected(true);
                 if (Array.isArray(data)) {
-                    // Filter by strategy if provided
+                    // Filter by strategy if provided.
+                    // If golden_signal, include legacy trades (no strategyId).
                     const filtered = strategyId
-                        ? data.filter((h: any) => h.strategyId === strategyId)
+                        ? data.filter((h: any) => {
+                            if (strategyId === 'golden_signal') {
+                                return h.strategyId === 'golden_signal' || !h.strategyId;
+                            }
+                            return h.strategyId === strategyId;
+                        })
                         : data;
                     setHunts(filtered);
                     setLastSync(new Date());
