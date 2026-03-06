@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, BookOpen, Users, Repeat, Newspaper, Layers, Bot, Compass, Waves, Globe, TrendingUp } from 'lucide-react';
+import { Search, Zap, Activity, Brain, LayoutList, Anchor, GitCompare, Layers, Bot, Compass, Waves, Globe, TrendingUp, Trophy } from 'lucide-react';
 
 interface DashboardHeaderProps {
     activeStrategy: string;

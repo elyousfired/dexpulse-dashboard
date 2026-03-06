@@ -24,7 +24,6 @@ import { MarketStructureDashboard } from './components/MarketStructureDashboard'
 import { ArbitrageTerminal } from './components/ArbitrageTerminal';
 import { StructureRadar } from './components/StructureRadar';
 import { GlobalCompoundTerminal } from './components/GlobalCompoundTerminal';
-import { Sidebar } from './components/Sidebar';
 
 // ─── VWAP Architecture View (Chart + VWAP Indicator) ──────
 const VwapArchView: React.FC<{
