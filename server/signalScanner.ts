@@ -165,14 +165,17 @@ export async function runSignalScanner() {
     try {
         // 1. Fetch Top 150 Symbols
         const res = await axios.get('https://api.binance.com/api/v3/ticker/24hr');
-        const topSymbols = res.data
-            .filter((t: any) => t.symbol.endsWith('USDT') && parseFloat(t.quoteVolume) > 1200000)
+        const rawTickers = res.data.filter((t: any) => t.symbol.endsWith('USDT'));
+
+        const topSymbols = rawTickers
             .sort((a: any, b: any) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
-            .slice(0, 400)
+            .slice(0, 450)
             .map((t: any) => ({
                 symbol: t.symbol.replace('USDT', ''),
+                fullSymbol: t.symbol,
                 price: parseFloat(t.lastPrice),
-                change: parseFloat(t.priceChangePercent)
+                change: parseFloat(t.priceChangePercent),
+                volume: parseFloat(t.quoteVolume)
             }));
 
         console.log(`[SignalBot] Processing ${topSymbols.length} symbols...`);
@@ -200,39 +203,53 @@ export async function runSignalScanner() {
             const isGolden = cond1 && cond2 && cond3 && cond4 && cond5 && cond6;
 
             // --- Catch-up Entry Logic ---
-            // If we missed the exact cross (cond6), but we ARE above max and WERE below max in the last 4 candles (1 hour)
             const wasBelowRecently = vwap.history15m.slice(-5, -1).some(price => price <= vwap.max);
             const isCatchUp = cond1 && cond2 && cond3 && cond4 && cond5 && wasBelowRecently;
 
             const isDiamond = isGolden && cond7;
 
-            if (isGolden || isCatchUp) {
-                const entryType = isGolden ? (isDiamond ? 'Diamond' : 'Golden') : 'Catch-up';
-                console.log(`[SignalBot] 🏆 ${entryType} SIGNAL: ${t.symbol}`);
+            // ─── STRATEGY 1: ORIGINAL GOLDEN SIGNAL ───
+            if (t.volume > 500000) { // Original 500k filter
+                if (isGolden || isCatchUp) {
+                    const entryType = isGolden ? (isDiamond ? 'Diamond' : 'Golden') : 'Catch-up';
+                    console.log(`[SignalBot] 🏆 ${entryType} SIGNAL: ${t.symbol} (Golden Signal)`);
+                    registerNewHunt(t.fullSymbol, lastClose, 'golden_signal');
 
-                // ─── Register in Compound Terminal with strategy tag ───
-                registerNewHunt(t.symbol + "USDT", lastClose, 'golden_signal');
-
-                const message = [
-                    isDiamond ? `💎 <b>⚡ DIAMOND BREAKOUT (v7 Turbo)</b>` : `🏆 <b>⚡ GOLDEN SIGNAL (24/7 Bot)</b>`,
-                    ``,
-                    `<b>Token:</b> ${t.symbol}/USDT`,
-                    `<b>Price:</b> $${lastClose.toLocaleString()}`,
-                    `<b>24h Change:</b> ${t.change >= 0 ? '+' : ''}${t.change.toFixed(2)}%`,
-                    ``,
-                    `<b>VWAP Levels:</b>`,
-                    `  🟢 Target (Max): $${vwap.max.toLocaleString()}`,
-                    `  🔴 Stop (Mid): $${vwap.mid.toLocaleString()}`,
-                    ``,
-                    `<b>AI Verdict:</b> [v7-Server] Confirmed ${isDiamond ? 'Diamond' : '6-point'} breakout. Price cleared structural levels with ${(volatility * 100).toFixed(1)}% volatility.`,
-                    ``,
-                    `📊 <a href="https://dexpulse-boosted-dashboard.vercel.app">Open Dashboard</a>`
-                ].join('\n');
-
-                await sendTelegram(config, message);
-                alerted.ids.push(t.symbol);
-                fs.writeFileSync(ALERTED_FILE, JSON.stringify(alerted));
+                    const message = [
+                        isDiamond ? `💎 <b>⚡ DIAMOND BREAKOUT (v7 Turbo)</b>` : `🏆 <b>⚡ GOLDEN SIGNAL (24/7 Bot)</b>`,
+                        ``,
+                        `<b>Token:</b> ${t.symbol}/USDT`,
+                        `<b>Price:</b> $${lastClose.toLocaleString()}`,
+                        `<b>Strategy:</b> Original Golden`,
+                        ``,
+                        `📊 <a href="http://187.124.33.159:3000">Open Dashboard</a>`
+                    ].join('\n');
+                    await sendTelegram(config, message);
+                }
             }
+
+            // ─── STRATEGY 2: GOLDEN PRO (Optimized) ───
+            if (t.volume > 1200000) { // Pro 1.2M filter
+                if (isGolden || isCatchUp) {
+                    const entryType = isGolden ? (isDiamond ? 'Diamond' : 'Golden') : 'Catch-up';
+                    console.log(`[SignalBot] 💎 ${entryType} SIGNAL: ${t.symbol} (Golden Pro)`);
+                    registerNewHunt(t.fullSymbol, lastClose, 'golden_pro');
+
+                    const message = [
+                        `💎 <b>⚡ GOLDEN PRO SIGNAL (v8)</b>`,
+                        ``,
+                        `<b>Token:</b> ${t.symbol}/USDT`,
+                        `<b>Price:</b> $${lastClose.toLocaleString()}`,
+                        `<b>Strategy:</b> Pro Risk Mgmt (-8% SL, +6% BE)`,
+                        ``,
+                        `📊 <a href="http://187.124.33.159:3000">Open Dashboard</a>`
+                    ].join('\n');
+                    await sendTelegram(config, message);
+                }
+            }
+
+            alerted.ids.push(t.symbol);
+            fs.writeFileSync(ALERTED_FILE, JSON.stringify(alerted));
 
             // Sleep slightly to avoid rate limits
             await new Promise(r => setTimeout(r, 100));

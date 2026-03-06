@@ -84,24 +84,32 @@ export async function processActiveHunts() {
                 const currentProfitPct = (decisionPrice - hunt.entryPrice) / hunt.entryPrice;
                 const peakProfitPct = (hunt.peakPrice - hunt.entryPrice) / hunt.entryPrice;
 
-                // ─── Phase 8: Professional Risk Management ───
-                // 1. Loosened Stop Loss: -8% (Breathing Room)
-                let stopPrice = hunt.entryPrice * 0.92;
+                // ─── Strategy-Specific Risk Management ───
+                let stopPrice = hunt.entryPrice * 0.95; // Default Original: -5%
+                let trailDist = 0.05;
+                let strategyName = "Golden Signal";
 
-                // 2. Break-Even Trigger: If profit >= +6%, move stop to Entry + 0.5%
-                if (peakProfitPct >= 0.06) {
-                    stopPrice = hunt.entryPrice * 1.005;
+                if (hunt.strategyId === 'golden_pro') {
+                    strategyName = "Golden Pro";
+                    // 1. Loosened Stop Loss: -8%
+                    stopPrice = hunt.entryPrice * 0.92;
+
+                    // 2. Break-Even Trigger: If profit >= +6%, move stop to Entry + 0.5%
+                    if (peakProfitPct >= 0.06) {
+                        stopPrice = hunt.entryPrice * 1.005;
+                    }
                 }
 
-                // 3. Tiered Trailing Logic (Enhanced)
-                let trailDist = 0.05;
+                // Tiered Trailing Logic (Universal for both, based on peak)
                 let newTier = 1;
-
                 if (peakProfitPct >= 0.30) {
                     trailDist = 0.12;
                     newTier = 3;
-                } else if (peakProfitPct >= 0.15) {
+                } else if (hunt.strategyId === 'golden_pro' && peakProfitPct >= 0.15) {
                     trailDist = 0.08;
+                    newTier = 2;
+                } else if (hunt.strategyId !== 'golden_pro' && peakProfitPct >= 0.10) {
+                    trailDist = 0.07;
                     newTier = 2;
                 }
 
@@ -113,9 +121,9 @@ export async function processActiveHunts() {
 
                 // Alert on Tier Change
                 if (newTier > (hunt.tier || 1)) {
-                    console.log(`[StrategyTracker] 🆙 ${hunt.symbol} upgraded to Tier ${newTier}`);
+                    console.log(`[StrategyTracker] 🆙 ${hunt.symbol} (${strategyName}) upgraded to Tier ${newTier}`);
                     await sendTelegram([
-                        `💎 <b>STRATEGY UPGRADE: TIER ${newTier}</b>`,
+                        `💎 <b>${strategyName.toUpperCase()} UPGRADE: TIER ${newTier}</b>`,
                         ``,
                         `<b>Symbol:</b> #${hunt.symbol}`,
                         `<b>Peak Profit:</b> +${(peakProfitPct * 100).toFixed(2)}%`,
@@ -137,7 +145,7 @@ export async function processActiveHunts() {
                     const reason = stopPrice > hunt.entryPrice ? 'Take Profit/BE' : 'Hard Stop Loss';
 
                     await sendTelegram([
-                        `🔴 <b>HUNT CLOSED: #${hunt.symbol}</b>`,
+                        `🔴 <b>${strategyName.toUpperCase()} CLOSED: #${hunt.symbol}</b>`,
                         ``,
                         `<b>PNL:</b> ${finalPnl >= 0 ? '+' : ''}${finalPnl.toFixed(2)}%`,
                         `<b>Exit Price:</b> $${hunt.exitPrice.toLocaleString()}`,
@@ -146,7 +154,7 @@ export async function processActiveHunts() {
                         `💰 Rebalancing capital...`
                     ].join('\n'));
 
-                    console.log(`[StrategyTracker] 🔴 CLOSED ${hunt.symbol} | PnL: ${finalPnl.toFixed(2)}% | Reason: ${reason}`);
+                    console.log(`[StrategyTracker] 🔴 CLOSED ${hunt.symbol} (${strategyName}) | PnL: ${finalPnl.toFixed(2)}%`);
                 }
 
                 // Small delay to prevent Binance rate limit

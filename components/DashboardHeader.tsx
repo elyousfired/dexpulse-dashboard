@@ -153,6 +153,17 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                         <Trophy className="w-3.5 h-3.5" />
                         Golden Signal 🏆
                     </button>
+
+                    <button
+                        onClick={() => {
+                            onStrategyChange('golden_pro');
+                            onViewChange('strategy_page');
+                        }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'strategy_page' && activeStrategy === 'golden_pro' ? 'bg-blue-600/20 text-blue-400 border border-blue-600/20 shadow-[0_0_20px_rgba(37,99,235,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Zap className="w-3.5 h-3.5" />
+                        Golden Pro 💎
+                    </button>
                 </div>
 
                 {/* Search & Stats */}
