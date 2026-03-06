@@ -335,6 +335,8 @@ const App: React.FC = () => {
         onSearchChange={setSearchTerm}
         lastUpdated={lastUpdated}
         isScanning={cexLoading}
+        activeStrategy={activeStrategy}
+        onStrategyChange={setActiveStrategy}
       />
 
       <div className="flex">

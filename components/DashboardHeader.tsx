@@ -3,28 +3,16 @@ import React from 'react';
 import { Search, Zap, Shield, Activity, Brain, LayoutList, Anchor, GitCompare, BookOpen, Users, Repeat, Newspaper, Layers, Bot, Compass, Waves, Globe, TrendingUp } from 'lucide-react';
 
 interface DashboardHeaderProps {
-    searchTerm: string;
-    onSearchChange: (term: string) => void;
-    isScanning: boolean;
-    lastUpdated: Date;
-    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems'
-    | 'tma'
-    | 'vwapArch'
-    | 'structure'
-    | 'arbitrage'
-    | 'bullStructure'
-    | 'compound'
-    | 'strategy_page';
+    activeStrategy: string;
+    onStrategyChange: (id: string) => void;
     onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure' | 'arbitrage' | 'bullStructure' | 'compound' | 'strategy_page') => void;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
-    searchTerm,
-    onSearchChange,
-    isScanning,
-    lastUpdated,
     activeView,
-    onViewChange
+    onViewChange,
+    activeStrategy,
+    onStrategyChange
 }) => {
     return (
         <header className="dashboard-header text-white">
@@ -143,12 +131,39 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                         <TrendingUp className="w-3.5 h-3.5" />
                         Bull Radar
                     </button>
+                    <div className="w-px h-6 bg-gray-800 mx-2" />
+
                     <button
-                        onClick={() => onViewChange('compound')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'compound' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
+                        onClick={() => {
+                            onStrategyChange('golden_signal');
+                            onViewChange('strategy_page');
+                        }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'strategy_page' && activeStrategy === 'golden_signal' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         <Zap className="w-3.5 h-3.5" />
-                        Compound Terminal 💎
+                        Golden Signal 🏆
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            onStrategyChange('scalper');
+                            onViewChange('strategy_page');
+                        }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'strategy_page' && activeStrategy === 'scalper' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 shadow-[0_0_20px_rgba(34,211,238,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Activity className="w-3.5 h-3.5" />
+                        Scalper 5m ⚡
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            onStrategyChange('whale_tracker');
+                            onViewChange('strategy_page');
+                        }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'strategy_page' && activeStrategy === 'whale_tracker' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.2)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Compass className="w-3.5 h-3.5" />
+                        Whale Tracker 🐋
                     </button>
                 </div>
 
