@@ -37,10 +37,12 @@ async function generateFullReport() {
     console.log(`   - Currently Tracking: ${active.length} active hunts\n`);
 
     if (closed.length > 0) {
-        console.log(`🏆 TOP WINNERS:`);
-        const topWins = [...wins].sort((a, b) => b.pnl - a.pnl).slice(0, 5);
-        topWins.forEach(h => {
-            console.log(`   • ${h.symbol.padEnd(12)} | +${h.pnl.toFixed(2)}%`);
+        console.log(`📜 DETAILED TRADE LOG (Closed):`);
+        console.log(`   | Symbol       | PnL %   | Status |`);
+        console.log(`   |--------------|---------|--------|`);
+        closed.forEach(h => {
+            const pnlStr = (h.pnl >= 0 ? '+' : '') + h.pnl.toFixed(2) + '%';
+            console.log(`   | ${h.symbol.padEnd(12)} | ${pnlStr.padEnd(7)} | ${h.pnl >= 0 ? 'WIN ✅' : 'LOSS ❌'}  |`);
         });
         console.log("");
     }
