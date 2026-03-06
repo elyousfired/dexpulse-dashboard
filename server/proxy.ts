@@ -203,10 +203,14 @@ app.get('/api/hunts', (req, res) => {
         if (!fs.existsSync(HUNTS_FILE)) {
             return res.json([]);
         }
-        const hunts = JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8'));
+        const content = fs.readFileSync(HUNTS_FILE, 'utf8').trim();
+        if (!content) return res.json([]);
+
+        const hunts = JSON.parse(content);
         res.json(hunts);
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch hunts' });
+        console.error('[Proxy] Error reading hunts file:', (error as Error).message);
+        res.json([]); // Return empty list instead of 500 to keep UI "Online"
     }
 });
 
