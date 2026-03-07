@@ -8,7 +8,7 @@ interface ActiveHunt {
     entryPrice: number;
     entryTime: string;
     peakPrice: number;
-    lastPrice?: number;
+    currentPrice?: number;
     status: 'active' | 'closed';
     exitPrice?: number;
     exitTime?: string;
@@ -178,7 +178,7 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
                                             onTickerClick({
                                                 symbol: hunt.symbol.split('USDT')[0],
                                                 id: hunt.symbol.endsWith('USDT') ? hunt.symbol : `${hunt.symbol}USDT`,
-                                                priceUsd: hunt.lastPrice || hunt.entryPrice
+                                                priceUsd: hunt.currentPrice || hunt.entryPrice
                                             });
                                         }
                                     }}
@@ -235,7 +235,7 @@ const HuntRow: React.FC<{ hunt: ActiveHunt; onClick: () => void }> = ({ hunt, on
             <td className="px-6 py-5">
                 <div className="space-y-1">
                     <div className="text-xs font-mono text-gray-400">IN: ${hunt.entryPrice.toLocaleString()}</div>
-                    {!isClosed && <div className="text-xs font-mono text-white animate-pulse">LIV: ${(hunt.lastPrice || hunt.peakPrice).toLocaleString()}</div>}
+                    {!isClosed && <div className="text-xs font-mono text-white animate-pulse">LIV: ${(hunt.currentPrice || hunt.peakPrice).toLocaleString()}</div>}
                     {isClosed && <div className="text-xs font-mono text-gray-500 italic">OUT: ${hunt.exitPrice?.toLocaleString()}</div>}
                 </div>
             </td>
