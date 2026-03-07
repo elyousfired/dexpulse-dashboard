@@ -14,6 +14,10 @@ interface VwapData {
 const HUNTS_FILE = path.join(process.cwd(), 'server', 'data', 'active_hunts.json');
 const CONFIG_FILE = path.join(process.cwd(), 'server', 'bot_config.json');
 
+const vwapCache = new Map<string, { wMax: number, wMin: number, currentMid: number, expires: number }>();
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes cache
+let isScanning = false;
+
 async function fetchBinanceKlines(symbol: string, interval: string, limit: number) {
     const pair = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
     const url = `https://data-api.binance.vision/api/v3/klines?symbol=${pair}&interval=${interval}&limit=${limit}`;
@@ -29,44 +33,59 @@ async function fetchBinanceKlines(symbol: string, interval: string, limit: numbe
 }
 
 async function getVwapData(symbol: string): Promise<VwapData | null> {
-    const [klines, klines15m] = await Promise.all([
-        fetchBinanceKlines(symbol, '1d', 30),
-        fetchBinanceKlines(symbol, '15m', 5)
-    ]);
-    if (klines.length < 15 || klines15m.length < 2) return null;
+    const now = Date.now();
+    const cached = vwapCache.get(symbol);
 
-    const lastClose = klines15m[klines15m.length - 2].close;
-    const getMonTs = (ts: number) => {
-        const d = new Date(ts * 1000);
-        const day = d.getUTCDay();
-        const diff = (day === 0 ? 6 : day - 1);
-        const mon = new Date(ts * 1000);
-        mon.setUTCHours(0, 0, 0, 0);
-        mon.setUTCDate(mon.getUTCDate() - diff);
-        return Math.floor(mon.getTime() / 1000);
-    };
+    let wMax: number, wMin: number, currentMid: number;
 
-    const nowTs = Math.floor(Date.now() / 1000);
-    const mondayTs = getMonTs(nowTs);
-    let wMax = -Infinity;
-    let wMin = Infinity;
-    let currentMid = 0;
+    if (cached && cached.expires > now) {
+        wMax = cached.wMax;
+        wMin = cached.wMin;
+        currentMid = cached.currentMid;
+    } else {
+        const klines = await fetchBinanceKlines(symbol, '1d', 30);
+        if (klines.length < 15) return null;
 
-    const rawVwap = klines.map((k: any) => (k.volume > 0 ? k.quoteVolume / k.volume : k.close));
-    klines.forEach((k: any, index: number) => {
-        const dailyVwap = rawVwap[index];
-        if (getMonTs(k.time) === mondayTs && index < klines.length - 1) {
-            if (dailyVwap > wMax) wMax = dailyVwap;
-            if (dailyVwap < wMin) wMin = dailyVwap;
-        }
-        if (index === klines.length - 1) currentMid = dailyVwap;
-    });
+        const getMonTs = (ts: number) => {
+            const d = new Date(ts * 1000);
+            const day = d.getUTCDay();
+            const diff = (day === 0 ? 6 : day - 1);
+            const mon = new Date(ts * 1000);
+            mon.setUTCHours(0, 0, 0, 0);
+            mon.setUTCDate(mon.getUTCDate() - diff);
+            return Math.floor(mon.getTime() / 1000);
+        };
 
-    if (wMax === -Infinity) wMax = currentMid;
+        const nowTs = Math.floor(now / 1000);
+        const mondayTs = getMonTs(nowTs);
+        wMax = -Infinity;
+        wMin = Infinity;
+        currentMid = 0;
+
+        const rawVwap = klines.map((k: any) => (k.volume > 0 ? k.quoteVolume / k.volume : k.close));
+        klines.forEach((k: any, index: number) => {
+            const dailyVwap = rawVwap[index];
+            if (getMonTs(k.time) === mondayTs && index < klines.length - 1) {
+                if (dailyVwap > wMax) wMax = dailyVwap;
+                if (dailyVwap < wMin) wMin = dailyVwap;
+            }
+            if (index === klines.length - 1) currentMid = dailyVwap;
+        });
+
+        if (wMax === -Infinity) wMax = currentMid;
+        vwapCache.set(symbol, { wMax, wMin, currentMid, expires: now + CACHE_DURATION });
+    }
+
+    const klines15m = await fetchBinanceKlines(symbol, '15m', 2);
+    if (klines15m.length < 1) return null;
+    const lastClose = klines15m[klines15m.length - 1].close;
+
     return { max: wMax, min: wMin, mid: currentMid, last15mClose: lastClose };
 }
 
 export async function runRotationEngine() {
+    if (isScanning) return;
+    isScanning = true;
     console.log(`[RotationEngine] 🛰️ Running Market Rotation Check...`);
 
     try {
@@ -170,5 +189,7 @@ export async function runRotationEngine() {
 
     } catch (err: any) {
         console.error(`[RotationEngine] Error:`, err.message);
+    } finally {
+        isScanning = false;
     }
 }

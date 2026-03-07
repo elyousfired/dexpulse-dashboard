@@ -250,8 +250,8 @@ app.listen(PORT, '0.0.0.0', () => {
     processActiveHunts();
     setInterval(processActiveHunts, 5 * 1000);
 
-    // 3. Rotation Engine (Every 5 minutes)
-    console.log('[Proxy] Starting Rotation Engine (5m interval)...');
+    // 3. Rotation Engine (Every 5 seconds for hyper-fast response)
+    console.log('[Proxy] Starting Rotation Engine (5s interval)...');
     runRotationEngine();
-    setInterval(runRotationEngine, 5 * 60 * 1000);
+    setInterval(runRotationEngine, 5 * 1000);
 });
