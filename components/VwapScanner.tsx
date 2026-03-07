@@ -222,6 +222,12 @@ export const VwapScanner: React.FC<VwapScannerProps> = ({ tickers, onTickerClick
                                     <div className={`px-2 py-0.5 rounded-[6px] text-[10px] font-black tracking-tight ${stateBadge[res.state]}`}>
                                         {stateText[res.state]}
                                     </div>
+                                    {res.state === 'green' && (
+                                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 animate-pulse">
+                                            <Zap size={8} className="text-cyan-400 fill-cyan-400" />
+                                            <span className="text-[8px] font-black text-cyan-400 uppercase tracking-tighter">Rotation Target</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="text-right">
                                     <div className="text-xs font-mono font-bold text-white">${formatPrice(res.ticker.priceUsd)}</div>

@@ -25,6 +25,47 @@ interface TerminalProps {
     onTickerClick?: (ticker: any) => void;
 }
 
+// --- Health Gauge Component ---
+const HealthGauge: React.FC<{ value: number; label: string }> = ({ value, label }) => {
+    const radius = 30;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (value / 100) * circumference;
+
+    return (
+        <div className="flex flex-col items-center justify-center p-4 bg-[#12141c]/50 rounded-2xl border border-gray-800/50">
+            <div className="relative w-20 h-20">
+                <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                        cx="40"
+                        cy="40"
+                        r={radius}
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="transparent"
+                        className="text-gray-800"
+                    />
+                    <circle
+                        cx="40"
+                        cy="40"
+                        r={radius}
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        fill="transparent"
+                        strokeDasharray={circumference}
+                        style={{ strokeDashoffset: offset }}
+                        strokeLinecap="round"
+                        className={`${value > 70 ? 'text-green-500' : value > 40 ? 'text-yellow-500' : 'text-red-500'} transition-all duration-1000 ease-out shadow-[0_0_10px_currentColor]`}
+                    />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-sm font-black text-white">{value.toFixed(0)}%</span>
+                </div>
+            </div>
+            <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest mt-2">{label}</span>
+        </div>
+    );
+};
+
 export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
     strategyId = 'all',
     title = 'Collective Strategy Terminal',
@@ -119,33 +160,49 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
             </div>
 
             {/* --- Stats Overview --- */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard
-                    label="Current Hunt Active"
-                    value={activeCount.toString()}
-                    subValue={`Across 350+ Pairs`}
-                    icon={<Activity className="w-5 h-5 text-blue-400" />}
-                />
-                <StatCard
-                    label="Cumulative PnL"
-                    value={`${totalPnL > 0 ? '+' : ''}${totalPnL.toFixed(2)}%`}
-                    subValue="Historical Aggregate"
-                    color={totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}
-                    icon={<TrendingUp className="w-5 h-5 text-green-400" />}
-                />
-                <StatCard
-                    label="Compound Balance"
-                    value={`$${compoundingBalance.toFixed(2)}`}
-                    subValue={`Initial $${initialCapital.toFixed(2)}`}
-                    color="text-white"
-                    icon={<Zap className="w-5 h-5 text-yellow-400" />}
-                />
-                <StatCard
-                    label="Success Velocity"
-                    value={`${winRate.toFixed(1)}%`}
-                    subValue="Signal Accuracy"
-                    icon={<Trophy className="w-5 h-5 text-purple-400" />}
-                />
+            <div className="flex flex-col xl:flex-row gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1">
+                    <StatCard
+                        label="Current Hunt Active"
+                        value={activeCount.toString()}
+                        subValue={`Across 350+ Pairs`}
+                        icon={<Activity className="w-5 h-5 text-blue-400" />}
+                    />
+                    <StatCard
+                        label="Cumulative PnL"
+                        value={`${totalPnL > 0 ? '+' : ''}${totalPnL.toFixed(2)}%`}
+                        subValue="Historical Aggregate"
+                        color={totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}
+                        icon={<TrendingUp className="w-5 h-5 text-green-400" />}
+                    />
+                    <StatCard
+                        label="Compound Balance"
+                        value={`$${compoundingBalance.toFixed(2)}`}
+                        subValue={`Initial $${initialCapital.toFixed(2)}`}
+                        color="text-white"
+                        icon={<Zap className="w-5 h-5 text-yellow-400" />}
+                    />
+                    <StatCard
+                        label="Execution Slots"
+                        value={`${activeCount}/3`}
+                        subValue="Capacity Utility"
+                        icon={<Target className="w-5 h-5 text-cyan-400" />}
+                    />
+                </div>
+
+                {/* Strategy Health Section */}
+                <div className="flex items-center gap-4 bg-[#0c0e14] border border-gray-800 rounded-2xl p-4">
+                    <div className="flex-1 min-w-[120px]">
+                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Strategy Health</h3>
+                        <p className="text-[11px] text-gray-500 font-medium leading-tight">Dynamic efficiency based on win/loss ratio and drawdown protection.</p>
+                        <div className="mt-2 flex items-center gap-2">
+                            <div className="px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-[9px] font-black text-green-500 uppercase">Optimized</div>
+                            <div className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[9px] font-black text-blue-500 uppercase italic">v7.2</div>
+                        </div>
+                    </div>
+                    <HealthGauge value={winRate} label="Efficiency" />
+                    <HealthGauge value={Math.min(100, Math.max(0, 100 + totalPnL))} label="Momentum" />
+                </div>
             </div>
 
             {/* --- Active Trades Table --- */}

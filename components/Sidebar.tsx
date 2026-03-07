@@ -1,4 +1,4 @@
-import React from 'react';
+import { RotationMiniMonitor } from './RotationMiniMonitor';
 
 interface SidebarProps {
     activeStrategy: string;
@@ -7,9 +7,9 @@ interface SidebarProps {
 
 const strategies = [
     { id: 'golden_signal', name: 'Golden Signal', icon: '🏆' },
+    { id: 'golden_rotation', name: 'VWAP Rotation', icon: '🛰️' },
     { id: 'scalper', name: 'Scalper 5m', icon: '⚡' },
     { id: 'whale_tracker', name: 'Whale Tracker', icon: '🐋' },
-    { id: 'volatility_hunt', name: 'Volatility Hunt', icon: '🔥' }
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeStrategy, onSelectStrategy }) => {
@@ -24,26 +24,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeStrategy, onSelectStrate
                 </h2>
             </div>
 
-            <nav className="flex-1 space-y-1">
+            <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar pr-1">
                 {strategies.map((strat) => (
                     <button
                         key={strat.id}
                         onClick={() => onSelectStrategy(strat.id)}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${activeStrategy === strat.id
-                                ? 'bg-gradient-to-r from-blue-600/20 to-cyan-500/20 text-white border border-blue-500/20'
-                                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                            ? 'bg-gradient-to-r from-blue-600/20 to-cyan-500/20 text-white border border-blue-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
                             }`}
                     >
                         <span className="text-xl group-hover:scale-110 transition-transform">{strat.icon}</span>
-                        <span className="font-medium">{strat.name}</span>
+                        <span className="font-medium text-sm">{strat.name}</span>
                         {activeStrategy === strat.id && (
                             <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
                         )}
                     </button>
                 ))}
+
+                <RotationMiniMonitor />
             </nav>
 
-            <div className="mt-auto p-4 rounded-2xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/5">
+            <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/5">
                 <div className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">System Status</div>
                 <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
