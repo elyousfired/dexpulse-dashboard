@@ -104,7 +104,9 @@ export async function runRotationEngine() {
             console.log(`[RotationEngine] Slot utilization: ${currentOpenCount}/${MAX_SLOTS}. Searching for ${MAX_SLOTS - currentOpenCount} more candidates...`);
             for (const symbol of topSymbols) {
                 if (candidates.length >= (MAX_SLOTS - currentOpenCount)) break;
-                if (rotationActive.find(h => h.symbol === symbol)) continue; // Already active in rotation
+
+                // Extra check: Is it already active in ANY strategy?
+                if (currentActive.find((h: any) => h.symbol === symbol && h.status === 'active')) continue;
 
                 const vwap = await getVwapData(symbol);
                 if (!vwap) continue;
@@ -151,11 +153,12 @@ export async function runRotationEngine() {
         if (finalActive.length > MAX_SLOTS) {
             console.log(`[RotationEngine] 🧹 Cleaning up ${finalActive.length - MAX_SLOTS} excess slots...`);
             const hunts = JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8'));
+            // Keep the 3 NEWEST ones, close the oldest
             const toPurge = finalActive.slice(0, finalActive.length - MAX_SLOTS).map((h: any) => h.symbol);
             hunts.forEach((h: any) => {
                 if (toPurge.includes(h.symbol) && h.strategyId === 'golden_rotation' && h.status === 'active') {
                     h.status = 'closed';
-                    h.exitPrice = h.lastPrice || h.entryPrice;
+                    h.exitPrice = h.currentPrice || h.entryPrice;
                     h.exitTime = new Date().toISOString();
                     h.reason = 'Slot Capacity Purge (Self-Correction)';
                 }

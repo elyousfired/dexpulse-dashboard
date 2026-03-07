@@ -31,7 +31,7 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
     subtitle = 'Advanced Multi-Strategy Execution & Combined PnL Performance',
     onTickerClick
 }) => {
-    const [hunts, setHunts] = useState<ActiveHunt[]>(historicalHunts as ActiveHunt[]);
+    const [hunts, setHunts] = useState<ActiveHunt[]>([]);
     const [loading, setLoading] = useState(false);
     const [lastSync, setLastSync] = useState(new Date());
     const [isServerConnected, setIsServerConnected] = useState(false);
@@ -75,7 +75,7 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
         fetchHunts();
         const interval = setInterval(fetchHunts, 5000); // Sync every 5s for ultra-live feel
         return () => clearInterval(interval);
-    }, []);
+    }, [strategyId]); // RE-RUN when switching strategies
 
     const activeCount = hunts.filter(h => h.status === 'active').length;
     const totalPnL = hunts.reduce((acc, h) => acc + (h.pnl || 0), 0);

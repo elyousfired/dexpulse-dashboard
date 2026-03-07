@@ -178,8 +178,15 @@ export function registerNewHunt(symbol: string, entryPrice: number, strategyId: 
     try {
         const hunts: ActiveHunt[] = fs.existsSync(HUNTS_FILE) ? JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8')) : [];
 
-        // Prevent duplicates for the same strategy
-        if (hunts.find(h => h.symbol === symbol && h.status === 'active' && h.strategyId === strategyId)) {
+        // Prevent duplicates for the same strategy (case-insensitive and robust)
+        const alreadyActive = hunts.find(h =>
+            h.symbol.toUpperCase() === symbol.toUpperCase() &&
+            h.status === 'active' &&
+            (h.strategyId === strategyId || (!h.strategyId && strategyId === 'golden_signal'))
+        );
+
+        if (alreadyActive) {
+            console.log(`[StrategyTracker] ⚠️ Skipping duplicate hunt for ${symbol} (${strategyId})`);
             return;
         }
 
