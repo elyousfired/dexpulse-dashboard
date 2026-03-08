@@ -135,7 +135,10 @@ export async function runRotationEngine() {
         // 3. Scan top symbols for new entries
         const candidates: { symbol: string, price: number, density: number, whale: WhaleCategory }[] = [];
         const MAX_SLOTS = 3;
-        const STABLECOINS = ['USDT', 'USDC', 'USD1', 'DAI', 'FDUSD', 'BUSD', 'TUSD', 'USTC'];
+        const STABLECOINS = [
+            'USDT', 'USDC', 'USD1', 'DAI', 'FDUSD', 'BUSD', 'TUSD', 'USTC',
+            'EUR', 'GBP', 'JPY', 'USDP', 'GUSD', 'PYUSD', 'AEUR', 'ZUSD'
+        ];
         const currentOpenCount = rotationActive.length - toClose.length;
 
         if (currentOpenCount < MAX_SLOTS) {
@@ -147,10 +150,10 @@ export async function runRotationEngine() {
             for (const symbol of topSymbols) {
                 if (candidates.length >= (MAX_SLOTS - currentOpenCount)) break;
 
-                // A. Filter Stablecoins
-                const baseSymbol = symbol.replace('USDT', '');
-                if (STABLECOINS.includes(baseSymbol) || STABLECOINS.includes(symbol)) {
-                    // console.log(`[RotationEngine] 🛡️ Filtering stablecoin: ${symbol}`);
+                // A. Filter Stablecoins & Pegged Assets
+                const isStable = STABLECOINS.some(s => symbol.includes(s));
+                if (isStable) {
+                    // console.log(`[RotationEngine] 🛡️ Filtering stablecoin/pegged: ${symbol}`);
                     continue;
                 }
 
