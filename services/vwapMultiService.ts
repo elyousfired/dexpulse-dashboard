@@ -24,6 +24,26 @@ export interface TokenVwapProfile {
     change24h: number;
     levels: VwapLevel[];
     aboveCount: number;
+    densityScore: number;
+}
+
+export function calculateDensityScore(vwaps: number[], currentPrice: number): number {
+    if (vwaps.length < 2) return 0;
+
+    // Average VWAP
+    const avgVwap = vwaps.reduce((a, b) => a + b, 0) / vwaps.length;
+
+    // Mean Absolute Percentage Error from the average
+    const totalDiffPct = vwaps.reduce((acc, v) => acc + (Math.abs(v - avgVwap) / avgVwap), 0);
+    const avgDiffPct = totalDiffPct / vwaps.length;
+
+    // Convert to a 0-100 score. 
+    // If avgDiff is 0.5% (0.005), that's very dense. 
+    // Sensitivity: 0.02 (2%) difference = 0 score. 0% diff = 100 score.
+    const sensitivity = 0.02;
+    const score = Math.max(0, 100 * (1 - (avgDiffPct / sensitivity)));
+
+    return Math.round(score);
 }
 
 export async function fetchTokenVwapProfile(symbol: string, currentPrice: number, change24h: number): Promise<TokenVwapProfile | null> {
@@ -61,11 +81,15 @@ export async function fetchTokenVwapProfile(symbol: string, currentPrice: number
 
     if (levels.length === 0) return null;
 
+    const vwapValues = levels.map(l => l.vwap);
+    const densityScore = calculateDensityScore(vwapValues, currentPrice);
+
     return {
         symbol,
         price: currentPrice,
         change24h,
         levels,
-        aboveCount
+        aboveCount,
+        densityScore
     };
 }

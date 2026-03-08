@@ -24,6 +24,39 @@ const TF_COLORS: Record<string, string> = {
     '15m': '#6366f1',
 };
 
+const DensityGauge: React.FC<{ score: number }> = ({ score }) => {
+    const getColor = (s: number) => {
+        if (s >= 90) return '#f59e0b'; // Gold
+        if (s >= 70) return '#3b82f6'; // Blue
+        return '#4b5563'; // Grey
+    };
+
+    return (
+        <div className="flex flex-col items-center gap-1 min-w-[60px]">
+            <div className="relative w-12 h-6 overflow-hidden">
+                {/* Background Arc */}
+                <div className="absolute inset-0 w-12 h-12 rounded-full border-[5px] border-gray-800" />
+                {/* Foreground Arc */}
+                <div
+                    className="absolute inset-0 w-12 h-12 rounded-full border-[5px] transition-all duration-1000"
+                    style={{
+                        borderColor: getColor(score),
+                        clipPath: `polygon(0 ${100 - score}%, 100% ${100 - score}%, 100% 100%, 0% 100%)`,
+                        transform: `rotate(${score * 1.8}deg)`,
+                        transformOrigin: 'center center'
+                    }}
+                />
+                <div className="absolute bottom-0 w-full text-center text-[7px] font-black uppercase text-gray-500">
+                    Density
+                </div>
+            </div>
+            <div className={`text-[10px] font-black ${score >= 90 ? 'text-amber-400 animate-pulse' : 'text-gray-400'}`}>
+                {score}%
+            </div>
+        </div>
+    );
+};
+
 export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick }) => {
     const [profiles, setProfiles] = useState<TokenVwapProfile[]>([]);
     const [loading, setLoading] = useState(true);
@@ -274,8 +307,10 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
                                         </div>
                                     </div>
 
-                                    {/* Active TF VWAP */}
+                                    {/* Density Gauge */}
                                     <div className="flex items-center gap-4">
+                                        <DensityGauge score={profile.densityScore} />
+
                                         <div className="text-right">
                                             <div className="text-[9px] text-gray-600 font-black uppercase">{activeTFLabel} VWAP</div>
                                             <div className="text-sm font-mono font-bold text-gray-400">${formatPrice(activeLevel.vwap)}</div>
@@ -291,6 +326,15 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
                                         </div>
                                     </div>
                                 </div>
+
+                                {profile.densityScore >= 90 && (
+                                    <div className="mb-4 px-3 py-1 rounded bg-amber-500/10 border border-amber-500/20 flex items-center justify-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                                        <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">
+                                            Density Squeeze Detected: Explosive Breakout Imminent
+                                        </span>
+                                    </div>
+                                )}
 
                                 {/* Multi-TF Heat Strip */}
                                 <div className="flex items-center gap-1.5">

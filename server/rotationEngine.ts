@@ -171,9 +171,19 @@ export async function runRotationEngine() {
                 const dailyPurityBuffer = isMonday ? 1.005 : 1.0;
                 const isPure = vwap.last15mClose >= (vwap.mid * dailyPurityBuffer);
 
-                // 4. Trigger Condition
+                // 4. SMART FEATURE: DENSITY SQUEEZE
+                // Measure the convergence between Max, Mid, and Min.
+                const vwapValues = [vwap.max, vwap.mid, vwap.min];
+                const avgVwap = vwapValues.reduce((a, b) => a + b, 0) / 3;
+                const avgDiffPct = vwapValues.reduce((acc, v) => acc + (Math.abs(v - avgVwap) / avgVwap), 0) / 3;
+                const densityScore = Math.max(0, 100 * (1 - (avgDiffPct / 0.02))); // 2% sensitivity
+
+                // 5. Trigger Condition
+                // We enter if isFullLong AND isPure AND distFromMax <= 5%
+                // Priority given to High Density (Squeeze)
                 if (isFullLong && isPure && distFromMax <= MAX_DISTANCE_PCT) {
-                    console.log(`[RotationEngine] 🛰️ Found High-Probability Candidate: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%)`);
+                    const isSqueeze = densityScore >= 80;
+                    console.log(`[RotationEngine] 🛰️ Found ${isSqueeze ? 'HIGH CONVICTION' : 'CANDIDATE'}: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%, Density: ${densityScore}%)`);
                     candidates.push({ symbol, price: vwap.last15mClose });
                 } else if (isFullLong && distFromMax > MAX_DISTANCE_PCT) {
                     // console.log(`[RotationEngine] ⛈️ Skipping overextended candidate: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%)`);
@@ -202,7 +212,16 @@ export async function runRotationEngine() {
         // 5. Apply Entries
         for (const cand of candidates) {
             console.log(`[RotationEngine] 🛰️ Rotating Capital into: ${cand.symbol}`);
-            registerNewHunt(cand.symbol, cand.price, 'golden_rotation');
+            // Calculate a quick density score for the registration alert
+            const vwap = await getVwapData(cand.symbol);
+            let dScore = 0;
+            if (vwap) {
+                const vValues = [vwap.max, vwap.mid, vwap.min];
+                const avgV = vValues.reduce((a, b) => a + b, 0) / 3;
+                const avgDPct = vValues.reduce((acc, v) => acc + (Math.abs(v - avgV) / avgV), 0) / 3;
+                dScore = Math.round(Math.max(0, 100 * (1 - (avgDPct / 0.02))));
+            }
+            registerNewHunt(cand.symbol, cand.price, 'golden_rotation', dScore);
         }
 
         // 6. EXTRA SAFETY: If slots > 3 (bug/legacy), close oldest ones

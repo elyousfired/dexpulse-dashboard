@@ -19,6 +19,7 @@ export interface ActiveHunt {
     capital: number;
     tier?: number;
     strategyId?: string;
+    density?: number;
 }
 
 async function sendTelegram(text: string) {
@@ -256,21 +257,18 @@ export async function processActiveHunts() {
     }
 }
 
-export function registerNewHunt(symbol: string, entryPrice: number, strategyId: string = 'golden_signal') {
+export function registerNewHunt(symbol: string, entryPrice: number, strategyId: string = 'golden_signal', density?: number) {
     try {
         const hunts: ActiveHunt[] = fs.existsSync(HUNTS_FILE) ? JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8')) : [];
 
-        // Prevent duplicates for the same strategy (case-insensitive and robust)
+        // Prevent duplicates for the same strategy
         const alreadyActive = hunts.find(h =>
             h.symbol.toUpperCase() === symbol.toUpperCase() &&
             h.status === 'active' &&
             (h.strategyId === strategyId || (!h.strategyId && strategyId === 'golden_signal'))
         );
 
-        if (alreadyActive) {
-            console.log(`[StrategyTracker] ⚠️ Skipping duplicate hunt for ${symbol} (${strategyId})`);
-            return;
-        }
+        if (alreadyActive) return;
 
         const newHunt: ActiveHunt = {
             symbol,
@@ -278,13 +276,33 @@ export function registerNewHunt(symbol: string, entryPrice: number, strategyId: 
             entryTime: new Date().toISOString(),
             peakPrice: entryPrice,
             status: 'active',
-            capital: 10.0, // Default starting capital
-            strategyId
+            capital: 10.0,
+            strategyId,
+            density
         };
 
         hunts.push(newHunt);
         fs.writeFileSync(HUNTS_FILE, JSON.stringify(hunts, null, 2));
-        console.log(`[StrategyTracker] 💎 REGISTERED NEW HUNT: ${symbol} at ${entryPrice}`);
+        console.log(`[StrategyTracker] 💎 REGISTERED NEW HUNT: ${symbol} at ${entryPrice} (Density: ${density || 0}%)`);
+
+        // Send Entry Alert
+        let strategyName = "Golden Signal";
+        if (strategyId === 'golden_pro') strategyName = "Golden Pro";
+        if (strategyId === 'golden_rotation') strategyName = "Golden Rotation";
+
+        const isSqueeze = (density || 0) >= 80;
+
+        sendTelegram([
+            `${isSqueeze ? '🔥' : '💎'} <b>${strategyName.toUpperCase()} ENTRY: #${symbol}</b>`,
+            ``,
+            `<b>Price:</b> $${entryPrice.toLocaleString()}`,
+            density ? `<b>Density Score:</b> ${density}% ${isSqueeze ? '⚡ <i>(SQUEEZE)</i>' : ''}` : '',
+            ``,
+            isSqueeze
+                ? `🚀 <b>HIGH CONVICTION:</b> VWAP levels are tightly clustered. Explosive move expected.`
+                : `📈 Trend following initiated.`
+        ].filter(Boolean).join('\n'));
+
     } catch (err: any) {
         console.error('[StrategyTracker] Registration Error:', err.message);
     }
