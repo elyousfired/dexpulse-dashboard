@@ -155,12 +155,20 @@ export async function runRotationEngine() {
                 const vwap = await getVwapData(symbol);
                 if (!vwap) continue;
 
-                // Full Long = Price > Weekly Max AND Price > Mid AND Price > Min
+                // --- CLIMAX PROTECTION & PURITY LOGIC ---
+                // 1. Distance Check: Price must be above VMAX but NOT more than 5% above it
+                const distFromMax = (vwap.last15mClose - vwap.max) / vwap.max;
+                const MAX_DISTANCE_PCT = 0.05; // 5% limit to avoid buying the "Climax"
+
+                // 2. Full Long Alignment: Close > Max (Weekly) AND Close > Mid (Daily) AND Close > Min (Weekly Floor)
                 const isFullLong = vwap.last15mClose > vwap.max && vwap.last15mClose > vwap.mid && vwap.last15mClose > vwap.min;
 
-                if (isFullLong) {
-                    console.log(`[RotationEngine] 🛰️ Found potential candidate: ${symbol}`);
+                // 3. Trigger Condition
+                if (isFullLong && distFromMax <= MAX_DISTANCE_PCT) {
+                    console.log(`[RotationEngine] 🛰️ Found High-Probability Candidate: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%)`);
                     candidates.push({ symbol, price: vwap.last15mClose });
+                } else if (isFullLong && distFromMax > MAX_DISTANCE_PCT) {
+                    // console.log(`[RotationEngine] ⛈️ Skipping overextended candidate: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%)`);
                 }
 
                 // Avoid rate limit
