@@ -160,11 +160,19 @@ export async function runRotationEngine() {
                 const distFromMax = (vwap.last15mClose - vwap.max) / vwap.max;
                 const MAX_DISTANCE_PCT = 0.05; // 5% limit to avoid buying the "Climax"
 
-                // 2. Full Long Alignment: Close > Max (Weekly) AND Close > Mid (Daily) AND Close > Min (Weekly Floor)
+                // 2. Full Long Alignment (Purity Check): 
+                //    - Close > Max (Weekly Max so far)
+                //    - Close > Mid (Daily VWAP / "Pure" Trend)
+                //    - Close > Min (Weekly Floor)
                 const isFullLong = vwap.last15mClose > vwap.max && vwap.last15mClose > vwap.mid && vwap.last15mClose > vwap.min;
 
-                // 3. Trigger Condition
-                if (isFullLong && distFromMax <= MAX_DISTANCE_PCT) {
+                // 3. Weekly Purity: On Mondays, ensure we are at least 0.5% above Daily VWAP to confirm breakout
+                const isMonday = new Date().getDay() === 1;
+                const dailyPurityBuffer = isMonday ? 1.005 : 1.0;
+                const isPure = vwap.last15mClose >= (vwap.mid * dailyPurityBuffer);
+
+                // 4. Trigger Condition
+                if (isFullLong && isPure && distFromMax <= MAX_DISTANCE_PCT) {
                     console.log(`[RotationEngine] 🛰️ Found High-Probability Candidate: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%)`);
                     candidates.push({ symbol, price: vwap.last15mClose });
                 } else if (isFullLong && distFromMax > MAX_DISTANCE_PCT) {
