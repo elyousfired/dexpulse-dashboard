@@ -47,7 +47,7 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
         const filtered = strategyId && strategyId !== 'all'
             ? huntsData.filter((h: any) => {
                 if (strategyId === 'golden_signal') return h.strategyId === 'golden_signal' || !h.strategyId;
-                if (strategyId === 'golden_rotation') return h.strategyId === 'golden_rotation' && h.status === 'active';
+                if (strategyId === 'golden_rotation') return h.strategyId === 'golden_rotation';
                 return h.strategyId === strategyId;
             })
             : huntsData;

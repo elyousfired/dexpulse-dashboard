@@ -225,10 +225,11 @@ export async function runRotationEngine() {
             hunts.forEach((h: any) => {
                 if (toClose.includes(h.symbol) && h.strategyId === 'golden_rotation' && h.status === 'active') {
                     h.status = 'closed';
-                    h.exitPrice = h.lastPrice || h.entryPrice;
+                    h.exitPrice = h.currentPrice || h.entryPrice;
                     h.exitTime = new Date().toISOString();
+                    h.pnl = ((h.exitPrice - h.entryPrice) / h.entryPrice) * 100;
                     h.reason = 'Lost Full Long Status (Rotation Swapped Out)';
-                    console.log(`[RotationEngine] 💸 CLOSED ${h.symbol} (Rotation Exit)`);
+                    console.log(`[RotationEngine] 💸 CLOSED ${h.symbol} (Rotation Exit) | PnL: ${h.pnl.toFixed(2)}%`);
                 }
             });
             fs.writeFileSync(HUNTS_FILE, JSON.stringify(hunts, null, 2));
