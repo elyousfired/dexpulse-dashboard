@@ -153,33 +153,40 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
             </div>
 
             <div className="bg-[#0c0e14] border border-gray-800 rounded-2xl overflow-hidden">
-                <table className="w-full text-left">
-                    <thead>
-                        <tr className="bg-[#12141c]/50 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                            <th className="px-6 py-4">Pair / Session</th>
-                            <th className="px-6 py-4">Entry / Current</th>
-                            <th className="px-6 py-4">Peak / Distance</th>
-                            <th className="px-6 py-4">Profit Tier</th>
-                            <th className="px-6 py-4">Live PnL</th>
-                            <th className="px-6 py-4">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-800/50">
-                        {hunts.sort((a, b) => b.entryTime.localeCompare(a.entryTime)).map((hunt, idx) => (
-                            <HuntRow key={idx} hunt={hunt} onClick={() => onTickerClick && onTickerClick({ symbol: hunt.symbol.split('USDT')[0], id: hunt.symbol.endsWith('USDT') ? hunt.symbol : `${hunt.symbol}USDT`, priceUsd: hunt.currentPrice || hunt.entryPrice })} />
-                        ))}
-                    </tbody>
-                </table>
-                {hunts.length === 0 && (
-                    <div className="py-20 flex flex-col items-center justify-center text-gray-600">
-                        <Target className="w-12 h-12 mb-4 opacity-20" />
-                        <p className="text-sm font-bold uppercase tracking-widest opacity-40">No active hunts in registry</p>
-                        <p className="text-[10px] uppercase tracking-wider opacity-30 mt-1">Waiting for next v7 Golden Signal...</p>
+                <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-blue-500/5 to-transparent">
+                    <div className="flex items-center gap-2">
+                        <Timer className="w-4 h-4 text-blue-400" />
+                        <span className="text-xs font-black text-white uppercase tracking-widest">Live Strategy Execution</span>
                     </div>
-                )}
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-[#12141c]/50 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                <th className="px-6 py-4">Pair / Session</th>
+                                <th className="px-6 py-4">Entry / Current</th>
+                                <th className="px-6 py-4">Peak / Distance</th>
+                                <th className="px-6 py-4">Profit Tier</th>
+                                <th className="px-6 py-4">Live PnL</th>
+                                <th className="px-6 py-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-800/50">
+                            {hunts.sort((a, b) => b.entryTime.localeCompare(a.entryTime)).map((hunt, idx) => (
+                                <HuntRow key={idx} hunt={hunt} onClick={() => onTickerClick && onTickerClick({ symbol: hunt.symbol.split('USDT')[0], id: hunt.symbol.endsWith('USDT') ? hunt.symbol : `${hunt.symbol}USDT`, priceUsd: hunt.currentPrice || hunt.entryPrice })} />
+                            ))}
+                        </tbody>
+                    </table>
+                    {hunts.length === 0 && (
+                        <div className="py-20 flex flex-col items-center justify-center text-gray-600">
+                            <Target className="w-12 h-12 mb-4 opacity-20" />
+                            <p className="text-sm font-bold uppercase tracking-widest opacity-40">No active hunts in registry</p>
+                            <p className="text-[10px] uppercase tracking-wider opacity-30 mt-1">Waiting for next v7 Golden Signal...</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
-        </div >
     );
 };
 
