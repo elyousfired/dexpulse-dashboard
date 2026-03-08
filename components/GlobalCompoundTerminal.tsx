@@ -108,40 +108,78 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
             </div>
 
             <div className="bg-[#0c0e14] border border-gray-800 rounded-2xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-blue-500/5 to-transparent">
+                <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-emerald-500/5 to-transparent">
                     <div className="flex items-center gap-2">
-                        <Timer className="w-4 h-4 text-blue-400" />
-                        <span className="text-xs font-black text-white uppercase tracking-widest">Live Strategy Execution</span>
+                        <TrendingUp className="w-4 h-4 text-emerald-400" />
+                        <span className="text-xs font-black text-white uppercase tracking-widest">Daily Performance Breakdown</span>
                     </div>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-[#12141c]/50 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                <th className="px-6 py-4">Pair / Session</th>
-                                <th className="px-6 py-4">Entry / Current</th>
-                                <th className="px-6 py-4">Peak / Distance</th>
-                                <th className="px-6 py-4">Profit Tier</th>
-                                <th className="px-6 py-4">Live PnL</th>
-                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4">Date</th>
+                                <th className="px-6 py-4">Trades</th>
+                                <th className="px-6 py-4">Total PnL</th>
+                                <th className="px-6 py-4">Result</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-800/50">
-                            {hunts.sort((a, b) => b.entryTime.localeCompare(a.entryTime)).map((hunt, idx) => (
-                                <HuntRow key={idx} hunt={hunt} onClick={() => onTickerClick && onTickerClick({ symbol: hunt.symbol.split('USDT')[0], id: hunt.symbol.endsWith('USDT') ? hunt.symbol : `${hunt.symbol}USDT`, priceUsd: hunt.currentPrice || hunt.entryPrice })} />
+                            {Object.entries(
+                                hunts.reduce((acc: Record<string, { pnl: number, count: number }>, h) => {
+                                    const date = new Date(h.entryTime).toLocaleDateString();
+                                    if (!acc[date]) acc[date] = { pnl: 0, count: 0 };
+                                    acc[date].pnl += (h.pnl || 0);
+                                    acc[date].count += 1;
+                                    return acc;
+                                }, {})
+                            ).sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime()).map(([date, stats], idx) => (
+                                <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-4 text-xs font-bold text-gray-300">{date}</td>
+                                    <td className="px-6 py-4 text-xs font-mono text-blue-400">{stats.count} Trades</td>
+                                    <td className={`px-6 py-4 text-xs font-black ${stats.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        {stats.pnl >= 0 ? '+' : ''}{stats.pnl.toFixed(2)}%
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className={`w-20 h-1 rounded-full ${stats.pnl >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                                            <div className={`h-full rounded-full ${stats.pnl >= 0 ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, Math.abs(stats.pnl) * 5)}%` }} />
+                                        </div>
+                                    </td>
+                                </tr>
                             ))}
                         </tbody>
                     </table>
-                    {hunts.length === 0 && (
-                        <div className="py-20 flex flex-col items-center justify-center text-gray-600">
-                            <Target className="w-12 h-12 mb-4 opacity-20" />
-                            <p className="text-sm font-bold uppercase tracking-widest opacity-40">No active hunts in registry</p>
-                            <p className="text-[10px] uppercase tracking-wider opacity-30 mt-1">Waiting for next v7 Golden Signal...</p>
-                        </div>
-                    )}
                 </div>
             </div>
+
+            <div className="bg-[#0c0e14] border border-gray-800 rounded-2xl overflow-hidden">
+                <table className="w-full text-left">
+                    <thead>
+                        <tr className="bg-[#12141c]/50 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                            <th className="px-6 py-4">Pair / Session</th>
+                            <th className="px-6 py-4">Entry / Current</th>
+                            <th className="px-6 py-4">Peak / Distance</th>
+                            <th className="px-6 py-4">Profit Tier</th>
+                            <th className="px-6 py-4">Live PnL</th>
+                            <th className="px-6 py-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800/50">
+                        {hunts.sort((a, b) => b.entryTime.localeCompare(a.entryTime)).map((hunt, idx) => (
+                            <HuntRow key={idx} hunt={hunt} onClick={() => onTickerClick && onTickerClick({ symbol: hunt.symbol.split('USDT')[0], id: hunt.symbol.endsWith('USDT') ? hunt.symbol : `${hunt.symbol}USDT`, priceUsd: hunt.currentPrice || hunt.entryPrice })} />
+                        ))}
+                    </tbody>
+                </table>
+                {hunts.length === 0 && (
+                    <div className="py-20 flex flex-col items-center justify-center text-gray-600">
+                        <Target className="w-12 h-12 mb-4 opacity-20" />
+                        <p className="text-sm font-bold uppercase tracking-widest opacity-40">No active hunts in registry</p>
+                        <p className="text-[10px] uppercase tracking-wider opacity-30 mt-1">Waiting for next v7 Golden Signal...</p>
+                    </div>
+                )}
+            </div>
         </div>
+        </div >
     );
 };
 
