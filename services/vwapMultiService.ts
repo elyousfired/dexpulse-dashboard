@@ -25,6 +25,7 @@ export interface TokenVwapProfile {
     levels: VwapLevel[];
     aboveCount: number;
     densityScore: number;
+    whaleStatus?: string;
 }
 
 export function calculateDensityScore(vwaps: number[], currentPrice: number): number {
@@ -84,12 +85,27 @@ export async function fetchTokenVwapProfile(symbol: string, currentPrice: number
     const vwapValues = levels.map(l => l.vwap);
     const densityScore = calculateDensityScore(vwapValues, currentPrice);
 
+    // Whale Status Calculation
+    const weeklyVwap = levels.find(l => l.timeframe === 'weekly')?.vwap;
+    const midVwap = levels.find(l => l.timeframe === '1d')?.vwap; // use 1D as mid proxy
+    const minVwap = levels.find(l => l.timeframe === 'weekly')?.vwap; // simplified for profile
+
+    let whaleStatus = 'NONE';
+    if (weeklyVwap) {
+        if (currentPrice > weeklyVwap * 0.98 && currentPrice < weeklyVwap * 1.05) {
+            whaleStatus = 'BOTTOM_BOUNCE';
+        } else if (midVwap && currentPrice < midVwap) {
+            whaleStatus = 'LOADING_ZONE';
+        }
+    }
+
     return {
         symbol,
         price: currentPrice,
         change24h,
         levels,
         aboveCount,
-        densityScore
+        densityScore,
+        whaleStatus
     };
 }

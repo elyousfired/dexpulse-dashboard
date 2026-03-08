@@ -293,11 +293,25 @@ export const VwapMultiTF: React.FC<VwapMultiTFProps> = ({ tickers, onTickerClick
                                 <div className="flex items-center justify-between mb-4">
                                     {/* Token Info */}
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm bg-gray-800 text-white border border-gray-700">
-                                            {profile.symbol.charAt(0)}
+                                        <div className="relative">
+                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm bg-gray-800 text-white border border-gray-700">
+                                                {profile.symbol.charAt(0)}
+                                            </div>
+                                            {profile.whaleStatus !== 'NONE' && (
+                                                <div className="absolute -top-2 -right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-[10px] shadow-lg border-2 border-[#12141c]" title={`Whale: ${profile.whaleStatus}`}>
+                                                    🐳
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="text-left">
-                                            <span className="text-white font-black text-sm">{profile.symbol}/USDT</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-white font-black text-sm">{profile.symbol}/USDT</span>
+                                                {profile.whaleStatus !== 'NONE' && (
+                                                    <span className="text-[7px] font-black text-blue-400 bg-blue-500/10 px-1 rounded uppercase tracking-tighter">
+                                                        {profile.whaleStatus.replace('_', ' ')}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="flex items-center gap-2 mt-0.5">
                                                 <span className="text-[10px] text-gray-500 font-bold">${formatPrice(profile.price)}</span>
                                                 <span className={`text-[10px] font-black ${profile.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>

@@ -83,6 +83,24 @@ async function getVwapData(symbol: string): Promise<VwapData | null> {
     return { max: wMax, min: wMin, mid: currentMid, last15mClose: lastClose };
 }
 
+type WhaleCategory = 'BOTTOM_BOUNCE' | 'LOADING_ZONE' | 'SILENT_ACCUM' | 'NONE';
+
+function getWhaleStatus(vwap: VwapData): { category: WhaleCategory, intensity: number } {
+    const price = vwap.last15mClose;
+
+    // 1. BOTTOM BOUNCE: Just above Min (Weekly Floor)
+    if (price > vwap.min && price < (vwap.min * 1.05)) {
+        return { category: 'BOTTOM_BOUNCE', intensity: 90 };
+    }
+
+    // 2. LOADING ZONE: Between Min and Mid
+    if (price > vwap.min && price < vwap.mid) {
+        return { category: 'LOADING_ZONE', intensity: 75 };
+    }
+
+    return { category: 'NONE', intensity: 0 };
+}
+
 export async function runRotationEngine() {
     if (isScanning) return;
     isScanning = true;
@@ -115,7 +133,7 @@ export async function runRotationEngine() {
         }
 
         // 3. Scan top symbols for new entries
-        const candidates: { symbol: string, price: number }[] = [];
+        const candidates: { symbol: string, price: number, density: number, whale: WhaleCategory }[] = [];
         const MAX_SLOTS = 3;
         const STABLECOINS = ['USDT', 'USDC', 'USD1', 'DAI', 'FDUSD', 'BUSD', 'TUSD', 'USTC'];
         const currentOpenCount = rotationActive.length - toClose.length;
@@ -178,13 +196,17 @@ export async function runRotationEngine() {
                 const avgDiffPct = vwapValues.reduce((acc, v) => acc + (Math.abs(v - avgVwap) / avgVwap), 0) / 3;
                 const densityScore = Math.max(0, 100 * (1 - (avgDiffPct / 0.02))); // 2% sensitivity
 
-                // 5. Trigger Condition
+                // 5. SMART FEATURE: WHALE CONFIRMATION
+                const whale = getWhaleStatus(vwap);
+                const isWhaleBacked = whale.category !== 'NONE';
+
+                // 6. Trigger Condition
                 // We enter if isFullLong AND isPure AND distFromMax <= 5%
-                // Priority given to High Density (Squeeze)
+                // Priority given to High Density (Squeeze) AND Whale Backing
                 if (isFullLong && isPure && distFromMax <= MAX_DISTANCE_PCT) {
                     const isSqueeze = densityScore >= 80;
-                    console.log(`[RotationEngine] 🛰️ Found ${isSqueeze ? 'HIGH CONVICTION' : 'CANDIDATE'}: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%, Density: ${densityScore}%)`);
-                    candidates.push({ symbol, price: vwap.last15mClose });
+                    console.log(`[RotationEngine] 🛰️ Found ${isSqueeze ? 'HIGH CONVICTION' : 'CANDIDATE'}: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%, Density: ${densityScore}%, Whale: ${whale.category})`);
+                    candidates.push({ symbol, price: vwap.last15mClose, density: Math.round(densityScore), whale: whale.category });
                 } else if (isFullLong && distFromMax > MAX_DISTANCE_PCT) {
                     // console.log(`[RotationEngine] ⛈️ Skipping overextended candidate: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%)`);
                 }
@@ -210,18 +232,9 @@ export async function runRotationEngine() {
         }
 
         // 5. Apply Entries
-        for (const cand of candidates) {
-            console.log(`[RotationEngine] 🛰️ Rotating Capital into: ${cand.symbol}`);
-            // Calculate a quick density score for the registration alert
-            const vwap = await getVwapData(cand.symbol);
-            let dScore = 0;
-            if (vwap) {
-                const vValues = [vwap.max, vwap.mid, vwap.min];
-                const avgV = vValues.reduce((a, b) => a + b, 0) / 3;
-                const avgDPct = vValues.reduce((acc, v) => acc + (Math.abs(v - avgV) / avgV), 0) / 3;
-                dScore = Math.round(Math.max(0, 100 * (1 - (avgDPct / 0.02))));
-            }
-            registerNewHunt(cand.symbol, cand.price, 'golden_rotation', dScore);
+        for (const cand of (candidates as any[])) {
+            console.log(`[RotationEngine] 🛰️ Rotating Capital into: ${cand.symbol} (${cand.whale || 'NONE'})`);
+            registerNewHunt(cand.symbol, cand.price, 'golden_rotation', cand.density, cand.whale);
         }
 
         // 6. EXTRA SAFETY: If slots > 3 (bug/legacy), close oldest ones

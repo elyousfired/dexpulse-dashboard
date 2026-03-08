@@ -20,6 +20,7 @@ export interface ActiveHunt {
     tier?: number;
     strategyId?: string;
     density?: number;
+    whale?: string;
 }
 
 async function sendTelegram(text: string) {
@@ -257,7 +258,7 @@ export async function processActiveHunts() {
     }
 }
 
-export function registerNewHunt(symbol: string, entryPrice: number, strategyId: string = 'golden_signal', density?: number) {
+export function registerNewHunt(symbol: string, entryPrice: number, strategyId: string = 'golden_signal', density?: number, whale?: string) {
     try {
         const hunts: ActiveHunt[] = fs.existsSync(HUNTS_FILE) ? JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8')) : [];
 
@@ -278,12 +279,13 @@ export function registerNewHunt(symbol: string, entryPrice: number, strategyId: 
             status: 'active',
             capital: 10.0,
             strategyId,
-            density
+            density,
+            whale
         };
 
         hunts.push(newHunt);
         fs.writeFileSync(HUNTS_FILE, JSON.stringify(hunts, null, 2));
-        console.log(`[StrategyTracker] 💎 REGISTERED NEW HUNT: ${symbol} at ${entryPrice} (Density: ${density || 0}%)`);
+        console.log(`[StrategyTracker] 💎 REGISTERED NEW HUNT: ${symbol} at ${entryPrice} (Density: ${density || 0}%, Whale: ${whale || 'NONE'})`);
 
         // Send Entry Alert
         let strategyName = "Golden Signal";
@@ -291,16 +293,22 @@ export function registerNewHunt(symbol: string, entryPrice: number, strategyId: 
         if (strategyId === 'golden_rotation') strategyName = "Golden Rotation";
 
         const isSqueeze = (density || 0) >= 80;
+        const isWhaleBacked = whale && whale !== 'NONE';
 
         sendTelegram([
-            `${isSqueeze ? '🔥' : '💎'} <b>${strategyName.toUpperCase()} ENTRY: #${symbol}</b>`,
+            `${isWhaleBacked ? '🐳' : isSqueeze ? '🔥' : '💎'} <b>${strategyName.toUpperCase()} ENTRY: #${symbol}</b>`,
             ``,
             `<b>Price:</b> $${entryPrice.toLocaleString()}`,
             density ? `<b>Density Score:</b> ${density}% ${isSqueeze ? '⚡ <i>(SQUEEZE)</i>' : ''}` : '',
+            isWhaleBacked ? `<b>Whale Status:</b> ${whale} 🌊 <i>(INSTITUTIONAL)</i>` : '',
             ``,
-            isSqueeze
-                ? `🚀 <b>HIGH CONVICTION:</b> VWAP levels are tightly clustered. Explosive move expected.`
-                : `📈 Trend following initiated.`
+            isWhaleBacked && isSqueeze
+                ? `🚀 <b>ULTRA-ALPHA SETUP:</b> Accumulation confirmed + Tight Squeeze. High probability of massive move.`
+                : isWhaleBacked
+                    ? `🐋 <b>SMART MONEY ENTRY:</b> Institutional accumulation detected.`
+                    : isSqueeze
+                        ? `🚀 <b>SQUEEZE BREAKOUT:</b> Technical squeeze confirmed.`
+                        : `📈 Trend following initiated.`
         ].filter(Boolean).join('\n'));
 
     } catch (err: any) {
