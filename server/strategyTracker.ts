@@ -41,6 +41,26 @@ async function sendTelegram(text: string) {
     }
 }
 
+async function handleEarlyExit(hunt: ActiveHunt, exitPrice: number, strategyName: string, reason: string) {
+    hunt.status = 'closed';
+    hunt.exitPrice = exitPrice;
+    hunt.exitTime = new Date().toISOString();
+    const finalPnl = ((hunt.exitPrice - hunt.entryPrice) / hunt.entryPrice) * 100;
+    hunt.pnl = finalPnl;
+
+    await sendTelegram([
+        `🌤️ <b>${strategyName.toUpperCase()} EARLY EXIT: #${hunt.symbol}</b>`,
+        ``,
+        `<b>PNL:</b> ${finalPnl >= 0 ? '+' : ''}${finalPnl.toFixed(2)}%`,
+        `<b>Exit Price:</b> $${hunt.exitPrice.toLocaleString()}`,
+        `<b>Reason:</b> ${reason}`,
+        ``,
+        `💰 <i>Profit locked or loss minimized.</i>`
+    ].join('\n'));
+
+    console.log(`[StrategyTracker] 🌤️ EARLY EXIT ${hunt.symbol} (${strategyName}) | PnL: ${finalPnl.toFixed(2)}% | Reason: ${reason}`);
+}
+
 export async function processActiveHunts() {
     if (!fs.existsSync(HUNTS_FILE)) return;
 
@@ -148,6 +168,37 @@ export async function processActiveHunts() {
 
                     console.log(`[StrategyTracker] 🔴 CLOSED ${hunt.symbol} (${strategyName}) | PnL: ${finalPnl.toFixed(2)}%`);
                     continue; // Skip the rest of the loop for this hunt
+                }
+
+                // --- MOMENTUM EXHAUSTION GUARD (5m Timeframe) ---
+                const url5m = `https://api.binance.com/api/v3/klines?symbol=${hunt.symbol}&interval=5m&limit=20`;
+                const { data: klines5m } = await axios.get(url5m, { timeout: 10000 });
+
+                let rsi5m = 50;
+                if (klines5m && klines5m.length >= 15) {
+                    const closes = klines5m.map((k: any) => parseFloat(k[4]));
+                    let gains = 0, losses = 0;
+                    for (let i = closes.length - 14; i < closes.length; i++) {
+                        const diff = closes[i] - closes[i - 1];
+                        if (diff >= 0) gains += diff; else losses -= diff;
+                    }
+                    rsi5m = losses === 0 ? 100 : 100 - (100 / (1 + (gains / losses)));
+                }
+
+                // 1. Peak Reversal (Sliding TP): If up >5% and drops 1.5% from peak, exit.
+                const reversalDist = (hunt.peakPrice - livePrice) / hunt.peakPrice;
+                if (peakProfitPct >= 0.05 && reversalDist >= 0.015) {
+                    console.log(`[StrategyTracker] 📉 PEAK REVERSAL DETECTED: ${hunt.symbol} (Dropped ${(reversalDist * 100).toFixed(2)}% from peak)`);
+                    await handleEarlyExit(hunt, livePrice, strategyName, 'Peak Reversal (Sliding TP)');
+                    continue;
+                }
+
+                // 2. RSI Exhaustion: If RSI > 80 and price starts to stall (below previous 5m close)
+                const last5mClose = parseFloat(klines5m[klines5m.length - 2][4]);
+                if (rsi5m >= 80 && livePrice < last5mClose) {
+                    console.log(`[StrategyTracker] 🥵 RSI EXHAUSTION: ${hunt.symbol} (RSI: ${rsi5m.toFixed(1)})`);
+                    await handleEarlyExit(hunt, livePrice, strategyName, `RSI Exhaustion (${rsi5m.toFixed(0)})`);
+                    continue;
                 }
 
                 // Alert on Tier Change
