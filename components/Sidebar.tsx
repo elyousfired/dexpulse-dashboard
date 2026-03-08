@@ -1,8 +1,10 @@
 import { RotationMiniMonitor } from './RotationMiniMonitor';
+import { ActiveHunt } from '../types';
 
 interface SidebarProps {
     activeStrategy: string;
     onSelectStrategy: (id: string) => void;
+    activeHunts: ActiveHunt[];
 }
 
 const strategies = [
@@ -12,7 +14,7 @@ const strategies = [
     { id: 'whale_tracker', name: 'Whale Tracker', icon: '🐋' },
 ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeStrategy, onSelectStrategy }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeStrategy, onSelectStrategy, activeHunts }) => {
     return (
         <div className="w-64 bg-slate-900/50 backdrop-blur-xl border-r border-white/5 h-screen sticky top-0 flex flex-col p-4">
             <div className="flex items-center gap-3 px-2 mb-8 mt-2">
@@ -42,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeStrategy, onSelectStrate
                     </button>
                 ))}
 
-                <RotationMiniMonitor />
+                <RotationMiniMonitor activeHunts={activeHunts} />
             </nav>
 
             <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/5">

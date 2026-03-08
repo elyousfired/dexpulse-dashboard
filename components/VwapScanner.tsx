@@ -121,30 +121,34 @@ export const VwapScanner: React.FC<VwapScannerProps> = ({ tickers, onTickerClick
             });
     }, [tickers, vwapStore, readyCounters, searchTerm]);
 
-    // Update ready counters when in Green state
+    // Update ready counters every 5 seconds (Throttled for Performance)
     useEffect(() => {
-        setReadyCounters(prev => {
-            const next = { ...prev };
-            let changed = false;
+        const scannerLogicInterval = setInterval(() => {
+            setReadyCounters(prev => {
+                const next = { ...prev };
+                let changed = false;
 
-            tickers.forEach(t => {
-                const vwap = vwapStore[t.id];
-                if (!vwap) return;
+                tickers.forEach(t => {
+                    const vwap = vwapStore[t.id];
+                    if (!vwap) return;
 
-                const isGreen = t.priceUsd > vwap.max && t.priceUsd > vwap.mid && t.priceUsd > vwap.min;
+                    const isGreen = t.priceUsd > vwap.max && t.priceUsd > vwap.mid && t.priceUsd > vwap.min;
 
-                if (isGreen) {
-                    next[t.id] = (next[t.id] || 0) + 1;
-                    changed = true;
-                } else if (next[t.id]) {
-                    delete next[t.id];
-                    changed = true;
-                }
+                    if (isGreen) {
+                        next[t.id] = (next[t.id] || 0) + 1;
+                        changed = true;
+                    } else if (next[t.id]) {
+                        delete next[t.id];
+                        changed = true;
+                    }
+                });
+
+                return changed ? next : prev;
             });
+        }, 5000);
 
-            return changed ? next : prev;
-        });
-    }, [tickers]);
+        return () => clearInterval(scannerLogicInterval);
+    }, [tickers, vwapStore]);
 
     if (isLoading && Object.keys(vwapStore).length === 0) {
         return (

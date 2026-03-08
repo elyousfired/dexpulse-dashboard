@@ -117,15 +117,40 @@ export async function runRotationEngine() {
         // 3. Scan top symbols for new entries
         const candidates: { symbol: string, price: number }[] = [];
         const MAX_SLOTS = 3;
+        const STABLECOINS = ['USDT', 'USDC', 'USD1', 'DAI', 'FDUSD', 'BUSD', 'TUSD', 'USTC'];
         const currentOpenCount = rotationActive.length - toClose.length;
 
         if (currentOpenCount < MAX_SLOTS) {
             console.log(`[RotationEngine] Slot utilization: ${currentOpenCount}/${MAX_SLOTS}. Searching for ${MAX_SLOTS - currentOpenCount} more candidates...`);
+
+            // Get all historical hunts for cooldown check
+            const allHunts: ActiveHunt[] = currentActive;
+
             for (const symbol of topSymbols) {
                 if (candidates.length >= (MAX_SLOTS - currentOpenCount)) break;
 
-                // Extra check: Is it already active in ANY strategy?
-                if (currentActive.find((h: any) => h.symbol === symbol && h.status === 'active')) continue;
+                // A. Filter Stablecoins
+                const baseSymbol = symbol.replace('USDT', '');
+                if (STABLECOINS.includes(baseSymbol) || STABLECOINS.includes(symbol)) {
+                    // console.log(`[RotationEngine] 🛡️ Filtering stablecoin: ${symbol}`);
+                    continue;
+                }
+
+                // B. Already active in ANY strategy?
+                if (allHunts.find((h: any) => h.symbol === symbol && h.status === 'active')) continue;
+
+                // C. RE-ENTRY COOL-DOWN (4h)
+                // If we lost money on this coin in the last 4 hours, skip it.
+                const recentLoss = allHunts.find((h: any) =>
+                    h.symbol === symbol &&
+                    h.status === 'closed' &&
+                    h.pnl < 0 &&
+                    (new Date().getTime() - new Date(h.exitTime).getTime()) < (4 * 60 * 60 * 1000)
+                );
+                if (recentLoss) {
+                    // console.log(`[RotationEngine] 🧊 Cool-down active for ${symbol} (Recent Loss)`);
+                    continue;
+                }
 
                 const vwap = await getVwapData(symbol);
                 if (!vwap) continue;

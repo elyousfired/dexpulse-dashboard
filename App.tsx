@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { CexTicker, VwapData, WatchlistTrade } from './types';
+import { CexTicker, VwapData, WatchlistTrade, ActiveHunt } from './types';
 import { fetchCexTickers, initCexWebSocket, fetchWeeklyVwapData, fetchBinanceKlines } from './services/cexService';
 import { buildVwapMetrics, classifyVwapTrend, analyzeVwapIntraday, runVwapScenarioEngine, VwapArchState } from './services/vwapArchService';
 import { VwapArchPanel } from './components/VwapArchPanel';
@@ -24,8 +24,9 @@ import { MarketStructureDashboard } from './components/MarketStructureDashboard'
 import { ArbitrageTerminal } from './components/ArbitrageTerminal';
 import { StructureRadar } from './components/StructureRadar';
 import { GlobalCompoundTerminal } from './components/GlobalCompoundTerminal';
+import { Sidebar } from './components/Sidebar';
 
-// ─── VWAP Architecture View (Chart + VWAP Indicator) ──────
+// ─── VWAP Architecture View ───────────────────────
 const VwapArchView: React.FC<{
   selectedCexTicker: CexTicker | null;
   vwapArchState: VwapArchState | null;
@@ -42,11 +43,10 @@ const VwapArchView: React.FC<{
       setVwapArchLoading(true);
       try {
         const [weekly, klines15m] = await Promise.all([
-          fetchWeeklyVwapData(addr.replace('USDT', '') + 'USDT' === addr ? addr : addr),
+          fetchWeeklyVwapData(addr),
           fetchBinanceKlines(addr, '15m')
         ]);
         if (cancelled || !weekly) return;
-
         const vwapMetrics = buildVwapMetrics(weekly);
         const vwapTrend = classifyVwapTrend(vwapMetrics);
         const vwapDetection = analyzeVwapIntraday(vwapMetrics, klines15m);
@@ -57,24 +57,15 @@ const VwapArchView: React.FC<{
         else if (vwapProbs.continuation > 50) vwapBias = vwapDetection.acceptance === 'Above W-Max' ? 'Bullish' : 'Bearish';
 
         setVwapArchState({
-          metrics: vwapMetrics,
-          trend: vwapTrend,
-          liquidityTaken: vwapDetection.liquidityTaken,
-          current: {
-            ...vwapDetection,
-            bias: vwapBias,
-            confidence: Math.max(vwapProbs.reversal, vwapProbs.continuation, vwapProbs.range)
-          },
+          metrics: vwapMetrics, trend: vwapTrend, liquidityTaken: vwapDetection.liquidityTaken,
+          current: { ...vwapDetection, bias: vwapBias, confidence: Math.max(vwapProbs.reversal, vwapProbs.continuation, vwapProbs.range) },
           probabilities: vwapProbs
         });
-      } catch (e) {
-        console.error('VWAP Arch error:', e);
-      } finally {
-        if (!cancelled) setVwapArchLoading(false);
-      }
+      } catch (e) { console.error('VWAP Arch error:', e); }
+      finally { if (!cancelled) setVwapArchLoading(false); }
     };
     compute();
-    const interval = setInterval(compute, 60000); // refresh every minute
+    const interval = setInterval(compute, 60000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [addr]);
 
@@ -90,15 +81,8 @@ const VwapArchView: React.FC<{
         </div>
       </div>
       <div className="h-[750px] relative">
-        <TokenChart
-          address={addr}
-          symbol={sym}
-          isCex={true}
-          activeView="price"
-          hideTmaPanel={true}
-        />
+        <TokenChart address={addr} symbol={sym} isCex={true} activeView="price" hideTmaPanel={true} />
       </div>
-      {/* VWAP Architecture Indicator (Always Visible) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <VwapArchPanel symbol={sym} state={vwapArchState} isLoading={vwapArchLoading} />
       </div>
@@ -106,30 +90,23 @@ const VwapArchView: React.FC<{
   );
 };
 
+// ─── Main App Component ───────────────────────────
 const App: React.FC = () => {
-  // ─── CEX State (Primary) ────────────────────────
   const [cexTickers, setCexTickers] = useState<CexTicker[]>([]);
   const [cexLoading, setCexLoading] = useState(false);
   const [selectedCexTicker, setSelectedCexTicker] = useState<CexTicker | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const tickersRef = React.useRef<CexTicker[]>([]);
-  const [activeView, setActiveView] = useState<'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems'
-    | 'tma'
-    | 'vwapArch'
-    | 'structure'
-    | 'arbitrage'
-    | 'bullStructure'
-    | 'compound'
-    | 'strategy_page'
-  >('grid');
+  const updateBufferRef = React.useRef<CexTicker[]>([]);
+
+  const [activeView, setActiveView] = useState<any>('grid');
   const [activeStrategy, setActiveStrategy] = useState('golden_signal');
   const [watchlist, setWatchlist] = useState<WatchlistTrade[]>(() => {
     const saved = localStorage.getItem('dex_cex_watchlist');
     return saved ? JSON.parse(saved) : [];
   });
 
-  // ─── AI Signal Engine State ─────────────────────
   const [vwapStore, setVwapStore] = useState<Record<string, VwapData>>({});
   const [firstSeenTimes, setFirstSeenTimes] = useState<Record<string, number>>(() => {
     try {
@@ -138,29 +115,38 @@ const App: React.FC = () => {
     } catch { return {}; }
   });
   const [vwapLoading, setVwapLoading] = useState(false);
-
-  // ─── VWAP Architecture State ────────────────────
+  const [activeHunts, setActiveHunts] = useState<ActiveHunt[]>([]);
   const [vwapArchState, setVwapArchState] = useState<VwapArchState | null>(null);
   const [vwapArchLoading, setVwapArchLoading] = useState(false);
 
-  // ─── Global Reset for New Logic (v7) ────────────
+  // ─── Global Cleanup ─────────────────────────────
   useEffect(() => {
     const hasReset = localStorage.getItem('dexpulse_global_reset_v7');
     if (!hasReset) {
-      const allKeys = Object.keys(localStorage);
-      allKeys.forEach(k => {
-        if (k.startsWith('dexpulse_') || k.startsWith('dex_')) {
-          localStorage.removeItem(k);
-        }
-      });
       localStorage.setItem('dexpulse_global_reset_v7', 'true');
-      console.log('[Global] Emergency History Purge (v7) executed.');
       setFirstSeenTimes({});
       setVwapStore({});
     }
   }, []);
 
-  // ─── Initial Data Fetch ─────────────────────────
+  // ─── Consolidated Hunts Polling (5s) ───────────
+  const fetchGlobalHunts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/hunts');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setActiveHunts(data);
+      }
+    } catch (e) { console.error('Hunts error:', e); }
+  }, []);
+
+  useEffect(() => {
+    fetchGlobalHunts();
+    const interval = setInterval(fetchGlobalHunts, 5000);
+    return () => clearInterval(interval);
+  }, [fetchGlobalHunts]);
+
+  // ─── CEX Data & WS Throttling (1s) ──────────────
   const loadCexData = useCallback(async () => {
     setCexLoading(true);
     try {
@@ -168,288 +154,100 @@ const App: React.FC = () => {
       setCexTickers(data);
       tickersRef.current = data;
       setLastUpdated(new Date());
-    } catch (err) {
-      console.error('Failed to load CEX tickers', err);
-    } finally {
-      setCexLoading(false);
-    }
+    } finally { setCexLoading(false); }
   }, []);
 
   useEffect(() => {
     loadCexData();
     const interval = setInterval(loadCexData, 60000);
-    const cleanupWs = initCexWebSocket((updatedTickers) => {
+    const throttleInterval = setInterval(() => {
+      if (updateBufferRef.current.length === 0) return;
       setCexTickers((prev) => {
         const next = [...prev];
-        updatedTickers.forEach((upd) => {
+        updateBufferRef.current.forEach((upd) => {
           const idx = next.findIndex((t) => t.id === upd.id);
-          if (idx !== -1) {
-            next[idx] = { ...next[idx], ...upd };
-          } else {
-            next.push(upd);
-          }
+          if (idx !== -1) next[idx] = { ...next[idx], ...upd };
+          else next.push(upd);
         });
         tickersRef.current = next;
         return next;
       });
+      updateBufferRef.current = [];
+      setLastUpdated(new Date());
+    }, 1000);
+
+    const cleanupWs = initCexWebSocket((updatedTickers) => {
+      updateBufferRef.current = [...updateBufferRef.current, ...updatedTickers];
     });
 
-    return () => {
-      clearInterval(interval);
-      cleanupWs();
-    };
+    return () => { clearInterval(interval); clearInterval(throttleInterval); cleanupWs(); };
   }, [loadCexData]);
 
-  // ─── VWAP Signal Polling ────────────────────────
+  // ─── Signal Engine ──────────────────────────────
   useEffect(() => {
-    if (activeView !== 'decision' && activeView !== 'anchoredVWAP' && activeView !== 'ecosystems' && activeView !== 'vwapArch') return;
-
+    if (!['decision', 'anchoredVWAP', 'ecosystems', 'vwapArch'].includes(activeView)) return;
     let cancelled = false;
-
-    const fetchSignals = async () => {
-      const currentTickers = tickersRef.current;
-      if (currentTickers.length === 0) {
-        console.log('[Engine] Tickers not ready, retrying in 3s...');
-        setTimeout(fetchSignals, 3000); // Retry soon
-        return;
-      }
-
-      const mainTickers = currentTickers.filter(t => t.volume24h > 500000).slice(0, 150);
-      console.log(`[Engine] Starting signal scan for ${mainTickers.length} tickers...`);
+    const runScan = async () => {
+      if (tickersRef.current.length === 0) { setTimeout(() => { if (!cancelled) runScan(); }, 3000); return; }
       setVwapLoading(true);
-      const newVwapStore: Record<string, VwapData> = { ...vwapStore };
-      const newFirstSeen: Record<string, number> = { ...firstSeenTimes };
+      const tickers = tickersRef.current.filter(t => t.volume24h > 500000).slice(0, 150);
+      const newVwap = { ...vwapStore };
+      const newFirstSeen = { ...firstSeenTimes };
 
-      const CHUNK_SIZE = 5;
-      const DELAY_MS = 600;
-
-      for (let i = 0; i < mainTickers.length; i += CHUNK_SIZE) {
+      for (let i = 0; i < tickers.length; i += 5) {
         if (cancelled) break;
-        const chunk = mainTickers.slice(i, i + CHUNK_SIZE);
+        const chunk = tickers.slice(i, i + 5);
         await Promise.all(chunk.map(async (t) => {
           try {
             const data = await fetchWeeklyVwapData(t.symbol);
-            if (data) {
-              newVwapStore[t.id] = data;
-              if (!newFirstSeen[t.id]) {
-                newFirstSeen[t.id] = Date.now();
-              }
-            }
+            if (data) { newVwap[t.id] = data; if (!newFirstSeen[t.id]) newFirstSeen[t.id] = Date.now(); }
           } catch (e) { }
         }));
-
-        // Incremental update so signals appear as they load
-        if (!cancelled) {
-          setVwapStore({ ...newVwapStore });
-          setFirstSeenTimes(newFirstSeen);
-          localStorage.setItem('dexpulse_first_seen_times', JSON.stringify(newFirstSeen));
-        }
-
-        // Rate-limit delay
-        if (i + CHUNK_SIZE < mainTickers.length) {
-          await new Promise(r => setTimeout(r, DELAY_MS));
-        }
+        if (!cancelled) { setVwapStore({ ...newVwap }); setFirstSeenTimes(newFirstSeen); }
+        if (i + 5 < tickers.length) await new Promise(r => setTimeout(r, 600));
       }
-
       if (!cancelled) setVwapLoading(false);
     };
-
-    const scheduleNextFetch = () => {
-      const now = new Date();
-      const mins = now.getMinutes();
-      const secs = now.getSeconds();
-      const ms = now.getMilliseconds();
-
-      // Calculate minutes until next :00, :15, :30, :45
-      const next15 = 15 - (mins % 15);
-
-      // Target: next15 minutes away, minus current seconds/ms, plus 20s buffer
-      const delayMs = (next15 * 60 * 1000) - (secs * 1000) - ms + (20 * 1000);
-
-      console.log(`[Engine] Scheduling next fetch in ${Math.round(delayMs / 1000)}s (Next 15m Candle + Buffer)`);
-      return setTimeout(() => {
-        if (!cancelled) {
-          fetchSignals().then(scheduleNextFetch);
-        }
-      }, delayMs);
-    };
-
-    fetchSignals().then(scheduleNextFetch);
+    runScan();
     return () => { cancelled = true; };
-  }, [activeView]); // Remove cexTickers dependency
+  }, [activeView === 'decision']);
 
   // ─── Watchlist Handlers ─────────────────────────
   const handleAddToWatchlist = (ticker: CexTicker) => {
-    const isDuplicate = watchlist.some(t => t.symbol === ticker.symbol && t.status === 'open');
-    if (isDuplicate) return;
-
-    const newTrade: WatchlistTrade = {
-      id: crypto.randomUUID(),
-      symbol: ticker.symbol,
-      entryPrice: ticker.priceUsd,
-      entryTime: Date.now(),
-      amount: 100, // Fixed unit for simulation
-      status: 'open'
-    };
-    const nextWatchlist = [newTrade, ...watchlist];
-    setWatchlist(nextWatchlist);
-    localStorage.setItem('dex_cex_watchlist', JSON.stringify(nextWatchlist));
+    if (watchlist.some(t => t.symbol === ticker.symbol && t.status === 'open')) return;
+    const next = [{ id: crypto.randomUUID(), symbol: ticker.symbol, entryPrice: ticker.priceUsd, entryTime: Date.now(), amount: 100, status: 'open' as const }, ...watchlist];
+    setWatchlist(next);
+    localStorage.setItem('dex_cex_watchlist', JSON.stringify(next));
   };
 
-  const handleCloseTrade = (tradeId: string) => {
-    // We need the current price to close. Find it in tickers.
-    const trade = watchlist.find(t => t.id === tradeId);
-    if (!trade) return;
-
-    const ticker = cexTickers.find(t => t.symbol === trade.symbol);
-    const currentPrice = ticker ? ticker.priceUsd : trade.entryPrice;
-
-    const nextWatchlist = watchlist.map(t => {
-      if (t.id === tradeId && t.status === 'open') {
-        return {
-          ...t,
-          status: 'closed' as const,
-          closePrice: currentPrice,
-          closeTime: Date.now()
-        };
-      }
-      return t;
-    });
-    setWatchlist(nextWatchlist);
-    localStorage.setItem('dex_cex_watchlist', JSON.stringify(nextWatchlist));
+  const handleCloseTrade = (id: string) => {
+    const next = watchlist.map(t => (t.id === id && t.status === 'open') ? { ...t, status: 'closed' as const, closePrice: cexTickers.find(x => x.symbol === t.symbol)?.priceUsd || t.entryPrice, closeTime: Date.now() } : t);
+    setHoldings(next);
   };
 
-  const handleRemoveTrade = (tradeId: string) => {
-    const nextWatchlist = watchlist.filter(t => t.id !== tradeId);
-    setWatchlist(nextWatchlist);
-    localStorage.setItem('dex_cex_watchlist', JSON.stringify(nextWatchlist));
+  const setHoldings = (next: WatchlistTrade[]) => {
+    setWatchlist(next);
+    localStorage.setItem('dex_cex_watchlist', JSON.stringify(next));
   };
 
   return (
-    <div className="min-h-screen bg-[#06080c] text-white selection:bg-blue-500/30">
-      <DashboardHeader
-        activeView={activeView}
-        onViewChange={setActiveView}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        lastUpdated={lastUpdated}
-        isScanning={cexLoading}
-        activeStrategy={activeStrategy}
-        onStrategyChange={setActiveStrategy}
-      />
+    <div className="min-h-screen bg-[#06080c] text-white selection:bg-blue-500/30 flex">
+      <Sidebar activeStrategy={activeStrategy} onSelectStrategy={setActiveStrategy} activeHunts={activeHunts} />
 
-      <main className="max-w-[1600px] mx-auto px-4 py-6 md:px-8">
-        <div className="flex flex-col gap-6">
-          {activeView === 'grid' ? (
-            <CexGrid
-              tickers={cexTickers}
-              loading={cexLoading}
-              onRefresh={loadCexData}
-              onTickerClick={setSelectedCexTicker}
-            />
-          ) : activeView === 'scanner' ? (
-            <VwapScanner
-              tickers={cexTickers}
-              onTickerClick={setSelectedCexTicker}
-            />
-          ) : activeView === 'decision' ? (
-            <DecisionBuyAi
-              tickers={cexTickers}
-              vwapStore={vwapStore}
-              firstSeenTimes={firstSeenTimes}
-              isLoading={vwapLoading}
-              onTickerClick={setSelectedCexTicker}
-              onAddToWatchlist={handleAddToWatchlist}
-            />
-          ) : activeView === 'whale' ? (
-            <WhaleScanner
-              tickers={cexTickers}
-              onTickerClick={setSelectedCexTicker}
-            />
-          ) : activeView === 'correlation' ? (
-            <BtcCorrelation
-              tickers={cexTickers}
-              onTickerClick={setSelectedCexTicker}
-            />
-          ) : activeView === 'playbook' ? (
-            <TradingPlaybook />
-          ) : activeView === 'sentiment' ? (
-            <AntfarmSentiment
-              tickers={cexTickers}
-              onTickerClick={setSelectedCexTicker}
-            />
-          ) : activeView === 'swap' ? (
-            <SwapPanel tickers={cexTickers} />
-          ) : activeView === 'news' ? (
-            <NewsFeed />
-          ) : activeView === 'vwapMulti' ? (
-            <VwapMultiTF tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
-          ) : activeView === 'anchoredVWAP' ? (
-            <VwapAnchorBot tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />
-          ) : activeView === 'ecosystems' ? (
-            <EcosystemGrid tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />
-          ) : activeView === 'tma' ? (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">Market Architecture</h2>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Deep Structural Analysis & PD Liquidity Engine</p>
-                </div>
-                <div className="flex bg-[#12141c] rounded-xl p-1 border border-gray-800">
-                  <span className="px-4 py-1.5 text-xs font-black text-indigo-400 uppercase tracking-widest">Active Ticker: {selectedCexTicker?.symbol || 'BTC'}</span>
-                </div>
-              </div>
-              <div className="h-[750px] relative">
-                <TokenChart
-                  address={selectedCexTicker?.id || 'BTCUSDT'}
-                  symbol={selectedCexTicker?.symbol || 'BTC'}
-                  isCex={true}
-                  activeView="price"
-                />
-              </div>
-            </div>
-          ) : activeView === 'vwapArch' ? (
-            <VwapArchView
-              selectedCexTicker={selectedCexTicker}
-              vwapArchState={vwapArchState}
-              vwapArchLoading={vwapArchLoading}
-              setVwapArchState={setVwapArchState}
-              setVwapArchLoading={setVwapArchLoading}
-            />
-          ) : activeView === 'structure' ? (
-            <MarketStructureDashboard onTickerClick={setSelectedCexTicker} />
-          ) : activeView === 'arbitrage' ? (
-            <ArbitrageTerminal tickers={cexTickers} />
-          ) : activeView === 'bullStructure' ? (
-            <StructureRadar tickers={cexTickers} onTickerClick={setSelectedCexTicker} />
-          ) : activeView === 'strategy_page' ? (
-            <GlobalCompoundTerminal
-              strategyId={activeStrategy}
-              onTickerClick={setSelectedCexTicker}
-              title={activeStrategy.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Hub'}
-              subtitle={`Dedicated Real-Time Execution for ${activeStrategy}`}
-            />
-          ) : activeView === 'compound' ? (
-            <GlobalCompoundTerminal onTickerClick={setSelectedCexTicker} />
-          ) : (
-            <WatchlistPanel
-              trades={watchlist}
-              tickers={cexTickers}
-              onCloseTrade={handleCloseTrade}
-              onRemoveTrade={handleRemoveTrade}
-              onTickerClick={setSelectedCexTicker}
-            />
-          )}
+      <main className="flex-1 min-w-0 overflow-y-auto bg-slate-950/20 custom-scrollbar">
+        <DashboardHeader activeView={activeView} onViewChange={setActiveView} searchTerm={searchTerm} onSearchChange={setSearchTerm} lastUpdated={lastUpdated} isScanning={cexLoading} activeStrategy={activeStrategy} onStrategyChange={setActiveStrategy} />
+
+        <div className="p-8 max-w-[1600px] mx-auto space-y-8">
+          {activeView === 'grid' && <CexGrid tickers={cexTickers} loading={cexLoading} onRefresh={loadCexData} onTickerClick={setSelectedCexTicker} searchTerm={searchTerm} onSearchChange={setSearchTerm} />}
+          {activeView === 'scanner' && <VwapScanner tickers={cexTickers} onTickerClick={setSelectedCexTicker} />}
+          {activeView === 'decision' && <DecisionBuyAi tickers={cexTickers} vwapStore={vwapStore} firstSeenTimes={firstSeenTimes} isLoading={vwapLoading} onTickerClick={setSelectedCexTicker} onAddToWatchlist={handleAddToWatchlist} />}
+          {activeView === 'compound' && <GlobalCompoundTerminal huntsData={activeHunts} onTickerClick={setSelectedCexTicker} />}
+          {activeView === 'strategy_page' && <GlobalCompoundTerminal strategyId={activeStrategy} huntsData={activeHunts} title={activeStrategy.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Hub'} subtitle={`Dedicated Real-Time Execution for ${activeStrategy}`} onTickerClick={setSelectedCexTicker} />}
+          {(activeView === 'watchlist' || !activeView) && <WatchlistPanel trades={watchlist} tickers={cexTickers} onCloseTrade={handleCloseTrade} onRemoveTrade={(id) => setHoldings(watchlist.filter(t => t.id !== id))} onTickerClick={setSelectedCexTicker} />}
         </div>
       </main>
 
-      {selectedCexTicker && (
-        <CexDetailPanel
-          ticker={selectedCexTicker}
-          onClose={() => setSelectedCexTicker(null)}
-          onAddToWatchlist={handleAddToWatchlist}
-        />
-      )}
+      {selectedCexTicker && <CexDetailPanel ticker={selectedCexTicker} onClose={() => setSelectedCexTicker(null)} onAddToWatchlist={handleAddToWatchlist} />}
     </div>
   );
 };

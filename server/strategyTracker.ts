@@ -98,6 +98,10 @@ export async function processActiveHunts() {
                     if (peakProfitPct >= 0.06) {
                         stopPrice = hunt.entryPrice * 1.005;
                     }
+                } else if (hunt.strategyId === 'golden_rotation') {
+                    strategyName = "Golden Rotation";
+                    // Tight rotation stop: -4%
+                    stopPrice = hunt.entryPrice * 0.96;
                 }
 
                 // Tiered Trailing Logic (Universal for both, based on peak)
@@ -119,6 +123,33 @@ export async function processActiveHunts() {
                     stopPrice = trailingStop;
                 }
 
+                // --- EMERGENCY HARD STOP (LIVE PRICE CHECK) ---
+                // If livePrice (5s update) hits stop level, exit IMMEDIATELY without waiting for candle close
+                if (livePrice <= stopPrice) {
+                    console.log(`[StrategyTracker] 🚨 EMERGENCY STOP TRIGGERED: ${hunt.symbol} at $${livePrice} (Stop: $${stopPrice})`);
+
+                    hunt.status = 'closed';
+                    hunt.exitPrice = livePrice;
+                    hunt.exitTime = new Date().toISOString();
+                    const finalPnl = ((hunt.exitPrice - hunt.entryPrice) / hunt.entryPrice) * 100;
+                    hunt.pnl = finalPnl;
+
+                    const reason = stopPrice > hunt.entryPrice ? 'Take Profit/BE (Emergency)' : 'Hard Stop-Loss (Emergency)';
+
+                    await sendTelegram([
+                        `🚨 <b>${strategyName.toUpperCase()} EMERGENCY EXIT: #${hunt.symbol}</b>`,
+                        ``,
+                        `<b>PNL:</b> ${finalPnl >= 0 ? '+' : ''}${finalPnl.toFixed(2)}%`,
+                        `<b>Exit Price:</b> $${hunt.exitPrice.toLocaleString()} (LIVE)`,
+                        `<b>Reason:</b> ${reason}`,
+                        ``,
+                        `🛡️ <i>Instant Protection Activated.</i>`
+                    ].join('\n'));
+
+                    console.log(`[StrategyTracker] 🔴 CLOSED ${hunt.symbol} (${strategyName}) | PnL: ${finalPnl.toFixed(2)}%`);
+                    continue; // Skip the rest of the loop for this hunt
+                }
+
                 // Alert on Tier Change
                 if (newTier > (hunt.tier || 1)) {
                     console.log(`[StrategyTracker] 🆙 ${hunt.symbol} (${strategyName}) upgraded to Tier ${newTier}`);
@@ -134,7 +165,7 @@ export async function processActiveHunts() {
                 }
                 hunt.tier = newTier;
 
-                // Check for exit
+                // Check for candle-close exit (secondary check, though emergency usually catches it)
                 if (decisionPrice <= stopPrice) {
                     hunt.status = 'closed';
                     hunt.exitPrice = decisionPrice;

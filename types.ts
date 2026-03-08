@@ -179,6 +179,21 @@ export interface TrackedGolden {
   tpHit: boolean;
 }
 
+export interface ActiveHunt {
+  symbol: string;
+  entryPrice: number;
+  entryTime: string;
+  peakPrice: number;
+  currentPrice?: number;
+  status: 'active' | 'closed';
+  exitPrice?: number;
+  exitTime?: string;
+  pnl?: number;
+  capital: number;
+  tier?: number;
+  strategyId?: string;
+}
+
 export interface GoldenStats {
   totalSignals: number;
   successCount: number; // reached +4%

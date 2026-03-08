@@ -1,41 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, ShieldCheck, Zap } from 'lucide-react';
-import axios from 'axios';
+import React from 'react';
+import { ShieldCheck, Zap } from 'lucide-react';
+import { ActiveHunt } from '../types';
 
-interface ActiveHunt {
-    symbol: string;
-    entryPrice: number;
-    currentPrice: number;
-    peakPrice: number;
-    status: string;
-    strategyId: string;
+interface RotationMiniMonitorProps {
+    activeHunts: ActiveHunt[];
 }
 
-export const RotationMiniMonitor: React.FC = () => {
-    const [hunts, setHunts] = useState<ActiveHunt[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    const fetchHunts = async () => {
-        try {
-            const res = await axios.get('/api/hunts');
-            const rotationHunts = (res.data || []).filter(
-                (h: any) => h.strategyId === 'golden_rotation' && h.status === 'active'
-            );
-            setHunts(rotationHunts);
-        } catch (err) {
-            console.error('MiniMonitor fetch error:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchHunts();
-        const interval = setInterval(fetchHunts, 5000);
-        return () => clearInterval(interval);
-    }, []);
-
-    if (loading && hunts.length === 0) return null;
+export const RotationMiniMonitor: React.FC<RotationMiniMonitorProps> = ({ activeHunts }) => {
+    // Filter for active rotation hunts
+    const hunts = activeHunts.filter(
+        h => h.strategyId === 'golden_rotation' && h.status === 'active'
+    );
 
     return (
         <div className="mt-4 px-2 py-3 bg-[#0a0c14]/50 rounded-xl border border-gray-800/50 backdrop-blur-sm">
@@ -55,7 +30,8 @@ export const RotationMiniMonitor: React.FC = () => {
                     </div>
                 ) : (
                     hunts.map((hunt) => {
-                        const pnl = ((hunt.currentPrice - hunt.entryPrice) / hunt.entryPrice) * 100;
+                        const current = hunt.currentPrice || hunt.entryPrice;
+                        const pnl = ((current - hunt.entryPrice) / hunt.entryPrice) * 100;
                         const isPos = pnl >= 0;
 
                         return (
