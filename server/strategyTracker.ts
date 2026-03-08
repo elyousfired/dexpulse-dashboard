@@ -187,11 +187,17 @@ export async function processActiveHunts() {
                     rsi5m = losses === 0 ? 100 : 100 - (100 / (1 + (gains / losses)));
                 }
 
-                // 1. Peak Reversal (Sliding TP): If up >5% and drops 1.5% from peak, exit.
+                // 1. Peak Reversal (Sliding TP):
+                // Rotation: 2.5% Trigger, 1.0% Reversal (Hyper-Scalp)
+                // Others: 5.0% Trigger, 1.5% Reversal
+                const isRotation = hunt.strategyId === 'golden_rotation';
+                const triggerThreshold = isRotation ? 0.025 : 0.05;
+                const reversalThreshold = isRotation ? 0.010 : 0.015;
+
                 const reversalDist = (hunt.peakPrice - livePrice) / hunt.peakPrice;
-                if (peakProfitPct >= 0.05 && reversalDist >= 0.015) {
-                    console.log(`[StrategyTracker] 📉 PEAK REVERSAL DETECTED: ${hunt.symbol} (Dropped ${(reversalDist * 100).toFixed(2)}% from peak)`);
-                    await handleEarlyExit(hunt, livePrice, strategyName, 'Peak Reversal (Sliding TP)');
+                if (peakProfitPct >= triggerThreshold && reversalDist >= reversalThreshold) {
+                    console.log(`[StrategyTracker] 📉 ${isRotation ? 'HYPER-SCALP' : 'PEAK REVERSAL'} DETECTED: ${hunt.symbol} (Dropped ${(reversalDist * 100).toFixed(2)}% from peak)`);
+                    await handleEarlyExit(hunt, livePrice, strategyName, isRotation ? 'Hyper-Scalp (Tighter Locking)' : 'Peak Reversal (Sliding TP)');
                     continue;
                 }
 

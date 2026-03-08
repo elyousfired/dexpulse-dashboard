@@ -101,6 +101,26 @@ function getWhaleStatus(vwap: VwapData): { category: WhaleCategory, intensity: n
     return { category: 'NONE', intensity: 0 };
 }
 
+async function sendRotationAlert(text: string) {
+    if (!fs.existsSync(CONFIG_FILE)) return;
+    const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    if (!config.enabled || !config.botToken || !config.chatId) return;
+
+    const chatIds = config.chatId.split(',').map((id: string) => id.trim());
+    for (const id of chatIds) {
+        try {
+            await axios.post(`https://api.telegram.org/bot${config.botToken}/sendMessage`, {
+                chat_id: id,
+                text,
+                parse_mode: 'HTML',
+                disable_web_page_preview: true
+            });
+        } catch (err: any) {
+            console.error(`[RotationEngine] Telegram Error:`, err.message);
+        }
+    }
+}
+
 export async function runRotationEngine() {
     if (isScanning) return;
     isScanning = true;
@@ -115,8 +135,59 @@ export async function runRotationEngine() {
             .slice(0, 150)
             .map((t: any) => t.symbol);
 
-        const currentActive = fs.existsSync(HUNTS_FILE) ? JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8')) : [];
+        const currentActive: ActiveHunt[] = fs.existsSync(HUNTS_FILE) ? JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8')) : [];
         const rotationActive = currentActive.filter((h: ActiveHunt) => h.status === 'active' && h.strategyId === 'golden_rotation');
+
+        // --- BASKET MANAGEMENT LOGIC ---
+        if (rotationActive.length > 0) {
+            const totalPnL = rotationActive.reduce((acc, h) => {
+                const current = h.currentPrice || h.entryPrice;
+                const pnl = h.pnl ?? ((current - h.entryPrice) / h.entryPrice) * 100;
+                return acc + pnl;
+            }, 0);
+
+            const hasSignificantLoss = rotationActive.some(h => {
+                const current = h.currentPrice || h.entryPrice;
+                const pnl = ((current - h.entryPrice) / h.entryPrice) * 100;
+                return pnl <= -2.0;
+            });
+
+            const isBasketExit = totalPnL >= 5.0;
+            const isOffsetReset = Math.abs(totalPnL) <= 0.5 && hasSignificantLoss && rotationActive.length >= 2;
+
+            if (isBasketExit || isOffsetReset) {
+                const reason = isBasketExit ? `Basket Exit Target Reached (+${totalPnL.toFixed(2)}%)` : `Offsetting Reset (Washing Losses at ${totalPnL.toFixed(2)}% Total)`;
+                console.log(`[RotationEngine] 🧺 ${reason.toUpperCase()}. Closing all ${rotationActive.length} slots.`);
+
+                const hunts = JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8'));
+                const symbolsToClose = rotationActive.map(h => h.symbol);
+
+                hunts.forEach((h: any) => {
+                    if (symbolsToClose.includes(h.symbol) && h.strategyId === 'golden_rotation' && h.status === 'active') {
+                        h.status = 'closed';
+                        h.exitPrice = h.currentPrice || h.entryPrice;
+                        h.exitTime = new Date().toISOString();
+                        h.pnl = ((h.exitPrice - h.entryPrice) / h.entryPrice) * 100;
+                        h.reason = reason;
+                    }
+                });
+                fs.writeFileSync(HUNTS_FILE, JSON.stringify(hunts, null, 2));
+
+                // Notify Telegram
+                await sendRotationAlert([
+                    `🧺 <b>BASKET ${isBasketExit ? 'PROFIT TAKEN' : 'WASHED'}</b>`,
+                    ``,
+                    `<b>Total PnL:</b> ${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}%`,
+                    `<b>Slots Cleared:</b> ${rotationActive.length}`,
+                    `<b>Reason:</b> ${reason}`,
+                    ``,
+                    `🛰️ <i>Ready for fresh candidates...</i>`
+                ].join('\n'));
+
+                isScanning = false;
+                return; // Cycle fresh
+            }
+        }
 
         console.log(`[RotationEngine] Checking ${rotationActive.length} active rotation slots...`);
 
