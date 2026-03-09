@@ -122,7 +122,18 @@ export async function runRotationEngine() {
             .slice(0, 300) // Increased to 300 to catch mid-caps like MBOX
             .map((t: any) => t.symbol);
 
-        const currentActive: ActiveHunt[] = fs.existsSync(HUNTS_FILE) ? JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8')) : [];
+        const MAX_SLOTS = 3;
+
+        let currentActive: ActiveHunt[] = [];
+        try {
+            if (fs.existsSync(HUNTS_FILE)) {
+                const content = fs.readFileSync(HUNTS_FILE, 'utf8').trim();
+                currentActive = content ? JSON.parse(content) : [];
+            }
+        } catch (e) {
+            console.error(`[RotationEngine] Warning: Failed to parse hunts file, using empty list.`);
+            currentActive = [];
+        }
         const rotationActive = currentActive.filter((h: ActiveHunt) => h.status === 'active' && h.strategyId === 'golden_rotation');
 
         // --- BASKET MANAGEMENT LOGIC ---
@@ -176,7 +187,7 @@ export async function runRotationEngine() {
             }
         }
 
-        console.log(`[RotationEngine] Checking ${rotationActive.length} active rotation slots...`);
+        console.log(`[RotationEngine] Checking ${rotationActive.length}/${MAX_SLOTS} active slots...`);
 
         // 2. Check exits for currently active
         const toClose: string[] = [];
@@ -192,7 +203,6 @@ export async function runRotationEngine() {
 
         // 3. Scan top symbols for new entries
         const candidates: { symbol: string, price: number, density: number }[] = [];
-        const MAX_SLOTS = 3;
         const STABLECOINS = [
             'USDT', 'USDC', 'USD1', 'DAI', 'FDUSD', 'BUSD', 'TUSD', 'USTC',
             'EUR', 'GBP', 'JPY', 'USDP', 'GUSD', 'PYUSD', 'AEUR', 'ZUSD'
@@ -200,13 +210,18 @@ export async function runRotationEngine() {
         const currentOpenCount = rotationActive.length - toClose.length;
 
         if (currentOpenCount < MAX_SLOTS) {
-            console.log(`[RotationEngine] Slot utilization: ${currentOpenCount}/${MAX_SLOTS}. Searching for ${MAX_SLOTS - currentOpenCount} more candidates...`);
+            console.log(`[RotationEngine] Slot utilization: ${currentOpenCount}/${MAX_SLOTS}. Scanning top ${topSymbols.length} pairs...`);
 
             // Get all historical hunts for cooldown check
             const allHunts: ActiveHunt[] = currentActive;
 
             for (const symbol of topSymbols) {
                 if (candidates.length >= (MAX_SLOTS - currentOpenCount)) break;
+
+                // SPECIAL LOG FOR TARGETS
+                if (['MBOXUSDT', 'DEXEUSDT'].includes(symbol)) {
+                    console.log(`[RotationEngine] 🕵️ Investigating target: ${symbol}`);
+                }
 
                 // A. Filter Stablecoins & Pegged Assets
                 const isStable = STABLECOINS.some(s => symbol.includes(s));
