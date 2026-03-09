@@ -248,7 +248,10 @@ app.listen(PORT, '0.0.0.0', () => {
 
     // 2. Strategy Tracker (Every 5 seconds)
     setInterval(async () => {
-        try { await processActiveHunts(); } catch (e) { console.error('[Proxy] Tracker Error:', e); }
+        try {
+            console.log('[Heartbeat] Tracker & Rotation Active...');
+            await processActiveHunts();
+        } catch (e) { console.error('[Proxy] Tracker Error:', e); }
     }, 5 * 1000);
 
     // 3. Rotation Engine (Every 5 seconds for hyper-fast response)

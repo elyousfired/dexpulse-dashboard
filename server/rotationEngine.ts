@@ -22,7 +22,7 @@ async function fetchBinanceKlines(symbol: string, interval: string, limit: numbe
     const pair = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
     const url = `https://data-api.binance.vision/api/v3/klines?symbol=${pair}&interval=${interval}&limit=${limit}`;
     try {
-        const res = await axios.get(url);
+        const res = await axios.get(url, { timeout: 10000 });
         return res.data.map((d: any) => ({
             time: Math.floor(d[0] / 1000),
             close: parseFloat(d[4]),
@@ -111,11 +111,11 @@ async function sendRotationAlert(text: string) {
 export async function runRotationEngine() {
     if (isScanning) return;
     isScanning = true;
-    console.log(`[RotationEngine] 🛰️ Running Market Rotation Check...`);
+    console.log(`[RotationEngine] 🛰️ Cycle Start: Initiating Top 300 Scan...`);
 
     try {
-        // 1. Fetch Top 150 Volume USDT Pairs (Increased from 100)
-        const res = await axios.get('https://api.binance.com/api/v3/ticker/24hr');
+        // 1. Fetch Top 300 Volume USDT Pairs
+        const res = await axios.get('https://api.binance.com/api/v3/ticker/24hr', { timeout: 15000 });
         const topSymbols = res.data
             .filter((t: any) => t.symbol.endsWith('USDT'))
             .sort((a: any, b: any) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
@@ -135,6 +135,8 @@ export async function runRotationEngine() {
             currentActive = [];
         }
         const rotationActive = currentActive.filter((h: ActiveHunt) => h.status === 'active' && h.strategyId === 'golden_rotation');
+
+        console.log(`[RotationEngine] 📡 Scanning ${topSymbols.length} pairs. Active slots: ${rotationActive.length}/${MAX_SLOTS}`);
 
         // --- BASKET MANAGEMENT LOGIC ---
         if (rotationActive.length > 0) {
