@@ -72,7 +72,10 @@ async function getVwapData(symbol: string): Promise<VwapData | null> {
             if (index === klines.length - 1) currentMid = dailyVwap;
         });
 
-        if (wMax === -Infinity) wMax = currentMid;
+        if (wMax === -Infinity) {
+            wMax = currentMid;
+            wMin = currentMid;
+        }
         vwapCache.set(symbol, { wMax, wMin, currentMid, expires: now + CACHE_DURATION });
     }
 
@@ -240,7 +243,9 @@ export async function runRotationEngine() {
                 //    - Close > Max (Weekly Max so far)
                 //    - Close > Mid (Daily VWAP / "Pure" Trend)
                 //    - Close > Min (Weekly Floor)
-                const isFullLong = vwap.last15mClose > vwap.max && vwap.last15mClose > vwap.mid && vwap.last15mClose > vwap.min;
+                // TUNE v31: Use >= for Max/Min when they are equal (Monday Morning) to allow early entry
+                const isFullLong = vwap.last15mClose > vwap.mid &&
+                    (vwap.max === vwap.min ? vwap.last15mClose >= vwap.max : (vwap.last15mClose > vwap.max && vwap.last15mClose > vwap.min));
 
                 // 3. Weekly Purity: On Mondays, ensure we are at least 0.5% above Daily VWAP to confirm breakout
                 // TUNE: On Monday morning (before 12:00 UTC), be less strict as the daily range is still tight.
