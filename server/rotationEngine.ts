@@ -138,7 +138,6 @@ export async function runRotationEngine() {
 
         console.log(`[RotationEngine] 📡 Scanning ${topSymbols.length} pairs. Active slots: ${rotationActive.length}/${MAX_SLOTS}`);
 
-        // --- BASKET MANAGEMENT LOGIC ---
         if (rotationActive.length > 0) {
             const totalPnL = rotationActive.reduce((acc, h) => {
                 const current = h.currentPrice || h.entryPrice;
@@ -146,17 +145,29 @@ export async function runRotationEngine() {
                 return acc + pnl;
             }, 0);
 
-            const hasSignificantLoss = rotationActive.some(h => {
+            const bestPnL = Math.max(...rotationActive.map(h => {
                 const current = h.currentPrice || h.entryPrice;
-                const pnl = ((current - h.entryPrice) / h.entryPrice) * 100;
-                return pnl <= -2.0;
-            });
+                return h.pnl ?? ((current - h.entryPrice) / h.entryPrice) * 100;
+            }));
 
-            const isBasketExit = totalPnL >= 5.0;
-            const isOffsetReset = Math.abs(totalPnL) <= 0.5 && hasSignificantLoss && rotationActive.length >= 2;
+            const worstPnL = Math.min(...rotationActive.map(h => {
+                const current = h.currentPrice || h.entryPrice;
+                return ((current - h.entryPrice) / h.entryPrice) * 100;
+            }));
 
-            if (isBasketExit || isOffsetReset) {
-                const reason = isBasketExit ? `Basket Exit Target Reached (+${totalPnL.toFixed(2)}%)` : `Offsetting Reset (Washing Losses at ${totalPnL.toFixed(2)}% Total)`;
+            // TUNE v34: Dynamic Target Calculation
+            const dynamicTarget = Math.min(bestPnL * 0.8, 8.0);
+
+            const isBasketExit = totalPnL >= dynamicTarget && totalPnL > 0;
+            const isStrongRunner = bestPnL >= 8.0;
+            const isCapitalProtection = Math.abs(totalPnL) <= 0.5 && worstPnL <= -2.0 && rotationActive.length >= 2;
+
+            if (isBasketExit || isStrongRunner || isCapitalProtection) {
+                let reason = "";
+                if (isBasketExit) reason = `Dynamic Basket Target (+${totalPnL.toFixed(2)}% vs ${dynamicTarget.toFixed(2)}% target)`;
+                else if (isStrongRunner) reason = `Strong Runner Exit (Top Token at +${bestPnL.toFixed(2)}%)`;
+                else reason = `Capital Protection (Washing Loser ${worstPnL.toFixed(2)}% at breakeven)`;
+
                 console.log(`[RotationEngine] 🧺 ${reason.toUpperCase()}. Closing all ${rotationActive.length} slots.`);
 
                 const hunts = JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8'));
@@ -175,11 +186,12 @@ export async function runRotationEngine() {
 
                 // Notify Telegram
                 await sendRotationAlert([
-                    `🧺 <b>BASKET ${isBasketExit ? 'PROFIT TAKEN' : 'WASHED'}</b>`,
+                    `🧺 <b>BASKET ${isBasketExit || isStrongRunner ? 'PROFIT TAKEN' : 'PROTECTED'}</b>`,
                     ``,
-                    `<b>Total PnL:</b> ${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}%`,
-                    `<b>Slots Cleared:</b> ${rotationActive.length}`,
                     `<b>Reason:</b> ${reason}`,
+                    `<b>Total PnL:</b> ${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}%`,
+                    `<b>Best Token:</b> +${bestPnL.toFixed(2)}%`,
+                    `<b>Slots Cleared:</b> ${rotationActive.length}`,
                     ``,
                     `🛰️ <i>Ready for fresh candidates...</i>`
                 ].join('\n'));
