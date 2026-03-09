@@ -242,16 +242,22 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('[Proxy] Initializing 24/7 background processes...');
 
     // 1. Signal Scanner (Every 2 minutes for faster live detection)
-    runSignalScanner();
-    setInterval(runSignalScanner, 2 * 60 * 1000);
+    setInterval(async () => {
+        try { await runSignalScanner(); } catch (e) { console.error('[Proxy] Scanner Error:', e); }
+    }, 2 * 60 * 1000);
 
     // 2. Strategy Tracker (Every 5 seconds)
-    console.log('[Proxy] Starting Strategy Tracker (5s interval)...');
-    processActiveHunts();
-    setInterval(processActiveHunts, 5 * 1000);
+    setInterval(async () => {
+        try { await processActiveHunts(); } catch (e) { console.error('[Proxy] Tracker Error:', e); }
+    }, 5 * 1000);
 
     // 3. Rotation Engine (Every 5 seconds for hyper-fast response)
-    console.log('[Proxy] Starting Rotation Engine (5s interval)...');
+    setInterval(async () => {
+        try { await runRotationEngine(); } catch (e) { console.error('[Proxy] Rotation Error:', e); }
+    }, 5 * 1000);
+
+    // Initial runs
+    runSignalScanner();
+    processActiveHunts();
     runRotationEngine();
-    setInterval(runRotationEngine, 5 * 1000);
 });
