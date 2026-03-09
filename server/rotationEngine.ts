@@ -116,7 +116,7 @@ export async function runRotationEngine() {
         const topSymbols = res.data
             .filter((t: any) => t.symbol.endsWith('USDT'))
             .sort((a: any, b: any) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
-            .slice(0, 150)
+            .slice(0, 300) // Increased to 300 to catch mid-caps like MBOX
             .map((t: any) => t.symbol);
 
         const currentActive: ActiveHunt[] = fs.existsSync(HUNTS_FILE) ? JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8')) : [];
@@ -247,7 +247,8 @@ export async function runRotationEngine() {
                 const now = new Date();
                 const isMonday = now.getUTCDay() === 1;
                 const isLateMonday = isMonday && now.getUTCHours() >= 12;
-                const dailyPurityBuffer = isLateMonday ? 1.005 : 1.0;
+                // TUNE v30: Loosen to 0.998 (0.2% tolerance) on Monday morning to catch early breakouts
+                const dailyPurityBuffer = isLateMonday ? 1.005 : (isMonday ? 0.998 : 1.0);
                 const isPure = vwap.last15mClose >= (vwap.mid * dailyPurityBuffer);
 
                 // 4. SMART FEATURE: DENSITY SQUEEZE
@@ -260,13 +261,23 @@ export async function runRotationEngine() {
 
                 // 6. Trigger Condition
                 // We enter if isFullLong AND isPure AND distFromMax <= 5%
-                // Priority given to High Density (Squeeze) AND Whale Backing
                 if (isFullLong && isPure && distFromMax <= MAX_DISTANCE_PCT) {
                     const isSqueeze = densityScore >= 80;
                     console.log(`[RotationEngine] 🛰️ Found ${isSqueeze ? 'HIGH CONVICTION' : 'CANDIDATE'}: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%, Density: ${densityScore}%)`);
                     candidates.push({ symbol, price: vwap.last15mClose, density: Math.round(densityScore) });
-                } else if (isFullLong && distFromMax > MAX_DISTANCE_PCT) {
-                    // console.log(`[RotationEngine] ⛈️ Skipping overextended candidate: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%)`);
+                } else {
+                    // DETAILED DEBUG LOGGING FOR STAGNATION INVESTIGATION
+                    const isTarget = ['MBOXUSDT', 'DEXEUSDT', 'MBOX', 'DEXE'].includes(symbol);
+                    if (isTarget || (distFromMax > 0 && distFromMax < 0.1)) {
+                        let reason = "";
+                        if (!isFullLong) reason = "Not Full Long (Price < W-Max/Min)";
+                        else if (!isPure) reason = `Not Pure (Price < Daily VWAP * ${dailyPurityBuffer})`;
+                        else if (distFromMax > MAX_DISTANCE_PCT) reason = `Overextended (Dist: ${(distFromMax * 100).toFixed(2)}%)`;
+
+                        if (reason) {
+                            console.log(`[RotationEngine] 🔍 ${symbol} skipped: ${reason} | Price: ${vwap.last15mClose} | W-Max: ${vwap.max} | Mid: ${vwap.mid}`);
+                        }
+                    }
                 }
 
                 // Avoid rate limit
