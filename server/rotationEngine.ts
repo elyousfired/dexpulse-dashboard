@@ -211,6 +211,9 @@ export async function runRotationEngine() {
         ];
         const currentOpenCount = rotationActive.length - toClose.length;
 
+        // TUNE v33: Log every cycle to show we are alive
+        console.log(`[RotationEngine] 📡 Slot check: ${currentOpenCount}/${MAX_SLOTS} used. Beginning scan...`);
+
         if (currentOpenCount < MAX_SLOTS) {
             console.log(`[RotationEngine] Slot utilization: ${currentOpenCount}/${MAX_SLOTS}. Scanning top ${topSymbols.length} pairs...`);
 
@@ -225,15 +228,17 @@ export async function runRotationEngine() {
                     console.log(`[RotationEngine] 🕵️ Investigating target: ${symbol}`);
                 }
 
-                // A. Filter Stablecoins & Pegged Assets
-                const isStable = STABLECOINS.some(s => symbol.includes(s));
+                // A. Filter Stablecoins & Pegged Assets (Corrected v33)
+                const isStable = STABLECOINS.some(s => symbol.startsWith(s));
                 if (isStable) {
-                    // console.log(`[RotationEngine] 🛡️ Filtering stablecoin/pegged: ${symbol}`);
                     continue;
                 }
 
                 // B. Already active in ANY strategy?
-                if (allHunts.find((h: any) => h.symbol === symbol && h.status === 'active')) continue;
+                if (allHunts.find((h: any) => h.symbol === symbol && h.status === 'active')) {
+                    if (['MBOXUSDT', 'DEXEUSDT', 'MBOX', 'DEXE'].includes(symbol)) console.log(`[RotationEngine] ❌ ${symbol} skipped: Already active in strategy.`);
+                    continue;
+                }
 
                 // C. RE-ENTRY COOL-DOWN (4h)
                 // If we lost money on this coin in the last 4 hours, skip it.
@@ -244,12 +249,15 @@ export async function runRotationEngine() {
                     (new Date().getTime() - new Date(h.exitTime).getTime()) < (4 * 60 * 60 * 1000)
                 );
                 if (recentLoss) {
-                    // console.log(`[RotationEngine] 🧊 Cool-down active for ${symbol} (Recent Loss)`);
+                    if (['MBOXUSDT', 'DEXEUSDT', 'MBOX', 'DEXE'].includes(symbol)) console.log(`[RotationEngine] ❌ ${symbol} skipped: Cooldown (Recent Loss).`);
                     continue;
                 }
 
                 const vwap = await getVwapData(symbol);
-                if (!vwap) continue;
+                if (!vwap) {
+                    if (['MBOXUSDT', 'DEXEUSDT', 'MBOX', 'DEXE'].includes(symbol)) console.log(`[RotationEngine] ❌ ${symbol} skipped: Failed to fetch VWAP/Kline data.`);
+                    continue;
+                }
 
                 // --- CLIMAX PROTECTION & PURITY LOGIC ---
                 // 1. Distance Check: Price must be above VMAX but NOT more than 5% above it
