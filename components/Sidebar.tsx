@@ -11,7 +11,6 @@ const strategies = [
     { id: 'golden_signal', name: 'Golden Signal', icon: '🏆' },
     { id: 'golden_rotation', name: 'VWAP Rotation', icon: '🛰️' },
     { id: 'scalper', name: 'Scalper 5m', icon: '⚡' },
-    { id: 'whale_tracker', name: 'Whale Tracker', icon: '🐋' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeStrategy, onSelectStrategy, activeHunts }) => {

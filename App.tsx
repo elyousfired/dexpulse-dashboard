@@ -10,7 +10,7 @@ import { CexDetailPanel } from './components/CexDetailPanel';
 import { VwapScanner } from './components/VwapScanner';
 import { DecisionBuyAi } from './components/DecisionBuyAi';
 import { WatchlistPanel } from './components/WatchlistPanel';
-import { WhaleScanner } from './components/WhaleScanner';
+// Removed WhaleScanner import
 import { BtcCorrelation } from './components/BtcCorrelation';
 import { TradingPlaybook } from './components/TradingPlaybook';
 import { AntfarmSentiment } from './components/AntfarmSentiment';
@@ -314,7 +314,7 @@ const App: React.FC = () => {
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">
           {activeView === 'grid' && <CexGrid tickers={cexTickers} loading={cexLoading} onRefresh={loadCexData} onTickerClick={setSelectedCexTicker} />}
           {activeView === 'scanner' && <VwapScanner tickers={cexTickers} onTickerClick={setSelectedCexTicker} />}
-          {activeView === 'whale' && <WhaleScanner tickers={cexTickers} onTickerClick={setSelectedCexTicker} />}
+          {/* Whale View Removed */}
           {activeView === 'correlation' && <BtcCorrelation tickers={cexTickers} onTickerClick={setSelectedCexTicker} />}
           {activeView === 'decision' && <DecisionBuyAi tickers={cexTickers} vwapStore={vwapStore} firstSeenTimes={firstSeenTimes} isLoading={vwapLoading} onTickerClick={setSelectedCexTicker} onAddToWatchlist={handleAddToWatchlist} />}
           {activeView === 'compound' && <GlobalCompoundTerminal huntsData={activeHunts} onTickerClick={setSelectedCexTicker} />}

@@ -53,13 +53,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                         <Activity className="w-3.5 h-3.5" />
                         VWAP Scan
                     </button>
-                    <button
-                        onClick={() => onViewChange('whale')}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'whale' ? 'bg-blue-600/20 text-blue-400 border border-blue-600/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
-                    >
-                        <Anchor className="w-3.5 h-3.5" />
-                        Whales
-                    </button>
+                    {/* Whales tab removed */}
                     <button
                         onClick={() => onViewChange('correlation')}
                         className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'correlation' ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
