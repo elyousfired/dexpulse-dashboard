@@ -366,6 +366,7 @@ export async function runRotationEngine() {
                             h.status = 'closed';
                             h.exitPrice = h.currentPrice || h.entryPrice;
                             h.exitTime = new Date().toISOString();
+                            h.pnl = ((h.exitPrice - h.entryPrice) / h.entryPrice) * 100;
                             h.reason = 'Stagnation Swap (Opportunity Cost)';
                         }
                     });

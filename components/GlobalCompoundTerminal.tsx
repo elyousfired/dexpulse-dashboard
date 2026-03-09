@@ -56,9 +56,17 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
     }, [strategyId, huntsData]);
 
     const activeCount = hunts.filter(h => h.status === 'active').length;
-    const totalPnL = hunts.reduce((acc, h) => acc + (h.pnl || 0), 0);
-    const winRate = hunts.length > 0 ? (hunts.filter(h => (h.pnl || 0) > 0).length / hunts.length) * 100 : 0;
-    const compoundingBalance = hunts.reduce((acc, h) => acc + h.capital * (1 + (h.pnl || 0) / 100), 0);
+    const totalPnL = hunts.reduce((acc, h) => {
+        const current = h.currentPrice || h.entryPrice;
+        const pnl = h.pnl ?? ((current - h.entryPrice) / h.entryPrice) * 100;
+        return acc + pnl;
+    }, 0);
+    const winRate = hunts.length > 0 ? (hunts.filter(h => (h.pnl || (h.currentPrice && ((h.currentPrice - h.entryPrice) / h.entryPrice) * 100) || 0) > 0).length / hunts.length) * 100 : 0;
+    const compoundingBalance = hunts.reduce((acc, h) => {
+        const current = h.currentPrice || h.entryPrice;
+        const pnl = h.pnl ?? ((current - h.entryPrice) / h.entryPrice) * 100;
+        return acc + h.capital * (1 + pnl / 100);
+    }, 0);
     const initialCapital = hunts.reduce((acc, h) => acc + h.capital, 0);
 
     return (
@@ -129,7 +137,9 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
                                 hunts.reduce((acc: Record<string, { pnl: number, count: number }>, h) => {
                                     const date = new Date(h.entryTime).toLocaleDateString();
                                     if (!acc[date]) acc[date] = { pnl: 0, count: 0 };
-                                    acc[date].pnl += (h.pnl || 0);
+                                    const current = h.currentPrice || h.entryPrice;
+                                    const pnl = h.pnl ?? ((current - h.entryPrice) / h.entryPrice) * 100;
+                                    acc[date].pnl += pnl;
                                     acc[date].count += 1;
                                     return acc;
                                 }, {})
