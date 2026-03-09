@@ -27,9 +27,7 @@ import { GlobalCompoundTerminal } from './components/GlobalCompoundTerminal';
 import { Sidebar } from './components/Sidebar';
 import { TmaPanel } from './components/TmaPanel';
 import { calculateATR, calculatePDMetrics, classifyDay, calculateLiquidityZones, analyzeIntraday, runScenarioEngine, TmaState } from './services/tmaService';
-import { Compass, Waves, Zap } from 'lucide-react';
-
-// ─── TMA Architecture View ───────────────────────
+import { Compass, Waves, Zap, Activity, ArrowUpRight, Clock, Search, ShieldCheck } from 'lucide-react';
 const TmaView: React.FC<{
   selectedCexTicker: CexTicker | null;
   tmaState: TmaState | null;
