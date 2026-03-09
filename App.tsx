@@ -25,6 +25,80 @@ import { ArbitrageTerminal } from './components/ArbitrageTerminal';
 import { StructureRadar } from './components/StructureRadar';
 import { GlobalCompoundTerminal } from './components/GlobalCompoundTerminal';
 import { Sidebar } from './components/Sidebar';
+import { TmaPanel } from './components/TmaPanel';
+import { calculateATR, calculatePDMetrics, classifyDay, calculateLiquidityZones, analyzeIntraday, runScenarioEngine, TmaState } from './services/tmaService';
+import { Compass, Waves, Zap } from 'lucide-react';
+
+// ─── TMA Architecture View ───────────────────────
+const TmaView: React.FC<{
+  selectedCexTicker: CexTicker | null;
+  tmaState: TmaState | null;
+  tmaLoading: boolean;
+  setTmaState: (s: TmaState | null) => void;
+  setTmaLoading: (b: boolean) => void;
+}> = ({ selectedCexTicker, tmaState, tmaLoading, setTmaState, setTmaLoading }) => {
+  const sym = selectedCexTicker?.symbol || 'BTC';
+  const addr = selectedCexTicker?.id || 'BTCUSDT';
+
+  useEffect(() => {
+    let cancelled = false;
+    const compute = async () => {
+      setTmaLoading(true);
+      try {
+        const [daily, klines15m] = await Promise.all([
+          fetchBinanceKlines(addr, '1d', 30),
+          fetchBinanceKlines(addr, '15m')
+        ]);
+        if (cancelled || daily.length < 2 || klines15m.length === 0) return;
+
+        const yesterday = daily[daily.length - 2];
+        const metrics = calculatePDMetrics(yesterday);
+        const classification = classifyDay(metrics);
+        const atr = calculateATR(daily);
+        const latestPrice = klines15m[klines15m.length - 1].close;
+        const zones = calculateLiquidityZones(metrics, latestPrice, atr);
+        const intraday = analyzeIntraday(metrics, klines15m);
+        const probabilities = runScenarioEngine(metrics, intraday, klines15m);
+
+        setTmaState({
+          metrics,
+          classification,
+          zones,
+          liquidityTaken: intraday.liquidityTaken,
+          current: intraday,
+          probabilities
+        });
+      } catch (e) { console.error('TMA Arch error:', e); }
+      finally { if (!cancelled) setTmaLoading(false); }
+    };
+    compute();
+    const interval = setInterval(compute, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [addr]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter flex items-center gap-3">
+            <Compass className="w-8 h-8 text-blue-500" />
+            TMA Architecture
+          </h2>
+          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Institutional Time-Market-Analysis & Liquidity Flow</p>
+        </div>
+        <div className="flex bg-[#12141c] rounded-xl p-1 border border-gray-800">
+          <span className="px-4 py-1.5 text-xs font-black text-blue-400 uppercase tracking-widest">Target: {sym}</span>
+        </div>
+      </div>
+      <div className="h-[750px] relative">
+        <TokenChart address={addr} symbol={sym} isCex={true} activeView="price" hideTmaPanel={true} />
+      </div>
+      <div className="grid grid-cols-1 gap-6">
+        <TmaPanel symbol={sym} state={tmaState} isLoading={tmaLoading} />
+      </div>
+    </div>
+  );
+};
 
 // ─── VWAP Architecture View ───────────────────────
 const VwapArchView: React.FC<{
@@ -118,6 +192,8 @@ const App: React.FC = () => {
   const [activeHunts, setActiveHunts] = useState<ActiveHunt[]>([]);
   const [vwapArchState, setVwapArchState] = useState<VwapArchState | null>(null);
   const [vwapArchLoading, setVwapArchLoading] = useState(false);
+  const [tmaState, setTmaState] = useState<TmaState | null>(null);
+  const [tmaLoading, setTmaLoading] = useState(false);
 
   // ─── Global Cleanup ─────────────────────────────
   useEffect(() => {
@@ -238,11 +314,24 @@ const App: React.FC = () => {
         <DashboardHeader activeView={activeView} onViewChange={setActiveView} searchTerm={searchTerm} onSearchChange={setSearchTerm} lastUpdated={lastUpdated} isScanning={cexLoading} activeStrategy={activeStrategy} onStrategyChange={setActiveStrategy} />
 
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">
-          {activeView === 'grid' && <CexGrid tickers={cexTickers} loading={cexLoading} onRefresh={loadCexData} onTickerClick={setSelectedCexTicker} searchTerm={searchTerm} onSearchChange={setSearchTerm} />}
+          {activeView === 'grid' && <CexGrid tickers={cexTickers} loading={cexLoading} onRefresh={loadCexData} onTickerClick={setSelectedCexTicker} />}
           {activeView === 'scanner' && <VwapScanner tickers={cexTickers} onTickerClick={setSelectedCexTicker} />}
+          {activeView === 'whale' && <WhaleScanner tickers={cexTickers} onTickerClick={setSelectedCexTicker} />}
+          {activeView === 'correlation' && <BtcCorrelation tickers={cexTickers} onTickerClick={setSelectedCexTicker} />}
           {activeView === 'decision' && <DecisionBuyAi tickers={cexTickers} vwapStore={vwapStore} firstSeenTimes={firstSeenTimes} isLoading={vwapLoading} onTickerClick={setSelectedCexTicker} onAddToWatchlist={handleAddToWatchlist} />}
           {activeView === 'compound' && <GlobalCompoundTerminal huntsData={activeHunts} onTickerClick={setSelectedCexTicker} />}
           {activeView === 'strategy_page' && <GlobalCompoundTerminal strategyId={activeStrategy} huntsData={activeHunts} title={activeStrategy.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Hub'} subtitle={`Dedicated Real-Time Execution for ${activeStrategy}`} onTickerClick={setSelectedCexTicker} />}
+          {activeView === 'playbook' && <TradingPlaybook />}
+          {activeView === 'sentiment' && <AntfarmSentiment tickers={cexTickers} onTickerClick={setSelectedCexTicker} />}
+          {activeView === 'swap' && <SwapPanel tickers={cexTickers} />}
+          {activeView === 'news' && <NewsFeed />}
+          {activeView === 'vwapMulti' && <VwapMultiTF tickers={cexTickers} onTickerClick={setSelectedCexTicker} />}
+          {activeView === 'anchoredVWAP' && <VwapAnchorBot tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />}
+          {activeView === 'ecosystems' && <EcosystemGrid tickers={cexTickers} vwapStore={vwapStore} onTickerClick={setSelectedCexTicker} />}
+          {activeView === 'tma' && <TmaView selectedCexTicker={selectedCexTicker} tmaState={tmaState} tmaLoading={tmaLoading} setTmaState={setTmaState} setTmaLoading={setTmaLoading} />}
+          {activeView === 'vwapArch' && <VwapArchView selectedCexTicker={selectedCexTicker} vwapArchState={vwapArchState} vwapArchLoading={vwapArchLoading} setVwapArchState={setVwapArchState} setVwapArchLoading={setVwapArchLoading} />}
+          {activeView === 'structure' && <MarketStructureDashboard />}
+          {activeView === 'arbitrage' && <ArbitrageTerminal tickers={cexTickers} />}
           {(activeView === 'watchlist' || !activeView) && <WatchlistPanel trades={watchlist} tickers={cexTickers} onCloseTrade={handleCloseTrade} onRemoveTrade={(id) => setHoldings(watchlist.filter(t => t.id !== id))} onTickerClick={setSelectedCexTicker} />}
         </div>
       </main>

@@ -259,8 +259,11 @@ export async function runRotationEngine() {
                 const isFullLong = vwap.last15mClose > vwap.max && vwap.last15mClose > vwap.mid && vwap.last15mClose > vwap.min;
 
                 // 3. Weekly Purity: On Mondays, ensure we are at least 0.5% above Daily VWAP to confirm breakout
-                const isMonday = new Date().getDay() === 1;
-                const dailyPurityBuffer = isMonday ? 1.005 : 1.0;
+                // TUNE: On Monday morning (before 12:00 UTC), be less strict as the daily range is still tight.
+                const now = new Date();
+                const isMonday = now.getUTCDay() === 1;
+                const isLateMonday = isMonday && now.getUTCHours() >= 12;
+                const dailyPurityBuffer = isLateMonday ? 1.005 : 1.0;
                 const isPure = vwap.last15mClose >= (vwap.mid * dailyPurityBuffer);
 
                 // 4. SMART FEATURE: DENSITY SQUEEZE
