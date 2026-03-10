@@ -252,9 +252,13 @@ export async function runRotationEngine() {
                     console.log(`[RotationEngine] 🕵️ Investigating target: ${symbol}`);
                 }
 
-                // A. Filter Stablecoins & Pegged Assets (Corrected v41)
+                // A. Filter Stablecoins & Pegged Assets (Refined v43)
+                // Only check if THE BASE ASSET contains USD, DAI, or EUR (to avoid blocking all XXXUSDT pairs)
+                const baseAsset = symbol.replace('USDT', '');
                 const isStable = STABLECOINS.some(s => symbol.startsWith(s)) ||
-                    symbol.includes('USD') && !['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'TRX', 'LINK', 'PEPE'].some(v => symbol.startsWith(v));
+                    baseAsset.includes('USD') ||
+                    baseAsset.includes('DAI') ||
+                    baseAsset.includes('EUR');
                 if (isStable) {
                     continue;
                 }
