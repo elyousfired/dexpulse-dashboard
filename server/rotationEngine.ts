@@ -241,14 +241,14 @@ export async function runRotationEngine() {
         // TUNE v33: Log every cycle to show we are alive
         console.log(`[RotationEngine] 📡 Slot check: ${currentOpenCount}/${MAX_SLOTS} used. Potential openings: ${totalPotentialOpenings}. Beginning scan...`);
 
-        if (totalPotentialOpenings > 0) {
-            console.log(`[RotationEngine] Scanning top ${topSymbols.length} pairs...`);
+        if (true) { // v46: Decoupled from potentialOpenings to populate UI
+            console.log(`[RotationEngine] Scanning top ${topSymbols.length} pairs for candidates...`);
 
             // Get all historical hunts for cooldown check
             const allHunts: ActiveHunt[] = currentActive;
 
             for (const symbol of topSymbols) {
-                if (currentCandidates.length >= totalPotentialOpenings) break;
+                if (currentCandidates.length >= 20) break; // Limit UI candidates to 20
 
                 // SPECIAL LOG FOR TARGETS
                 if (['MBOXUSDT', 'DEXEUSDT'].includes(symbol)) {
