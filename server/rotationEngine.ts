@@ -228,7 +228,8 @@ export async function runRotationEngine() {
         const candidates: { symbol: string, price: number, density: number }[] = [];
         const STABLECOINS = [
             'USDT', 'USDC', 'USD1', 'DAI', 'FDUSD', 'BUSD', 'TUSD', 'USTC',
-            'EUR', 'GBP', 'JPY', 'USDP', 'GUSD', 'PYUSD', 'AEUR', 'ZUSD'
+            'EUR', 'GBP', 'JPY', 'USDP', 'GUSD', 'PYUSD', 'AEUR', 'ZUSD',
+            'SDE', 'XUSD', 'USDE', 'USDS', 'VAI', 'USD'
         ];
         let currentOpenCount = rotationActive.length - toClose.length;
         const availableOpenings = MAX_SLOTS - currentOpenCount;
@@ -251,8 +252,9 @@ export async function runRotationEngine() {
                     console.log(`[RotationEngine] 🕵️ Investigating target: ${symbol}`);
                 }
 
-                // A. Filter Stablecoins & Pegged Assets (Corrected v33)
-                const isStable = STABLECOINS.some(s => symbol.startsWith(s));
+                // A. Filter Stablecoins & Pegged Assets (Corrected v41)
+                const isStable = STABLECOINS.some(s => symbol.startsWith(s)) ||
+                    symbol.includes('USD') && !['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'TRX', 'LINK', 'PEPE'].some(v => symbol.startsWith(v));
                 if (isStable) {
                     continue;
                 }
@@ -279,6 +281,13 @@ export async function runRotationEngine() {
                 const vwap = await getVwapData(symbol);
                 if (!vwap) {
                     if (['MBOXUSDT', 'DEXEUSDT', 'MBOX', 'DEXE'].includes(symbol)) console.log(`[RotationEngine] ❌ ${symbol} skipped: Failed to fetch VWAP/Kline data.`);
+                    continue;
+                }
+
+                // --- VOLATILITY FILTER (v41) ---
+                // If the entire weekly range is less than 0.5%, it's almost certainly a stablecoin or dead coin.
+                const weeklyRangePct = (vwap.max - vwap.min) / vwap.min;
+                if (weeklyRangePct < 0.005) {
                     continue;
                 }
 
