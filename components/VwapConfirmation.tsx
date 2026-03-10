@@ -50,6 +50,18 @@ export const VwapConfirmation: React.FC<{ onTickerClick: (symbol: string) => voi
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Real-Time Structural Breakouts (Super-Trend Hierarchy)</p>
                 </div>
                 <div className="flex items-center gap-3 bg-[#12141c] rounded-xl p-1 border border-gray-800">
+                    {(() => {
+                        const day = new Date().getUTCDay();
+                        if (day === 1 || day === 2) {
+                            return (
+                                <div className="px-3 py-1 flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Flexible Mode (Mon/Tue)</span>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
                     <span className="px-4 py-1.5 text-xs font-black text-green-400 uppercase tracking-widest animate-pulse">Confirmed: {candidates.length}</span>
                     <div className="h-4 w-px bg-gray-800" />
                     <span className="px-4 py-1.5 text-xs font-bold text-gray-500 uppercase tracking-widest">Update: {lastScan.toLocaleTimeString()}</span>
