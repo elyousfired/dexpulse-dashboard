@@ -301,7 +301,6 @@ export async function runRotationEngine() {
                 const MAX_DISTANCE_PCT = 0.05;
 
                 // 4. Weekly Purity: On Mondays, ensure we are at least 0.5% above Daily VWAP to confirm breakout
-                const now = new Date();
                 const isMonday = now.getUTCDay() === 1;
                 const isLateMonday = isMonday && now.getUTCHours() >= 12;
                 const dailyPurityBuffer = isLateMonday ? 1.005 : (isMonday ? 1.002 : 1.0);
