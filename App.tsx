@@ -26,6 +26,7 @@ import { StructureRadar } from './components/StructureRadar';
 import { GlobalCompoundTerminal } from './components/GlobalCompoundTerminal';
 import { Sidebar } from './components/Sidebar';
 import { TmaPanel } from './components/TmaPanel';
+import { VwapConfirmation } from './components/VwapConfirmation';
 import { calculateATR, calculatePDMetrics, classifyDay, calculateLiquidityZones, analyzeIntraday, runScenarioEngine, TmaState } from './services/tmaService';
 import { Compass, Waves, Zap, Activity, ArrowUpRight, Clock, Search, ShieldCheck } from 'lucide-react';
 const TmaView: React.FC<{
@@ -330,6 +331,10 @@ const App: React.FC = () => {
           {activeView === 'vwapArch' && <VwapArchView selectedCexTicker={selectedCexTicker} vwapArchState={vwapArchState} vwapArchLoading={vwapArchLoading} setVwapArchState={setVwapArchState} setVwapArchLoading={setVwapArchLoading} />}
           {activeView === 'structure' && <MarketStructureDashboard />}
           {activeView === 'arbitrage' && <ArbitrageTerminal tickers={cexTickers} />}
+          {activeView === 'vwapConfirmed' && <VwapConfirmation onTickerClick={(symbol) => {
+            const ticker = cexTickers.find(t => t.symbol === symbol);
+            if (ticker) setSelectedCexTicker(ticker);
+          }} />}
           {(activeView === 'watchlist' || !activeView) && <WatchlistPanel trades={watchlist} tickers={cexTickers} onCloseTrade={handleCloseTrade} onRemoveTrade={(id) => setHoldings(watchlist.filter(t => t.id !== id))} onTickerClick={setSelectedCexTicker} />}
         </div>
       </main>

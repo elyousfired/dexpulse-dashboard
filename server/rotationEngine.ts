@@ -18,6 +18,9 @@ const vwapCache = new Map<string, { wMax: number, wMin: number, currentMid: numb
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes cache
 let isScanning = false;
 
+// v44: Shared data for UI
+export let lastConfirmedCandidates: { symbol: string, price: number, density: number, vwap: VwapData }[] = [];
+
 async function fetchBinanceKlines(symbol: string, interval: string, limit: number) {
     const pair = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
     const url = `https://data-api.binance.vision/api/v3/klines?symbol=${pair}&interval=${interval}&limit=${limit}`;
@@ -225,7 +228,7 @@ export async function runRotationEngine() {
         }
 
         // 3. Scan top symbols for new entries
-        const candidates: { symbol: string, price: number, density: number }[] = [];
+        const currentCandidates: typeof lastConfirmedCandidates = [];
         const STABLECOINS = [
             'USDT', 'USDC', 'USD1', 'DAI', 'FDUSD', 'BUSD', 'TUSD', 'USTC',
             'EUR', 'GBP', 'JPY', 'USDP', 'GUSD', 'PYUSD', 'AEUR', 'ZUSD',
@@ -245,7 +248,7 @@ export async function runRotationEngine() {
             const allHunts: ActiveHunt[] = currentActive;
 
             for (const symbol of topSymbols) {
-                if (candidates.length >= totalPotentialOpenings) break;
+                if (currentCandidates.length >= totalPotentialOpenings) break;
 
                 // SPECIAL LOG FOR TARGETS
                 if (['MBOXUSDT', 'DEXEUSDT'].includes(symbol)) {
@@ -333,7 +336,7 @@ export async function runRotationEngine() {
                 if (isStructuralSignal && isPriceBreakout && isPure && distFromEntry <= MAX_DISTANCE_PCT) {
                     const isSqueeze = densityScore >= 80;
                     console.log(`[RotationEngine] 🛰️ Found ${isSqueeze ? 'HIGH CONVICTION' : 'CANDIDATE'}: ${symbol} (Dist: ${(distFromEntry * 100).toFixed(2)}%, Density: ${densityScore}%)`);
-                    candidates.push({ symbol, price: vwap.last15mClose, density: Math.round(densityScore) });
+                    currentCandidates.push({ symbol, price: vwap.last15mClose, density: Math.round(densityScore), vwap });
                 } else {
                     // DETAILED DEBUG LOGGING
                     const isTarget = ['MBOXUSDT', 'DEXEUSDT', 'MBOX', 'DEXE'].includes(symbol);
@@ -372,7 +375,7 @@ export async function runRotationEngine() {
         }
 
         // 5. Apply Entries (with Swapping v36)
-        for (const cand of (candidates as any[])) {
+        for (const cand of currentCandidates) {
             if (currentOpenCount >= MAX_SLOTS) {
                 const targetToSwap = stagnantSlots.shift();
                 if (targetToSwap) {
@@ -427,6 +430,9 @@ export async function runRotationEngine() {
             });
             fs.writeFileSync(HUNTS_FILE, JSON.stringify(hunts, null, 2));
         }
+
+        // Update Global UI Store (v44)
+        lastConfirmedCandidates = currentCandidates;
 
         console.log(`[RotationEngine] Cycle completed. Final Active Slots: ${Math.min(finalActive.length, MAX_SLOTS)}/${MAX_SLOTS}`);
 

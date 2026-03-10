@@ -9,8 +9,8 @@ interface DashboardHeaderProps {
     onSearchChange: (term: string) => void;
     isScanning: boolean;
     lastUpdated: Date;
-    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure' | 'arbitrage' | 'bullStructure' | 'compound' | 'strategy_page';
-    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure' | 'arbitrage' | 'bullStructure' | 'compound' | 'strategy_page') => void;
+    activeView: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure' | 'arbitrage' | 'bullStructure' | 'compound' | 'strategy_page' | 'vwapConfirmed';
+    onViewChange: (view: 'grid' | 'scanner' | 'decision' | 'watchlist' | 'whale' | 'correlation' | 'playbook' | 'sentiment' | 'swap' | 'news' | 'vwapMulti' | 'anchoredVWAP' | 'ecosystems' | 'tma' | 'vwapArch' | 'structure' | 'arbitrage' | 'bullStructure' | 'compound' | 'strategy_page' | 'vwapConfirmed') => void;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -52,6 +52,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     >
                         <Activity className="w-3.5 h-3.5" />
                         VWAP Scan
+                    </button>
+                    <button
+                        onClick={() => onViewChange('vwapConfirmed')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeView === 'vwapConfirmed' ? 'bg-green-500/20 text-green-500 border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Zap className="w-3.5 h-3.5" />
+                        VWAP Confirmation ✅
                     </button>
                     {/* Whales tab removed */}
                     <button

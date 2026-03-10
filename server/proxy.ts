@@ -10,7 +10,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'fs';
 import { runSignalScanner } from './signalScanner';
 import { processActiveHunts, registerNewHunt } from './strategyTracker';
-import { runRotationEngine } from './rotationEngine';
+import { runRotationEngine, lastConfirmedCandidates } from './rotationEngine';
 
 dotenv.config();
 
@@ -211,6 +211,14 @@ app.get('/api/hunts', (req, res) => {
     } catch (error) {
         console.error('[Proxy] Error reading hunts file:', (error as Error).message);
         res.json([]); // Return empty list instead of 500 to keep UI "Online"
+    }
+});
+
+app.get('/api/vwap-confirmed', (req, res) => {
+    try {
+        res.json(lastConfirmedCandidates || []);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch confirmed candidates' });
     }
 });
 
