@@ -266,9 +266,10 @@ export async function runRotationEngine() {
                     continue;
                 }
 
-                // B. Already active in ANY strategy?
-                if (allHunts.find((h: any) => h.symbol === symbol && h.status === 'active')) {
-                    if (['MBOXUSDT', 'DEXEUSDT', 'MBOX', 'DEXE'].includes(symbol)) console.log(`[RotationEngine] ❌ ${symbol} skipped: Already active in strategy.`);
+                // B. Already active in GOLDEN ROTATION?
+                // (We allow tokens that are active in OTHER strategies to still show up/be entered in rotation)
+                if (allHunts.find((h: any) => h.symbol === symbol && h.status === 'active' && h.strategyId === 'golden_rotation')) {
+                    if (['MBOXUSDT', 'DEXEUSDT', 'MBOX', 'DEXE'].includes(symbol)) console.log(`[RotationEngine] ❌ ${symbol} skipped: Already active in Rotation.`);
                     continue;
                 }
 
