@@ -282,53 +282,47 @@ export async function runRotationEngine() {
                     continue;
                 }
 
-                // --- CLIMAX PROTECTION & PURITY LOGIC ---
-                // 1. Distance Check: Price must be above VMAX but NOT more than 5% above it
-                const distFromMax = (vwap.last15mClose - vwap.max) / vwap.max;
-                const MAX_DISTANCE_PCT = 0.05; // 5% limit to avoid buying the "Climax"
+                // --- STRUCTURAL ENTRY LOGIC (v39 REFINE) ---
+                // 1. Structure Check: Daily VWAP (mid) must be the highest, leading the Weekly Max
+                const isStructuralSignal = vwap.mid > vwap.max && vwap.max > vwap.min;
 
-                // 2. Full Long Alignment (Purity Check): 
-                //    - Close > Max (Weekly Max so far)
-                //    - Close > Mid (Daily VWAP / "Pure" Trend)
-                //    - Close > Min (Weekly Floor)
-                // TUNE v31: Use >= for Max/Min when they are equal (Monday Morning) to allow early entry
-                const isFullLong = vwap.last15mClose > vwap.mid &&
-                    (vwap.max === vwap.min ? vwap.last15mClose >= vwap.max : (vwap.last15mClose > vwap.max && vwap.last15mClose > vwap.min));
+                // 2. Breakout Confirmation: Price must be above the highest of the three (mid)
+                const isPriceBreakout = vwap.last15mClose > vwap.mid;
 
-                // 3. Weekly Purity: On Mondays, ensure we are at least 0.5% above Daily VWAP to confirm breakout
-                // TUNE: On Monday morning (before 12:00 UTC), be less strict as the daily range is still tight.
+                // 3. Distance Check (Purity): Not more than 5% above the breakout level (mid)
+                const distFromEntry = (vwap.last15mClose - vwap.mid) / vwap.mid;
+                const MAX_DISTANCE_PCT = 0.05;
+
+                // 4. Weekly Purity: On Mondays, ensure we are at least 0.5% above Daily VWAP to confirm breakout
                 const now = new Date();
                 const isMonday = now.getUTCDay() === 1;
                 const isLateMonday = isMonday && now.getUTCHours() >= 12;
-                // TUNE v30: Loosen to 0.998 (0.2% tolerance) on Monday morning to catch early breakouts
-                const dailyPurityBuffer = isLateMonday ? 1.005 : (isMonday ? 0.998 : 1.0);
+                const dailyPurityBuffer = isLateMonday ? 1.005 : (isMonday ? 1.002 : 1.0);
                 const isPure = vwap.last15mClose >= (vwap.mid * dailyPurityBuffer);
 
-                // 4. SMART FEATURE: DENSITY SQUEEZE
-                // Measure the convergence between Max, Mid, and Min.
+                // --- DENSITY SQUEEZE (SMART FEATURE) ---
                 const vwapValues = [vwap.max, vwap.mid, vwap.min];
                 const avgVwap = vwapValues.reduce((a, b) => a + b, 0) / 3;
                 const avgDiffPct = vwapValues.reduce((acc, v) => acc + (Math.abs(v - avgVwap) / avgVwap), 0) / 3;
-                const densityScore = Math.max(0, 100 * (1 - (avgDiffPct / 0.02))); // 2% sensitivity
+                const densityScore = Math.max(0, 100 * (1 - (avgDiffPct / 0.02)));
 
-
-                // 6. Trigger Condition
-                // We enter if isFullLong AND isPure AND distFromMax <= 5%
-                if (isFullLong && isPure && distFromMax <= MAX_DISTANCE_PCT) {
+                // Trigger Condition (v39)
+                if (isStructuralSignal && isPriceBreakout && isPure && distFromEntry <= MAX_DISTANCE_PCT) {
                     const isSqueeze = densityScore >= 80;
-                    console.log(`[RotationEngine] 🛰️ Found ${isSqueeze ? 'HIGH CONVICTION' : 'CANDIDATE'}: ${symbol} (Dist: ${(distFromMax * 100).toFixed(2)}%, Density: ${densityScore}%)`);
+                    console.log(`[RotationEngine] 🛰️ Found ${isSqueeze ? 'HIGH CONVICTION' : 'CANDIDATE'}: ${symbol} (Dist: ${(distFromEntry * 100).toFixed(2)}%, Density: ${densityScore}%)`);
                     candidates.push({ symbol, price: vwap.last15mClose, density: Math.round(densityScore) });
                 } else {
-                    // DETAILED DEBUG LOGGING FOR STAGNATION INVESTIGATION
+                    // DETAILED DEBUG LOGGING
                     const isTarget = ['MBOXUSDT', 'DEXEUSDT', 'MBOX', 'DEXE'].includes(symbol);
-                    if (isTarget || (distFromMax > 0 && distFromMax < 0.1)) {
+                    if (isTarget || (distFromEntry > 0 && distFromEntry < 0.1)) {
                         let reason = "";
-                        if (!isFullLong) reason = "Not Full Long (Price < W-Max/Min)";
-                        else if (!isPure) reason = `Not Pure (Price < Daily VWAP * ${dailyPurityBuffer})`;
-                        else if (distFromMax > MAX_DISTANCE_PCT) reason = `Overextended (Dist: ${(distFromMax * 100).toFixed(2)}%)`;
+                        if (!isStructuralSignal) reason = `Structure Failure (Mid:${vwap.mid.toFixed(2)} Max:${vwap.max.toFixed(2)} Min:${vwap.min.toFixed(2)})`;
+                        else if (!isPriceBreakout) reason = `Price below Mid Breakout (${vwap.last15mClose.toFixed(2)} < ${vwap.mid.toFixed(2)})`;
+                        else if (!isPure) reason = `Low Purity (Monday Buffer)`;
+                        else if (distFromEntry > MAX_DISTANCE_PCT) reason = `Overextended (+${(distFromEntry * 100).toFixed(2)}%)`;
 
                         if (reason) {
-                            console.log(`[RotationEngine] 🔍 ${symbol} skipped: ${reason} | Price: ${vwap.last15mClose} | W-Max: ${vwap.max} | Mid: ${vwap.mid}`);
+                            console.log(`[RotationEngine] 🔍 ${symbol} skipped: ${reason}`);
                         }
                     }
                 }
