@@ -20,6 +20,7 @@ export interface ActiveHunt {
     tier?: number;
     strategyId?: string;
     density?: number;
+    lastVwapAnchor?: number;
 }
 
 async function sendTelegram(text: string) {
@@ -198,6 +199,45 @@ export async function processActiveHunts() {
                     console.log(`[StrategyTracker] 📉 ${isRotation ? 'HYPER-SCALP' : 'PEAK REVERSAL'} DETECTED: ${hunt.symbol} (Dropped ${(reversalDist * 100).toFixed(2)}% from peak)`);
                     await handleEarlyExit(hunt, livePrice, strategyName, isRotation ? 'Hyper-Scalp (Tighter Locking)' : 'Peak Reversal (Sliding TP)');
                     continue;
+                }
+
+                // --- AVWAP TREND GUARD (Phase 47) ---
+                // For Rotation trades, we follow the slope of the Anchored VWAP from Entry
+                if (hunt.strategyId === 'golden_rotation') {
+                    try {
+                        const entryTs = new Date(hunt.entryTime).getTime();
+                        const nowTs = Date.now();
+                        const avwapUrl = `https://api.binance.com/api/v3/klines?symbol=${hunt.symbol}&interval=15m&startTime=${entryTs}&limit=1000`;
+                        const { data: avwapKlines } = await axios.get(avwapUrl, { timeout: 10000 });
+
+                        if (avwapKlines && avwapKlines.length >= 2) {
+                            let totalPV = 0;
+                            let totalV = 0;
+                            let prevAVWAP = hunt.lastVwapAnchor || 0;
+                            let currentAVWAP = 0;
+
+                            // Calculate Current AVWAP
+                            for (const k of avwapKlines) {
+                                const p = (parseFloat(k[2]) + parseFloat(k[3]) + parseFloat(k[4])) / 3; // Typical Price
+                                const v = parseFloat(k[5]);
+                                totalPV += p * v;
+                                totalV += v;
+                            }
+                            currentAVWAP = totalV > 0 ? totalPV / totalV : 0;
+
+                            // Trend Exit Logic: If AVWAP turns negative (current < prev)
+                            // We wait for at least 3 klines of data to ensure trend stability
+                            if (prevAVWAP > 0 && currentAVWAP < prevAVWAP && avwapKlines.length >= 3) {
+                                console.log(`[StrategyTracker] 📉 AVWAP DOWNTURN: ${hunt.symbol} (Curr: ${currentAVWAP.toFixed(4)} < Prev: ${prevAVWAP.toFixed(4)})`);
+                                await handleEarlyExit(hunt, livePrice, strategyName, `AVWAP Slope Turned Negative`);
+                                continue;
+                            }
+
+                            hunt.lastVwapAnchor = currentAVWAP;
+                        }
+                    } catch (e: any) {
+                        console.error(`[Tracker] AVWAP Error for ${hunt.symbol}:`, e.message);
+                    }
                 }
 
                 // 2. RSI Exhaustion: If RSI > 80 and price starts to stall (below previous 5m close)
