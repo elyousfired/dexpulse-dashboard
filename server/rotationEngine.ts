@@ -283,8 +283,15 @@ export async function runRotationEngine() {
                 }
 
                 // --- STRUCTURAL ENTRY LOGIC (v39 REFINE) ---
+                const now = new Date();
+                const dayOfWeek = now.getUTCDay(); // 1=Mon, 2=Tue
+                const isEarlyWeek = dayOfWeek === 1 || dayOfWeek === 2;
+
                 // 1. Structure Check: Daily VWAP (mid) must be the highest, leading the Weekly Max
-                const isStructuralSignal = vwap.mid > vwap.max && vwap.max > vwap.min;
+                // TUNE v40: Allow Max == Min on Mon/Tue to capture early week breakouts
+                const isStructuralSignal = isEarlyWeek
+                    ? (vwap.mid > vwap.max && vwap.max >= vwap.min)
+                    : (vwap.mid > vwap.max && vwap.max > vwap.min);
 
                 // 2. Breakout Confirmation: Price must be above the highest of the three (mid)
                 const isPriceBreakout = vwap.last15mClose > vwap.mid;
