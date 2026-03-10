@@ -284,17 +284,21 @@ export async function runRotationEngine() {
                     continue;
                 }
 
-                // --- VOLATILITY FILTER (v41) ---
+                // --- STRUCTURAL CONTEXT (v42) ---
+                const now = new Date();
+                const dayOfWeek = now.getUTCDay(); // 1=Mon, 2=Tue
+                const isEarlyWeek = dayOfWeek === 1 || dayOfWeek === 2;
+
+                // --- VOLATILITY FILTER (v41/42) ---
                 // If the entire weekly range is less than 0.5%, it's almost certainly a stablecoin or dead coin.
-                const weeklyRangePct = (vwap.max - vwap.min) / vwap.min;
-                if (weeklyRangePct < 0.005) {
+                // TUNE v42: Skip this filter on Mon/Tue because ranges start at zero.
+                const weeklyRangePct = vwap.min > 0 ? (vwap.max - vwap.min) / vwap.min : 0;
+                const isStableVol = !isEarlyWeek && weeklyRangePct < 0.005;
+                if (isStableVol) {
                     continue;
                 }
 
                 // --- STRUCTURAL ENTRY LOGIC (v39 REFINE) ---
-                const now = new Date();
-                const dayOfWeek = now.getUTCDay(); // 1=Mon, 2=Tue
-                const isEarlyWeek = dayOfWeek === 1 || dayOfWeek === 2;
 
                 // 1. Structure Check: Daily VWAP (mid) must be the highest, leading the Weekly Max
                 // TUNE v40: Allow Max == Min on Mon/Tue to capture early week breakouts
