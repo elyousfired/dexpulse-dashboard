@@ -107,7 +107,7 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
                         <p className="text-[11px] text-gray-500 font-medium leading-tight">Dynamic efficiency based on win/loss ratio and drawdown protection.</p>
                         <div className="mt-2 flex items-center gap-2">
                             <div className="px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-[9px] font-black text-green-500 uppercase">Optimized</div>
-                            <div className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[9px] font-black text-blue-500 uppercase italic">v5.0</div>
+                            <div className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[9px] font-black text-blue-500 uppercase italic">v5.4 - FULL RESET ACTIVE</div>
                         </div>
                     </div>
                     <HealthGauge value={winRate} label="Efficiency" />

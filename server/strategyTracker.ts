@@ -23,6 +23,40 @@ export interface ActiveHunt {
     lastVwapAnchor?: number;
 }
 
+// ─── v54 Hardcoded Force Reset ───────────────────
+const RESET_KEY = "v54_reset_final"; // Change this to trigger a new wipe
+
+(function autoMigrateV54() {
+    try {
+        console.log(`[StrategyTracker] 🛰️ Checking V5.4 Reset Status (${RESET_KEY})...`);
+        
+        let config: any = { totalBalance: 100.0, enabled: true };
+        if (fs.existsSync(CONFIG_FILE)) {
+            config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+        }
+
+        // If the current reset key hasn't been applied, force a wipe
+        if (config.lastResetKey !== RESET_KEY) {
+            console.log(`[StrategyTracker] 🛠️ GLOBAL WIPE TRIGGERED (${RESET_KEY}): Wiping history and resetting balance to $100...`);
+            
+            config.totalBalance = 100.0;
+            config.lastResetKey = RESET_KEY;
+            
+            // Hard Wipe config
+            fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+            
+            // Hard Wipe Hunts
+            fs.writeFileSync(HUNTS_FILE, JSON.stringify([], null, 2));
+            
+            console.log("[StrategyTracker] ✅ Global Reset Complete. Starting fresh from $100.");
+        } else {
+            console.log(`[StrategyTracker] 🛰️ V5.4 Reset already applied. Balance: $${config.totalBalance}`);
+        }
+    } catch (e) {
+        console.error("[StrategyTracker] Migration Error:", e);
+    }
+})();
+
 // ─── v50 Self-Healing Migration ───────────────────
 // Since data files are gitignored, we force a reset if totalBalance is missing
 (function autoMigrateV50() {
