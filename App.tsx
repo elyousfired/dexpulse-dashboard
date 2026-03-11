@@ -25,6 +25,7 @@ import { ArbitrageTerminal } from './components/ArbitrageTerminal';
 import { StructureRadar } from './components/StructureRadar';
 import { GlobalCompoundTerminal } from './components/GlobalCompoundTerminal';
 import { Sidebar } from './components/Sidebar';
+import { PerformanceJournal } from './components/PerformanceJournal';
 import { TmaPanel } from './components/TmaPanel';
 import { VwapConfirmation } from './components/VwapConfirmation';
 import { calculateATR, calculatePDMetrics, classifyDay, calculateLiquidityZones, analyzeIntraday, runScenarioEngine, TmaState } from './services/tmaService';
@@ -305,9 +306,15 @@ const App: React.FC = () => {
     localStorage.setItem('dex_cex_watchlist', JSON.stringify(next));
   };
 
+  const handleSelectStrategy = (id: string) => {
+    setActiveStrategy(id);
+    if (id === 'journal') setActiveView('journal');
+    else setActiveView('strategy_page');
+  };
+
   return (
     <div className="min-h-screen bg-[#06080c] text-white selection:bg-blue-500/30 flex">
-      <Sidebar activeStrategy={activeStrategy} onSelectStrategy={setActiveStrategy} activeHunts={activeHunts} />
+      <Sidebar activeStrategy={activeStrategy} onSelectStrategy={handleSelectStrategy} activeHunts={activeHunts} />
 
       <main className="flex-1 min-w-0 overflow-y-auto bg-slate-950/20 custom-scrollbar">
         <DashboardHeader activeView={activeView} onViewChange={setActiveView} searchTerm={searchTerm} onSearchChange={setSearchTerm} lastUpdated={lastUpdated} isScanning={cexLoading} activeStrategy={activeStrategy} onStrategyChange={setActiveStrategy} />
@@ -331,6 +338,7 @@ const App: React.FC = () => {
           {activeView === 'vwapArch' && <VwapArchView selectedCexTicker={selectedCexTicker} vwapArchState={vwapArchState} vwapArchLoading={vwapArchLoading} setVwapArchState={setVwapArchState} setVwapArchLoading={setVwapArchLoading} />}
           {activeView === 'structure' && <MarketStructureDashboard />}
           {activeView === 'arbitrage' && <ArbitrageTerminal tickers={cexTickers} />}
+          {activeView === 'journal' && <PerformanceJournal hunts={activeHunts} onTickerClick={setSelectedCexTicker} />}
           {activeView === 'vwapConfirmed' && <VwapConfirmation onTickerClick={(symbol) => {
             const ticker = cexTickers.find(t => t.symbol === symbol);
             if (ticker) setSelectedCexTicker(ticker);

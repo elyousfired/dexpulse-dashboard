@@ -11,6 +11,7 @@ const strategies = [
     { id: 'golden_signal', name: 'Golden Signal', icon: '🏆' },
     { id: 'golden_rotation', name: 'VWAP Rotation', icon: '🛰️' },
     { id: 'scalper', name: 'Scalper 5m', icon: '⚡' },
+    { id: 'journal', name: 'Performance Journal', icon: '📖' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeStrategy, onSelectStrategy, activeHunts }) => {
@@ -37,7 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeStrategy, onSelectStrate
                     >
                         <span className="text-xl group-hover:scale-110 transition-transform">{strat.icon}</span>
                         <span className="font-medium text-sm">{strat.name}</span>
-                        {activeStrategy === strat.id && (
+                        {(activeStrategy === strat.id || (strat.id === 'journal' && activeStrategy === 'journal')) && (
                             <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
                         )}
                     </button>
