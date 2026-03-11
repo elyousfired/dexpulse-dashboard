@@ -27,15 +27,26 @@ export interface ActiveHunt {
 // Since data files are gitignored, we force a reset if totalBalance is missing
 (function autoMigrateV50() {
     try {
-        if (!fs.existsSync(CONFIG_FILE)) return;
+        console.log("[StrategyTracker] 🛰️ Checking V5.0 Migration Status...");
+        if (!fs.existsSync(CONFIG_FILE)) {
+            console.log("[StrategyTracker] 🛠️ No config found. Creating initial v5.0 config...");
+            fs.writeFileSync(CONFIG_FILE, JSON.stringify({ totalBalance: 100.0, enabled: true }, null, 2));
+            return;
+        }
+
         const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-        if (config.totalBalance === undefined) {
-            console.log("[StrategyTracker] 🛠️ v50 Reset: Initializing balance ($100) and wiping history...");
+        // Check for special reset flag or missing totalBalance
+        if (config.totalBalance === undefined || config.forceResetV50) {
+            console.log("[StrategyTracker] 🛠️ v5.0 Reset Triggered: Initializing balance ($100) and wiping history...");
             config.totalBalance = 100.0;
+            delete config.forceResetV50; // Remove flag if present
             fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
-            if (fs.existsSync(HUNTS_FILE)) {
-                fs.writeFileSync(HUNTS_FILE, JSON.stringify([], null, 2));
-            }
+
+            // Hard Wipe Hunts
+            fs.writeFileSync(HUNTS_FILE, JSON.stringify([], null, 2));
+            console.log("[StrategyTracker] ✅ Reset Complete. Starting fresh from $100.");
+        } else {
+            console.log(`[StrategyTracker] 🛰️ V5.0 Active. Current Balance: $${config.totalBalance}`);
         }
     } catch (e) {
         console.error("[StrategyTracker] Migration Error:", e);
