@@ -32,38 +32,25 @@ export interface ActiveHunt {
     lastVwapAnchor?: number;
 }
 
-// ─── v54 Hardcoded Force Reset ───────────────────
-const RESET_KEY = "v54_reset_final"; // Change this to trigger a new wipe
+// ─── v59 Final Full Wipe & Fixed Budgeting ────────
+const RESET_KEY = "v59_final_full_wipe"; // Final wipe for clean start
 
-(function autoMigrateV54() {
+(function autoMigrateV59() {
     try {
-        console.log(`[StrategyTracker] 🛰️ Checking V5.4 Reset Status (${RESET_KEY})...`);
-        
         let config: any = { totalBalance: 100.0, enabled: true };
         if (fs.existsSync(CONFIG_FILE)) {
             config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
         }
 
-        // If the current reset key hasn't been applied, force a wipe
         if (config.lastResetKey !== RESET_KEY) {
-            console.log(`[StrategyTracker] 🛠️ GLOBAL WIPE TRIGGERED (${RESET_KEY}): Wiping history and resetting balance to $100...`);
-            
+            console.log(`[StrategyTracker] 🛠️ FINAL GLOBAL WIPE (${RESET_KEY})...`);
             config.totalBalance = 100.0;
             config.lastResetKey = RESET_KEY;
-            
-            // Hard Wipe config
             fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
-            
-            // Hard Wipe Hunts
             fs.writeFileSync(HUNTS_FILE, JSON.stringify([], null, 2));
-            
-            console.log("[StrategyTracker] ✅ Global Reset Complete. Starting fresh from $100.");
-        } else {
-            console.log(`[StrategyTracker] 🛰️ V5.4 Reset already applied. Balance: $${config.totalBalance}`);
+            addDebugLog("FINAL GLOBAL RESET: Clean start at $100.00");
         }
-    } catch (e) {
-        console.error("[StrategyTracker] Migration Error:", e);
-    }
+    } catch (e) { console.error(e); }
 })();
 
 // ─── v50 Self-Healing Migration ───────────────────
@@ -413,21 +400,21 @@ export function registerNewHunt(symbol: string, entryPrice: number, strategyId: 
     try {
         const hunts: ActiveHunt[] = fs.existsSync(HUNTS_FILE) ? JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8')) : [];
 
-        // Prevent duplicates for the same strategy
+        // Prevent duplicates
         const alreadyActive = hunts.find(h =>
             h.symbol.toUpperCase() === symbol.toUpperCase() &&
             h.status === 'active' &&
             (h.strategyId === strategyId || (!h.strategyId && strategyId === 'golden_signal'))
         );
-
         if (alreadyActive) return;
 
-        // v50: Calculate Dynamic Capital (Balance / 3)
+        // v59: TOTAL Budget is shared by 3 Slots
         let entriesBudget = 10.0;
         if (fs.existsSync(CONFIG_FILE)) {
             const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
             if (config.totalBalance !== undefined) {
-                entriesBudget = Math.floor((config.totalBalance / 3) * 100) / 100; // Divide by 3 slots
+                // We divide current total balance by 3 slots
+                entriesBudget = Math.floor((config.totalBalance / 3) * 100) / 100;
             }
         }
 
@@ -444,7 +431,10 @@ export function registerNewHunt(symbol: string, entryPrice: number, strategyId: 
 
         hunts.push(newHunt);
         fs.writeFileSync(HUNTS_FILE, JSON.stringify(hunts, null, 2));
-        console.log(`[StrategyTracker] 💎 REGISTERED NEW HUNT: ${symbol} at ${entryPrice} (Density: ${density || 0}%)`);
+        
+        const budgetMsg = `💎 REGISTERED NEW HUNT: ${symbol} at $${entryPrice} | Budget: $${entriesBudget} (1/3 of total)`;
+        console.log(`[StrategyTracker] ${budgetMsg}`);
+        addDebugLog(budgetMsg);
 
         // Send Entry Alert
         let strategyName = "Golden Signal";
