@@ -42,6 +42,22 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
     const [hunts, setHunts] = useState<ActiveHunt[]>([]);
     const [localLoading, setLocalLoading] = useState(false);
     const [lastSync, setLastSync] = useState(new Date());
+    const [debugLogs, setDebugLogs] = useState<string[]>([]);
+
+    useEffect(() => {
+        const fetchLogs = async () => {
+            try {
+                const res = await fetch('/api/debug/logs');
+                if (res.ok) {
+                    const data = await res.json();
+                    setDebugLogs(data);
+                }
+            } catch (e) { console.error('Debug logs error:', e); }
+        };
+        fetchLogs();
+        const interval = setInterval(fetchLogs, 5000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         const filtered = strategyId && strategyId !== 'all'
@@ -159,6 +175,29 @@ export const GlobalCompoundTerminal: React.FC<TerminalProps> = ({
                             ))}
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <div className="bg-[#0c0e14] border border-gray-800 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(34,197,94,0.05)] mb-6">
+                <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-green-500/5 to-transparent">
+                    <div className="flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-green-400" />
+                        <span className="text-xs font-black text-white uppercase tracking-widest">Satellite Live Feed (V5.8)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest animate-pulse text-green-500">Live Uplink Active</span>
+                    </div>
+                </div>
+                <div className="p-6 bg-black/40 font-mono text-[10px] space-y-1.5 h-[200px] overflow-y-auto custom-scrollbar">
+                    {debugLogs.length === 0 && <div className="text-gray-700 italic">Waiting for satellite telemetry...</div>}
+                    {debugLogs.map((log, i) => (
+                        <div key={i} className="flex gap-3 border-l-2 border-emerald-500/20 pl-3">
+                            <span className="text-emerald-500/40 select-none">[{i}]</span>
+                            <span className={`${log.includes('CONFIRMED') ? 'text-green-400 font-bold' : log.includes('Scanning') ? 'text-blue-400' : 'text-gray-400'}`}>
+                                {log}
+                            </span>
+                        </div>
+                    ))}
                 </div>
             </div>
 

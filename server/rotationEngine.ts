@@ -2,7 +2,7 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
-import { registerNewHunt, ActiveHunt } from './strategyTracker';
+import { registerNewHunt, ActiveHunt, addDebugLog } from './strategyTracker';
 
 interface VwapData {
     max: number;
@@ -242,7 +242,9 @@ export async function runRotationEngine() {
         console.log(`[RotationEngine] 📡 Slot check: ${currentOpenCount}/${MAX_SLOTS} used. Potential openings: ${totalPotentialOpenings}. Beginning scan...`);
 
         if (true) { // v46: Decoupled from potentialOpenings to populate UI
-            console.log(`[RotationEngine] Scanning top ${topSymbols.length} pairs for candidates...`);
+            const scanMsg = `Scanning top ${topSymbols.length} pairs for candidates...`;
+            console.log(`[RotationEngine] ${scanMsg}`);
+            addDebugLog(scanMsg);
 
             // Get all historical hunts for cooldown check
             const allHunts: ActiveHunt[] = currentActive;

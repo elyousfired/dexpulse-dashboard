@@ -9,7 +9,7 @@ import os from 'os';
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'fs';
 import { runSignalScanner } from './signalScanner';
-import { processActiveHunts, registerNewHunt } from './strategyTracker';
+import { processActiveHunts, registerNewHunt, getDebugLogs } from './strategyTracker';
 import { runRotationEngine, lastConfirmedCandidates } from './rotationEngine';
 
 dotenv.config();
@@ -219,6 +219,14 @@ app.get('/api/vwap-confirmed', (req, res) => {
         res.json(lastConfirmedCandidates || []);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch confirmed candidates' });
+    }
+});
+
+app.get('/api/debug/logs', (req, res) => {
+    try {
+        res.json(getDebugLogs());
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch debug logs' });
     }
 });
 

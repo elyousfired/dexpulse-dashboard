@@ -6,6 +6,15 @@ import axios from 'axios';
 const HUNTS_FILE = path.join(process.cwd(), 'server', 'data', 'active_hunts.json');
 const CONFIG_FILE = path.join(process.cwd(), 'server', 'bot_config.json');
 
+// ─── v58 Web-Based Debug Console ──────────────────
+let debugLogs: string[] = [];
+export function addDebugLog(msg: string) {
+    const timestamp = new Date().toLocaleTimeString();
+    debugLogs.unshift(`[${timestamp}] ${msg}`);
+    if (debugLogs.length > 50) debugLogs.pop();
+}
+export function getDebugLogs() { return debugLogs; }
+
 export interface ActiveHunt {
     symbol: string;
     entryPrice: number;
