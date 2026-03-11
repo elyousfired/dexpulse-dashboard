@@ -216,6 +216,15 @@ export async function processActiveHunts() {
                     stopPrice = trailingStop;
                 }
 
+                // --- INSTANT MOON-SHOT TAKE PROFIT (+20%) ---
+                // If livePrice hits +20%, exit IMMEDIATELY to lock in huge gains
+                const liveProfitPct = (livePrice - hunt.entryPrice) / hunt.entryPrice;
+                if (liveProfitPct >= 0.20) {
+                    console.log(`[StrategyTracker] 🚀 MOON-SHOT REACHED: ${hunt.symbol} at $${livePrice} (+${(liveProfitPct * 100).toFixed(2)}%)`);
+                    await handleEarlyExit(hunt, livePrice, strategyName, `Instant 20% Moon-Shot TP`);
+                    continue;
+                }
+
                 // --- EMERGENCY HARD STOP (LIVE PRICE CHECK) ---
                 // If livePrice (5s update) hits stop level, exit IMMEDIATELY without waiting for candle close
                 if (livePrice <= stopPrice) {
@@ -431,7 +440,7 @@ export function registerNewHunt(symbol: string, entryPrice: number, strategyId: 
 
         hunts.push(newHunt);
         fs.writeFileSync(HUNTS_FILE, JSON.stringify(hunts, null, 2));
-        
+
         const budgetMsg = `💎 REGISTERED NEW HUNT: ${symbol} at $${entryPrice} | Budget: $${entriesBudget} (1/3 of total)`;
         console.log(`[StrategyTracker] ${budgetMsg}`);
         addDebugLog(budgetMsg);
