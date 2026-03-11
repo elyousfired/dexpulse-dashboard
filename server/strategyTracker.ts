@@ -23,6 +23,25 @@ export interface ActiveHunt {
     lastVwapAnchor?: number;
 }
 
+// ─── v50 Self-Healing Migration ───────────────────
+// Since data files are gitignored, we force a reset if totalBalance is missing
+(function autoMigrateV50() {
+    try {
+        if (!fs.existsSync(CONFIG_FILE)) return;
+        const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+        if (config.totalBalance === undefined) {
+            console.log("[StrategyTracker] 🛠️ v50 Reset: Initializing balance ($100) and wiping history...");
+            config.totalBalance = 100.0;
+            fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+            if (fs.existsSync(HUNTS_FILE)) {
+                fs.writeFileSync(HUNTS_FILE, JSON.stringify([], null, 2));
+            }
+        }
+    } catch (e) {
+        console.error("[StrategyTracker] Migration Error:", e);
+    }
+})();
+
 async function sendTelegram(text: string) {
     if (!fs.existsSync(CONFIG_FILE)) return;
     const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
