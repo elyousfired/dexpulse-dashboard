@@ -60,6 +60,17 @@ async function handleEarlyExit(hunt: ActiveHunt, exitPrice: number, strategyName
         `💰 <i>Profit locked or loss minimized.</i>`
     ].join('\n'));
 
+    // v50: Update Global Balance
+    if (fs.existsSync(CONFIG_FILE)) {
+        const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+        if (config.totalBalance !== undefined) {
+            const pnlAmount = hunt.capital * (finalPnl / 100);
+            config.totalBalance += pnlAmount;
+            fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+            console.log(`[StrategyTracker] 💰 Updated Balance: $${config.totalBalance.toFixed(2)} (PnL: $${pnlAmount.toFixed(2)})`);
+        }
+    }
+
     console.log(`[StrategyTracker] 🌤️ EARLY EXIT ${hunt.symbol} (${strategyName}) | PnL: ${finalPnl.toFixed(2)}% | Reason: ${reason}`);
 }
 
@@ -167,6 +178,17 @@ export async function processActiveHunts() {
                         ``,
                         `🛡️ <i>Instant Protection Activated.</i>`
                     ].join('\n'));
+
+                    // v50: Update Global Balance
+                    if (fs.existsSync(CONFIG_FILE)) {
+                        const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+                        if (config.totalBalance !== undefined) {
+                            const pnlAmount = hunt.capital * (finalPnl / 100);
+                            config.totalBalance += pnlAmount;
+                            fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+                            console.log(`[StrategyTracker] 💰 Updated Balance: $${config.totalBalance.toFixed(2)} (PnL: $${pnlAmount.toFixed(2)})`);
+                        }
+                    }
 
                     console.log(`[StrategyTracker] 🔴 CLOSED ${hunt.symbol} (${strategyName}) | PnL: ${finalPnl.toFixed(2)}%`);
                     continue; // Skip the rest of the loop for this hunt
@@ -283,6 +305,17 @@ export async function processActiveHunts() {
                         `💰 Rebalancing capital...`
                     ].join('\n'));
 
+                    // v50: Update Global Balance
+                    if (fs.existsSync(CONFIG_FILE)) {
+                        const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+                        if (config.totalBalance !== undefined) {
+                            const pnlAmount = hunt.capital * (finalPnl / 100);
+                            config.totalBalance += pnlAmount;
+                            fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+                            console.log(`[StrategyTracker] 💰 Updated Balance: $${config.totalBalance.toFixed(2)} (PnL: $${pnlAmount.toFixed(2)})`);
+                        }
+                    }
+
                     console.log(`[StrategyTracker] 🔴 CLOSED ${hunt.symbol} (${strategyName}) | PnL: ${finalPnl.toFixed(2)}%`);
                 }
 
@@ -316,13 +349,22 @@ export function registerNewHunt(symbol: string, entryPrice: number, strategyId: 
 
         if (alreadyActive) return;
 
+        // v50: Calculate Dynamic Capital (Balance / 3)
+        let entriesBudget = 10.0;
+        if (fs.existsSync(CONFIG_FILE)) {
+            const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+            if (config.totalBalance !== undefined) {
+                entriesBudget = Math.floor((config.totalBalance / 3) * 100) / 100; // Divide by 3 slots
+            }
+        }
+
         const newHunt: ActiveHunt = {
             symbol,
             entryPrice,
             entryTime: new Date().toISOString(),
             peakPrice: entryPrice,
             status: 'active',
-            capital: 10.0,
+            capital: entriesBudget,
             strategyId,
             density
         };

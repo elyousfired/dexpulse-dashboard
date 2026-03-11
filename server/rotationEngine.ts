@@ -376,39 +376,46 @@ export async function runRotationEngine() {
         }
 
         // 5. Apply Entries (with Swapping v36)
-        for (const cand of currentCandidates) {
-            if (currentOpenCount >= MAX_SLOTS) {
-                const targetToSwap = stagnantSlots.shift();
-                if (targetToSwap) {
-                    console.log(`[RotationEngine] ♻️ Stagnation Swap: Exiting ${targetToSwap.symbol} for ${cand.symbol}`);
-                    const hunts = JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8'));
-                    hunts.forEach((h: any) => {
-                        if (h.symbol === targetToSwap.symbol && h.strategyId === 'golden_rotation' && h.status === 'active') {
-                            h.status = 'closed';
-                            h.exitPrice = h.currentPrice || h.entryPrice;
-                            h.exitTime = new Date().toISOString();
-                            h.pnl = ((h.exitPrice - h.entryPrice) / h.entryPrice) * 100;
-                            h.reason = 'Stagnation Swap (Opportunity Cost)';
-                        }
-                    });
-                    fs.writeFileSync(HUNTS_FILE, JSON.stringify(hunts, null, 2));
+        if (totalPotentialOpenings > 0 && currentCandidates.length > 0) {
+            console.log(`[RotationEngine] 🎯 Sync Check: Entering ${Math.min(currentCandidates.length, totalPotentialOpenings)} candidates from Confirmation section.`);
+            for (const cand of currentCandidates.slice(0, totalPotentialOpenings)) {
+                // Check if already active in Golden Rotation specifically
+                const isAlreadyInRotation = (currentActive || []).some(h => h.symbol === cand.symbol && h.status === 'active' && h.strategyId === 'golden_rotation');
+                if (isAlreadyInRotation) continue;
 
-                    const oldPnL = (((targetToSwap.currentPrice || targetToSwap.entryPrice) - targetToSwap.entryPrice) / targetToSwap.entryPrice) * 100;
+                if (currentOpenCount >= MAX_SLOTS) {
+                    const targetToSwap = stagnantSlots.shift();
+                    if (targetToSwap) {
+                        console.log(`[RotationEngine] ♻️ Stagnation Swap: Exiting ${targetToSwap.symbol} for ${cand.symbol}`);
+                        const hunts = JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8'));
+                        hunts.forEach((h: any) => {
+                            if (h.symbol === targetToSwap.symbol && h.strategyId === 'golden_rotation' && h.status === 'active') {
+                                h.status = 'closed';
+                                h.exitPrice = h.currentPrice || h.entryPrice;
+                                h.exitTime = new Date().toISOString();
+                                h.pnl = ((h.exitPrice - h.entryPrice) / h.entryPrice) * 100;
+                                h.reason = 'Stagnation Swap (Opportunity Cost)';
+                            }
+                        });
+                        fs.writeFileSync(HUNTS_FILE, JSON.stringify(hunts, null, 2));
 
-                    await sendRotationAlert([
-                        `♻️ <b>STAGNATION SWAP: #${targetToSwap.symbol} ➔ #${cand.symbol}</b>`,
-                        ``,
-                        `<b>Reason:</b> Opportunity Cost (1H+ Stagnation)`,
-                        `<b>Old PnL:</b> +${oldPnL.toFixed(2)}%`,
-                        ``,
-                        `🛰️ <i>Rotating into faster momentum...</i>`
-                    ].join('\n'));
-                    currentOpenCount--;
+                        const oldPnL = (((targetToSwap.currentPrice || targetToSwap.entryPrice) - targetToSwap.entryPrice) / targetToSwap.entryPrice) * 100;
+
+                        await sendRotationAlert([
+                            `♻️ <b>STAGNATION SWAP: #${targetToSwap.symbol} ➔ #${cand.symbol}</b>`,
+                            ``,
+                            `<b>Reason:</b> Opportunity Cost (1H+ Stagnation)`,
+                            `<b>Old PnL:</b> +${oldPnL.toFixed(2)}%`,
+                            ``,
+                            `🛰️ <i>Rotating into faster momentum...</i>`
+                        ].join('\n'));
+                        currentOpenCount--;
+                    }
                 }
+                console.log(`[RotationEngine] 🛰️ Rotating Capital into Confirmed Candidate: ${cand.symbol}`);
+                registerNewHunt(cand.symbol, cand.price, 'golden_rotation', cand.density);
+                currentOpenCount++;
             }
-            console.log(`[RotationEngine] 🛰️ Rotating Capital into: ${cand.symbol}`);
-            registerNewHunt(cand.symbol, cand.price, 'golden_rotation', cand.density);
-            currentOpenCount++;
         }
 
         // 6. EXTRA SAFETY: If slots > 3 (bug/legacy), close oldest ones
