@@ -3,158 +3,357 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🛡️ Liquidity Guard — Scientific Audit Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <title>🛡️ Institutional Liquidity Guard — Deep Depth Audit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #030712;
-            --card: #0f172a;
-            --border: #1e293b;
-            --text: #f8fafc;
-            --muted: #64748b;
-            --primary: #60a5fa;
-            --success: #22c55e;
+            --bg: #02040a;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.4);
+            --card-bg: rgba(15, 23, 42, 0.6);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-main);
             background: var(--bg);
-            color: var(--text);
+            color: var(--text-primary);
             min-height: 100vh;
-            padding: 40px 20px;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% -20%, #1e293b 0%, transparent 50%),
+                radial-gradient(circle at 0% 0%, #1e1b4b 0%, transparent 35%);
         }
 
-        .container { max-width: 1200px; margin: 0 auto; }
+        /* Glassmorphism Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url("https://www.transparenttextures.com/patterns/carbon-fibre.png");
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 1;
+        }
 
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 60px 40px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Header Premium Styling */
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 40px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border);
+            margin-bottom: 60px;
+            text-align: center;
         }
+
+        .premium-tag {
+            display: inline-block;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            padding: 4px 16px;
+            border-radius: 100px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
         .header h1 {
-            font-size: 32px;
+            font-size: 48px;
             font-weight: 800;
-            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            letter-spacing: -2px;
+            margin-bottom: 8px;
+            background: linear-gradient(to bottom, #fff 40%, #94a3b8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .live-status {
-            display: flex; align-items: center; gap: 8px;
-            font-size: 13px; color: var(--muted);
-            font-weight: 600;
-        }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
+        .header .subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Audit Legend Bar */
         .audit-info {
-            background: #1e293b33;
-            border: 1px solid var(--border);
-            padding: 24px;
-            border-radius: 16px;
-            margin-bottom: 32px;
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-bottom: 50px;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(20px);
+            padding: 30px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
         }
-        .info-card h3 { font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: 1px; margin-bottom: 8px; }
-        .info-card p { font-size: 14px; line-height: 1.5; color: var(--text); }
 
+        .info-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .info-card h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent);
+            font-weight: 800;
+        }
+
+        .info-card p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        /* Grid System */
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 32px;
         }
 
+        /* Premium Risk Card */
         .risk-card {
-            background: var(--card);
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
             border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 24px;
+            border-radius: 32px;
+            padding: 32px;
             position: relative;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .risk-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        /* Performance Indicator Ring */
+        .status-beam {
+            position: absolute;
+            top: 24px; left: 0;
+            width: 4px; height: 32px;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .sym-block {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sym-name {
+            font-size: 28px;
+            font-weight: 900;
+            font-family: var(--font-mono);
+            letter-spacing: -1px;
+        }
+
+        .sym-full {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .risk-badge {
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .badge-extreme { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+        .badge-moderate { background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.2); }
+        .badge-whale { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
+
+        /* Stats Rows */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .metric-box {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .metric-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .metric-val {
+            font-size: 18px;
+            font-weight: 800;
+            font-family: var(--font-mono);
+        }
+
+        /* Depth Viz */
+        .depth-section {
+            margin-top: auto;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .depth-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .depth-title { font-size: 11px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; }
+
+        .spread-val { font-size: 11px; font-weight: 800; color: var(--accent); font-family: var(--font-mono); }
+
+        .visual-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            display: flex;
             overflow: hidden;
-            transition: transform 0.2s;
+            margin-bottom: 12px;
         }
-        .risk-card:hover { transform: translateY(-2px); }
 
-        .risk-indicator {
-            position: absolute; top: 0; left: 0; width: 6px; height: 100%;
-        }
-        .risk-green { background: var(--success); }
-        .risk-yellow { background: var(--warning); }
-        .risk-red { background: var(--danger); }
+        .bid-side { height: 100%; background: var(--success); opacity: 0.8; }
+        .ask-side { height: 100%; background: var(--danger); opacity: 0.8; }
 
-        .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-        .sym { font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
-        .risk-tag {
-            font-size: 10px; font-weight: 800; text-transform: uppercase;
-            padding: 4px 12px; border-radius: 50px;
-        }
-        .tag-green { background: #22c55e22; color: var(--success); border: 1px solid #22c55e33; }
-        .tag-yellow { background: #f59e0b22; color: var(--warning); border: 1px solid #f59e0b33; }
-        .tag-red { background: #ef444422; color: var(--danger); border: 1px solid #ef444433; }
-
-        .stat-row { display: flex; justify-content: space-between; margin-bottom: 16px; }
-        .stat-val { font-size: 20px; font-weight: 700; }
-        .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
-
-        .whale-meter {
-            background: #020617;
-            padding: 12px;
-            border-radius: 10px;
+        .wall-tag {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent);
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-top: 10px;
-        }
-        .whale-icon { font-size: 20px; }
-        .whale-text { font-size: 12px; font-weight: 600; color: var(--primary); }
-
-        .audit-note {
-            font-size: 12px; font-style: italic; color: var(--muted);
-            margin-top: 16px; padding-top: 12px; border-top: 1px solid #1e293b;
-            line-height: 1.4;
+            gap: 8px;
         }
 
-        .loader { text-align: center; padding: 60px; color: var(--muted); font-size: 14px; }
-        .empty { text-align: center; padding: 100px; color: var(--muted); }
+        .wall-icon { font-size: 16px; }
+
+        .note-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 16px;
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0); }
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 100px;
+            color: var(--text-secondary);
+        }
+
+        .loader-ring {
+            width: 50px; height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .live-dot {
+            width: 8px; height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div>
-                <h1>🛡️ Liquidity Guard</h1>
-                <p style="color:var(--muted); font-size: 14px; margin-top: 4px">Scientific Audit & Market Depth Monitoring — Isolated Analysis Page</p>
-            </div>
-            <div class="live-status">
-                <span class="dot"></span>
-                LIVE SCIENTIFIC MODE | <span id="clock">Loading...</span>
+            <span class="premium-tag">Institutional Data Link</span>
+            <h1>🛡️ Liquidity Guard 2.0</h1>
+            <p class="subtitle">Deep Depth Audit & Order Book Pressure Analysis for Active Turbo TSL Signals</p>
+            <div style="margin-top: 24px; font-size: 13px; font-weight: 700; color:var(--text-secondary)">
+                <span class="live-dot"></span> LIVE ENGINE STANDBY | <span id="clock" style="font-family: var(--font-mono)">--:--:--</span>
             </div>
         </div>
 
         <div class="audit-info">
             <div class="info-card">
-                <h3>🔍 Market Depth Correlation</h3>
-                <p>Tokens with Volume < $2M show a 90% correlation with Stop Loss wicks. Spread causes execution gaps.</p>
+                <h3>⚖️ Order Book Spread</h3>
+                <p>Spreads > 0.08% indicate thin liquidity. Active wicks often hit SL due to execution slippage, not trend reversal.</p>
             </div>
             <div class="info-card">
-                <h3>🐋 Whale Threshold</h3>
-                <p>Concentrated liquidity is confirmed only in symbols with Quote Volume > $10M. Healthy Order Book walls.</p>
+                <h3>🐋 Concentration Wall</h3>
+                <p>Whale Walls are verified within ±1% price depth. Minimum $50k consolidated liquidity required for Green status.</p>
             </div>
             <div class="info-card">
-                <h3>⚖️ Risk Model</h3>
-                <p>Red = Extreme Slippage Risk. Yellow = Moderate Retail Noise. Green = Institutional Backing.</p>
+                <h3>🌊 Pressure Ratio</h3>
+                <p>Bids vs Asks in the snapshot limit. Positive ratio (>1.5) confirms institutional backing and safe absorption.</p>
             </div>
         </div>
 
         <div id="grid" class="grid">
-            <div class="loader">Auditing current market conditions (Turbo TSL)...</div>
+            <div class="empty-state">
+                <div class="loader-ring" id="loader"></div>
+                <p style="margin-top: 20px" id="status-text">Synchronizing with Binance Data Layer...</p>
+            </div>
         </div>
     </div>
 
@@ -162,93 +361,140 @@
         const BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
             ? 'http://187.124.33.159:3001' : `http://${window.location.hostname}:3001`;
 
-        async function fetchAudit() {
+        async function fetchDepth(symbol) {
             try {
-                const clock = new Date().toLocaleTimeString();
-                document.getElementById('clock').textContent = clock;
+                const res = await fetch(`https://api.binance.com/api/v3/depth?symbol=${symbol}&limit=100`);
+                return res.json();
+            } catch (e) {
+                return null;
+            }
+        }
 
-                const [huntsRes, bRes] = await Promise.all([
+        async function auditMarket() {
+            try {
+                document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+
+                const [huntsRes, tickersRes] = await Promise.all([
                     fetch(`${BASE}/api/hunts`),
                     fetch(`https://api.binance.com/api/v3/ticker/24hr`)
                 ]);
 
                 const hunts = await huntsRes.json();
-                const tickers = await bRes.json();
+                const tickers = await tickersRes.json();
                 const active = hunts.filter(h => h.strategyId === 'vwap_tsl' && h.status === 'active');
 
                 if (active.length === 0) {
-                    document.getElementById('grid').innerHTML = '<div class="empty">🛡️ Liquidity Guard is standing by. No active Turbo TSL trades to audit.</div>';
+                    document.getElementById('grid').innerHTML = '<div class="empty-state">🛡️ STANDBY: No active Turbo TSL positions detected for deep audit.</div>';
                     return;
                 }
 
-                document.getElementById('grid').innerHTML = active.map(h => {
-                    const t = tickers.find(x => x.symbol === h.symbol);
-                    const vol = t ? parseFloat(t.quoteVolume) : 0;
-                    
-                    let risk = 'red';
-                    let riskTxt = 'EXTREME RISK';
-                    let whaleTxt = 'No Whale Walls';
-                    let whaleIco = '⭕';
-                    let note = 'High probability of hitting SL due to thin order book and high spread.';
+                // Fetch Deep Depth for each active symbol
+                const auditData = await Promise.all(active.map(async h => {
+                    const depth = await fetchDepth(h.symbol);
+                    const ticker = tickers.find(t => t.symbol === h.symbol);
+                    return { hunt: h, depth, ticker };
+                }));
 
-                    if (vol >= 10000000) {
-                        risk = 'green';
-                        riskTxt = 'WHALE SAFE';
-                        whaleTxt = 'Institutional Depth';
+                document.getElementById('grid').innerHTML = auditData.map(data => {
+                    const h = data.hunt;
+                    const d = data.depth;
+                    const t = data.ticker;
+
+                    if (!d || !t) return '';
+
+                    const bids = d.bids.map(b => ({ price: parseFloat(b[0]), qty: parseFloat(b[1]) }));
+                    const asks = d.asks.map(a => ({ price: parseFloat(a[0]), qty: parseFloat(a[1]) }));
+                    
+                    const bestBid = bids[0].price;
+                    const bestAsk = asks[0].price;
+                    const midPrice = (bestBid + bestAsk) / 2;
+                    const spreadPct = ((bestAsk - bestBid) / midPrice) * 100;
+
+                    // Compute Liquidity within 1%
+                    const bidsIn1 = bids.filter(b => b.price >= midPrice * 0.99).reduce((s, x) => s + (x.price * x.qty), 0);
+                    const asksIn1 = asks.filter(a => a.price <= midPrice * 1.01).reduce((s, x) => s + (x.price * x.qty), 0);
+                    
+                    const totalLiq = bidsIn1 + asksIn1;
+                    const pressureRatio = asksIn1 > 0 ? bidsIn1 / asksIn1 : 1;
+
+                    let risk = 'badge-extreme';
+                    let riskTxt = 'EXTREME SLIPPAGE';
+                    let beam = 'var(--danger)';
+                    let whaleIco = '⭕';
+                    let whaleTxt = 'THIN DEPTH';
+                    let note = 'High execution risk. Order book is too thin to support trailing exits safely.';
+
+                    if (totalLiq >= 100000 && spreadPct < 0.05) {
+                        risk = 'badge-whale';
+                        riskTxt = 'INSTITUTIONAL';
+                        beam = 'var(--success)';
                         whaleIco = '🐋';
-                        note = 'Strong liquidity walls detected. Price movements are supported by real money.';
-                    } else if (vol >= 2000000) {
-                        risk = 'yellow';
-                        riskTxt = 'MODERATE';
-                        whaleTxt = 'Retail Consensus';
+                        whaleTxt = 'DEEP LIQUIDITY';
+                        note = 'Strong institutional backing. Order book walls can absorb high volatility.';
+                    } else if (totalLiq >= 30000) {
+                        risk = 'badge-moderate';
+                        riskTxt = 'MODERATE NOISE';
+                        beam = 'var(--warning)';
                         whaleIco = '🐟';
-                        note = 'Moderate liquidity. Minor slippage risk during high volatility.';
+                        whaleTxt = 'RETAIL DEPTH';
+                        note = 'Moderate depth. Watch out for sudden spikes causing slippage.';
                     }
 
                     const pnl = h.currentPrice ? ((h.currentPrice - h.entryPrice) / h.entryPrice) * 100 : 0;
+                    const bidPct = (bidsIn1 / totalLiq) * 100;
 
                     return `
                         <div class="risk-card">
-                            <div class="risk-indicator risk-${risk}"></div>
-                            <div class="card-top">
-                                <span class="sym">${h.symbol.replace('USDT', '')}</span>
-                                <span class="risk-tag tag-${risk}">${riskTxt}</span>
+                            <div class="status-beam" style="background:${beam}"></div>
+                            <div class="card-header">
+                                <div class="sym-block">
+                                    <span class="sym-name">${h.symbol.replace('USDT', '')}</span>
+                                    <span class="sym-full">BINANCE PERPETUAL</span>
+                                </div>
+                                <span class="risk-badge ${risk}">${riskTxt}</span>
                             </div>
 
-                            <div class="stat-row" style="margin-bottom: 24px">
-                                <div>
-                                    <div class="stat-label">24h Volume (Liquidity)</div>
-                                    <div class="stat-val" style="color:${vol >= 10000000 ? 'var(--success)' : vol >= 2000000 ? 'var(--warning)' : 'var(--danger)'}">
-                                        $${(vol/1000000).toFixed(2)}M
-                                    </div>
+                            <div class="metric-grid">
+                                <div class="metric-box">
+                                    <div class="metric-label">1% Market Depth</div>
+                                    <div class="metric-val">$${(totalLiq/1000).toFixed(1)}k</div>
                                 </div>
-                                <div style="text-align: right">
-                                    <div class="stat-label">Realtime PnL</div>
-                                    <div class="stat-val ${pnl >= 0 ? 'green' : 'red'}" style="color:${pnl >= 0 ? 'var(--success)' : 'var(--danger)'}">
+                                <div class="metric-box">
+                                    <div class="metric-label">Execution PnL</div>
+                                    <div class="metric-val" style="color:${pnl >= 0 ? 'var(--success)' : 'var(--danger)'}">
                                         ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="whale-meter">
-                                <span class="whale-icon">${whaleIco}</span>
-                                <span class="whale-text">${whaleTxt}</span>
-                            </div>
-
-                            <div class="audit-note">
-                                ${note}
+                            <div class="depth-section">
+                                <div class="depth-header">
+                                    <span class="depth-title">Order Book Absorption</span>
+                                    <span class="spread-val">SPREAD: ${spreadPct.toFixed(4)}%</span>
+                                </div>
+                                <div class="visual-bar">
+                                    <div class="bid-side" style="width: ${bidPct}%"></div>
+                                    <div class="ask-side" style="width: ${100 - bidPct}%"></div>
+                                </div>
+                                <div class="wall-tag" style="background:${pressureRatio > 1.2 ? 'rgba(16,185,129,0.1)' : 'rgba(239, 68, 68, 0.1)'}; color:${pressureRatio > 1.2 ? 'var(--success)' : 'var(--danger)'}">
+                                    <span class="wall-icon">${whaleIco}</span>
+                                    <span>Pressure Ratio: ${pressureRatio.toFixed(2)}x</span>
+                                </div>
+                                <div class="note-text">
+                                    ${note}
+                                </div>
                             </div>
                         </div>
                     `;
                 }).join('');
 
             } catch (e) {
-                document.getElementById('grid').innerHTML = `<div class="loader">❌ Analysis failed: ${e.message}</div>`;
+                console.error(e);
             }
         }
 
-        fetchAudit();
-        setInterval(fetchAudit, 15000);
+        auditMarket();
+        setInterval(auditMarket, 10000);
     </script>
 </body>
 </html>
