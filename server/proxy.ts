@@ -26,6 +26,7 @@ const cache = new Map();
 const CACHE_DURATION = 30 * 1000; // 30 seconds
 const CONFIG_FILE = path.join(process.cwd(), 'server', 'bot_config.json');
 const HUNTS_FILE = path.join(process.cwd(), 'server', 'data', 'active_hunts.json');
+const MARKET_AUDIT_FILE = path.join(process.cwd(), 'server', 'data', 'institutional_market.json');
 
 // ─── Existing: Birdeye OHLCV Proxy ──────────────────────────
 
@@ -227,6 +228,20 @@ app.get('/api/shadow', (req, res) => {
         res.json(JSON.parse(content));
     } catch (error) {
         res.json([]);
+    }
+});
+
+// Institutional Market Audit API
+app.get('/api/market/institutional', (req, res) => {
+    try {
+        if (!fs.existsSync(MARKET_AUDIT_FILE)) {
+            return res.json({ timestamp: 0, count: 0, marketAudit: [] });
+        }
+        const content = fs.readFileSync(MARKET_AUDIT_FILE, 'utf8').trim();
+        if (!content) return res.json({ timestamp: 0, count: 0, marketAudit: [] });
+        res.json(JSON.parse(content));
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to read market audit data' });
     }
 });
 

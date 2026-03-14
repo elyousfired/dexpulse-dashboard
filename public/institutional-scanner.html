@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏦 Institutional Market Scanner 3.0 — Professional Global Audit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #010206;
+            --accent: #3b82f6;
+            --card: rgba(15, 23, 42, 0.7);
+            --border: rgba(255, 255, 255, 0.08);
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-main);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 50% -10%, #1e293b 0%, transparent 60%),
+                radial-gradient(circle at 100% 100%, #1e1b4b 0%, transparent 40%);
+        }
+
+        .container { max-width: 1600px; margin: 0 auto; padding: 40px; }
+
+        /* Header Section */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 40px;
+        }
+
+        .header-title h1 {
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            background: linear-gradient(to bottom, #fff 50%, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-title p {
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .live-ticker {
+            display: flex; gap: 24px;
+            background: var(--card);
+            padding: 12px 24px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .pulse-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+            display: inline-block; margin-right: 6px; box-shadow: 0 0 10px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        /* Tabs Navigation */
+        .tabs {
+            display: flex; gap: 12px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            padding: 10px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .tab-btn.active { color: #fff; background: var(--accent); }
+
+        /* Table Section */
+        .market-table-container {
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 20px 24px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            font-weight: 800;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        tr:hover td { background: rgba(255, 255, 255, 0.01); }
+
+        .sym-block {
+            display: flex; align-items: center; gap: 12px;
+        }
+
+        .sym-icon {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: #1e293b; display: flex; align-items: center;
+            justify-content: center; font-size: 14px;
+        }
+
+        .sym-text .symbol { font-weight: 900; font-family: var(--font-mono); font-size: 16px; }
+        .sym-text .network { font-size: 10px; color: var(--muted); font-weight: 800; }
+
+        .change-val.up { color: var(--success); }
+        .change-val.down { color: var(--danger); }
+
+        .score-pill {
+            padding: 6px 12px; border-radius: 8px; font-family: var(--font-mono);
+            font-weight: 800; font-size: 12px; text-align: center;
+        }
+
+        .trap-badge {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .whale-safeguard {
+            color: var(--success); font-size: 10px; font-weight: 800;
+            display: flex; align-items: center; gap: 4px; border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 4px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.05);
+        }
+
+        /* Order Book Preview Bar */
+        .pressure-bar {
+            width: 100px; height: 6px; background: rgba(255,255,255,0.05);
+            border-radius: 3px; overflow: hidden; display: flex;
+        }
+        .bid-p { height: 100%; background: var(--success); opacity: 0.8; }
+        .ask-p { height: 100%; background: var(--danger); opacity: 0.8; }
+
+        .loader {
+            padding: 100px; text-align: center; color: var(--muted);
+        }
+
+        .btn-inspect {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 8px 16px; border-radius: 10px;
+            font-size: 12px; font-weight: 700; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-inspect:hover { background: var(--accent); color: #fff; }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h1>🏦 Institutional Scanner 3.0</h1>
+                <p>Global Market Surveillance • Top 300 Audit • Order Flow Liquidity Analytics</p>
+            </div>
+            <div class="live-ticker">
+                <div><span class="pulse-dot"></span> LIVE ENGINE STANDBY</div>
+                <div id="clock" style="font-family: var(--font-mono)">--:--:--</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="setTab('market')">Global Market (Top 300)</button>
+            <button class="tab-btn" onclick="setTab('gainers')">Gainer Audit (Trap Analysis)</button>
+            <button class="tab-btn" onclick="setTab('institutional')">Institutional Accumulation</button>
+        </div>
+
+        <div class="market-table-container">
+            <table id="market-table">
+                <thead>
+                    <tr>
+                        <th>Asset</th>
+                        <th>Price</th>
+                        <th>24h Change</th>
+                        <th>24h Volume</th>
+                        <th>Institutional Score</th>
+                        <th>Order Flow Pressure</th>
+                        <th>Risk Audit</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr>
+                        <td colspan="8" class="loader">
+                            Connecting to Market Audit Service...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://187.124.33.159:3001' : `http://${window.location.hostname}:3001`;
+
+        let currentTab = 'market';
+        let marketData = [];
+
+        async function fetchMarketData() {
+            try {
+                document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+                const res = await fetch(`${BASE}/api/market/institutional`);
+                const data = await res.json();
+                marketData = data.marketAudit || [];
+                render();
+            } catch (e) {
+                console.error("Fetch failed:", e);
+                document.getElementById('table-body').innerHTML = `<tr><td colspan="8" class="loader">❌ Backend Sync Failed: ${e.message}</td></tr>`;
+            }
+        }
+
+        function setTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            render();
+        }
+
+        function render() {
+            let filtered = [];
+            if (currentTab === 'market') {
+                filtered = [...marketData];
+            } else if (currentTab === 'gainers') {
+                filtered = marketData.filter(m => parseFloat(m.change) > 0).sort((a,b) => parseFloat(b.change) - parseFloat(a.change));
+            } else if (currentTab === 'institutional') {
+                filtered = marketData.filter(m => m.score > 60).sort((a,b) => b.score - a.score);
+            }
+
+            if (filtered.length === 0) {
+                document.getElementById('table-body').innerHTML = `<tr><td colspan="8" class="loader">Waiting for Audit Results... (Backend Scanning 300 Assets)</td></tr>`;
+                return;
+            }
+
+            document.getElementById('table-body').innerHTML = filtered.map(m => {
+                const vol = parseFloat(m.volume) / 1000000;
+                const ratio = m.ratio || 1;
+                const bidPct = (ratio / (ratio + 1)) * 100;
+                
+                let scoreColor = 'rgba(255, 255, 255, 0.05)';
+                if (m.score > 70) scoreColor = 'rgba(16, 185, 129, 0.2)';
+                else if (m.score > 40) scoreColor = 'rgba(245, 158, 11, 0.2)';
+                else scoreColor = 'rgba(239, 68, 68, 0.2)';
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="sym-block">
+                                <div class="sym-icon">${m.symbol[0]}</div>
+                                <div class="sym-text">
+                                    <div class="symbol">${m.symbol.replace('USDT','')}</div>
+                                    <div class="network">BINANCE PERP</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="font-family: var(--font-mono)">$${parseFloat(m.price).toFixed(m.price < 1 ? 5 : 2)}</td>
+                        <td class="change-val ${parseFloat(m.change) >= 0 ? 'up' : 'down'}">${parseFloat(m.change).toFixed(2)}%</td>
+                        <td style="font-family: var(--font-mono)">$${vol.toFixed(2)}M</td>
+                        <td>
+                            <div class="score-pill" style="background: ${scoreColor}">${m.score}/100</div>
+                        </td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:8px">
+                                <div class="pressure-bar">
+                                    <div class="bid-p" style="width:${bidPct}%"></div>
+                                    <div class="ask-p" style="width:${100 - bidPct}%"></div>
+                                </div>
+                                <span style="font-size:10px; font-weight:800; color:var(--muted)">${ratio.toFixed(2)}x</span>
+                            </div>
+                        </td>
+                        <td>
+                            ${m.isTrap ? '<span class="trap-badge">⚠️ LIQUIDITY TRAP</span>' : (m.score > 75 ? '<span class="whale-safeguard">🐋 WHALE BACKED</span>' : '<span style="color:var(--muted); font-size:10px">NORMALIZED</span>')}
+                        </td>
+                        <td>
+                            <button class="btn-inspect" onclick="window.open('/liquidity-guard.html#${m.symbol}')">Inspect Depth</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        fetchMarketData();
+        setInterval(fetchMarketData, 20000);
+    </script>
+</body>
+</html>
