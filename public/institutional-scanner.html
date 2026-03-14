@@ -236,8 +236,9 @@
                         <th>Price</th>
                         <th>24h Change</th>
                         <th>Institutional Score</th>
-                        <th>Live Order Flow Delta</th>
-                        <th>Liquidity Clusters (Walls)</th>
+                        <th>Live Flow Delta</th>
+                        <th>Squeeze Predictor</th>
+                        <th>Liquidity Walls</th>
                         <th>Risk Audit</th>
                         <th>Action</th>
                     </tr>
@@ -314,6 +315,11 @@
                 const netDelta = (deltaInfo.delta / 1000).toFixed(1); // In $k
                 const deltaColor = deltaInfo.delta > 0 ? 'var(--success)' : (deltaInfo.delta < 0 ? 'var(--danger)' : 'var(--muted)');
 
+                // Squeeze Predictor: Net Delta Velocity vs Wallet Clusters
+                const deltaVelocity = Math.abs(deltaInfo.delta) / 50000; // Normalized
+                const wallIntensity = (m.clusters || []).length / 5;
+                const squeezeProb = Math.min(100, (deltaVelocity * 50 + wallIntensity * 50)).toFixed(0);
+
                 // Detect Conflict: Aggressive Selling hitting massive Buy Wall, or vice versa
                 const buyClusters = (m.clusters || []).filter(c => c.side === 'BUY');
                 const sellClusters = (m.clusters || []).filter(c => c.side === 'SELL');
@@ -352,6 +358,14 @@
                             </div>
                         </td>
                         <td>
+                            <div style="font-size:12px; font-weight:900; color:var(--accent)">
+                                ${squeezeProb}% <span style="font-size:8px; color:var(--muted)">IMBALANCED</span>
+                            </div>
+                            <div style="width:60px; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; margin-top:4px">
+                                <div style="width:${squeezeProb}%; height:100%; background:var(--accent); border-radius:2px"></div>
+                            </div>
+                        </td>
+                        <td>
                             <div style="max-width: 180px">
                                 ${(m.clusters || []).map(c => `
                                     <span class="cluster-tag ${c.side.toLowerCase()}">
@@ -367,7 +381,10 @@
                              (m.score > 75 ? '<span class="whale-safeguard">🐋 WHALE BACKED</span>' : '<span style="color:var(--muted); font-size:10px">NORMALIZED</span>')))}
                         </td>
                         <td>
-                            <button class="btn-inspect" onclick="window.open('/liquidity-guard.html#${m.symbol}')">Inspect Depth</button>
+                            <div style="display:flex; gap:8px">
+                                <button class="btn-inspect" onclick="window.open('/liquidity-visualizer.html#${m.symbol}')" style="background:var(--accent); border-color:var(--accent)">Heatmap</button>
+                                <button class="btn-inspect" onclick="window.open('/liquidity-guard.html#${m.symbol}')">Depth</button>
+                            </div>
                         </td>
                     </tr>
                 `;

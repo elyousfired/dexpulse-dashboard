@@ -5,6 +5,8 @@ import axios from 'axios';
 
 const HUNTS_FILE = path.join(process.cwd(), 'server', 'data', 'active_hunts.json');
 const CONFIG_FILE = path.join(process.cwd(), 'server', 'bot_config.json');
+const MARKET_AUDIT_FILE = path.join(process.cwd(), 'server', 'data', 'institutional_market.json');
+const LIVE_ORDER_FLOW_FILE = path.join(process.cwd(), 'server', 'data', 'live_order_flow.json');
 
 // ─── v58 Web-Based Debug Console ──────────────────
 let debugLogs: string[] = [];
@@ -134,6 +136,50 @@ async function handleEarlyExit(hunt: ActiveHunt, exitPrice: number, strategyName
     console.log(`[StrategyTracker] 🌤️ EARLY EXIT ${hunt.symbol} (${strategyName}) | PnL: ${finalPnl.toFixed(2)}% | Reason: ${reason}`);
 }
 
+async function applyInstitutionalRiskGuard(hunt: ActiveHunt, livePrice: number, strategyName: string): Promise<boolean> {
+    try {
+        if (!fs.existsSync(MARKET_AUDIT_FILE)) return false;
+        const auditData = JSON.parse(fs.readFileSync(MARKET_AUDIT_FILE, 'utf8'));
+        const symbolAudit = (auditData.marketAudit || []).find((m: any) => m.symbol === hunt.symbol);
+
+        if (!symbolAudit) return false;
+
+        // 1. LIQUIDITY TRAP GUARD (Highest Priority)
+        if (symbolAudit.isTrap) {
+            console.log(`[StrategyTracker] ⚠️ INSTITUTIONAL TRAP DETECTED for ${hunt.symbol}. Triggering Protection Exit...`);
+            await handleEarlyExit(hunt, livePrice, strategyName, "Institutional Liquidity Trap");
+            return true;
+        }
+
+        // 2. WHALE CONFLICT GUARD (Real-time Delta)
+        if (fs.existsSync(LIVE_ORDER_FLOW_FILE)) {
+            const deltaData = JSON.parse(fs.readFileSync(LIVE_ORDER_FLOW_FILE, 'utf8'));
+            const symbolDelta = deltaData.data ? deltaData.data[hunt.symbol] : null;
+
+            if (symbolDelta) {
+                const buyWalls = (symbolAudit.clusters || []).filter((c: any) => c.side === 'BUY');
+                // Danger: Net Sell Pressure > $50k hitting Buy Walls
+                if (symbolDelta.delta < -50000 && buyWalls.length > 0) {
+                    console.log(`[StrategyTracker] 💣 WHALE CONFLICT DETECTED for ${hunt.symbol}. Selling into Walls!`);
+                    await handleEarlyExit(hunt, livePrice, strategyName, "Whale Conflict (Selling into Walls)");
+                    return true;
+                }
+            }
+        }
+
+        // 3. LOW SCORE GUARD
+        if (symbolAudit.score < 15) {
+             console.log(`[StrategyTracker] 📉 LOW INSTITUTIONAL SCORE for ${hunt.symbol} (${symbolAudit.score}/100). Exiting...`);
+             await handleEarlyExit(hunt, livePrice, strategyName, `Low Institutional Score (${symbolAudit.score})`);
+             return true;
+        }
+
+    } catch (e: any) {
+        console.error(`[RiskGuard] Error for ${hunt.symbol}:`, e.message);
+    }
+    return false;
+}
+
 export async function processActiveHunts() {
     if (!fs.existsSync(HUNTS_FILE)) return;
 
@@ -215,6 +261,10 @@ export async function processActiveHunts() {
                 if (peakProfitPct >= 0.10 && trailingStop > stopPrice) {
                     stopPrice = trailingStop;
                 }
+
+                // ─── Phase 4.0: Institutional Risk Guard ───
+                const riskTriggered = await applyInstitutionalRiskGuard(hunt, livePrice, strategyName);
+                if (riskTriggered) continue;
 
                 // --- INSTANT MOON-SHOT TAKE PROFIT (+20%) ---
                 // If livePrice hits +20%, exit IMMEDIATELY to lock in huge gains

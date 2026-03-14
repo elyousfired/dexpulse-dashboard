@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquidity Heatmap — Whale Surveillance 5.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030712;
+            --surface: rgba(17, 24, 39, 0.7);
+            --accent: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #f3f4f6;
+            --muted: #9ca3af;
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            margin: 0; padding: 0; background: var(--bg); color: var(--text);
+            font-family: var(--font-main); overflow: hidden;
+        }
+
+        .dashboard {
+            display: grid; grid-template-columns: 300px 1fr; height: 100vh;
+        }
+
+        /* Sidebar Control Panel */
+        .sidebar {
+            background: var(--surface); border-right: 1px solid rgba(255,255,255,0.05);
+            padding: 24px; backdrop-filter: blur(20px); z-index: 10;
+        }
+
+        .header h1 { font-size: 20px; font-weight: 900; margin: 0; color: var(--accent); }
+        .header p { font-size: 12px; color: var(--muted); margin: 4px 0 24px 0; }
+
+        .control-group { margin-bottom: 24px; }
+        .control-group label { display: block; font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+
+        .symbol-badge {
+            background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2);
+            color: var(--accent); padding: 8px 12px; border-radius: 8px; font-weight: 900;
+            font-size: 18px; margin-bottom: 24px; display: inline-block;
+        }
+
+        .metric-card {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+            padding: 12px; border-radius: 12px; margin-bottom: 12px;
+        }
+        .metric-card .label { font-size: 10px; color: var(--muted); font-weight: 700; }
+        .metric-card .value { font-size: 16px; font-weight: 800; font-family: var(--font-mono); margin-top: 4px; }
+
+        /* Heatmap Canvas */
+        .viewport { position: relative; overflow: hidden; background: #000; }
+        canvas { width: 100%; height: 100%; display: block; }
+
+        .price-overlay {
+            position: absolute; right: 0; top: 0; bottom: 0; width: 80px;
+            background: rgba(0,0,0,0.5); border-left: 1px solid rgba(255,255,255,0.1);
+            display: flex; flex-direction: column; justify-content: space-between;
+            pointer-events: none; padding: 20px 0;
+        }
+        .price-tick { font-size: 10px; color: var(--muted); font-family: var(--font-mono); text-align: center; }
+
+        .loading-screen {
+            position: fixed; inset: 0; background: var(--bg); display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; transition: opacity 0.5s;
+        }
+        .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="loader" class="loading-screen">
+        <div class="spinner"></div>
+        <p style="margin-top: 20px; font-weight: 600;">Mapping Institutional Liquidity Zones...</p>
+    </div>
+
+    <div class="dashboard">
+        <div class="sidebar">
+            <div class="header">
+                <h1>HEATMAP 5.0</h1>
+                <p>Whale Surveillance Intelligence</p>
+            </div>
+
+            <div id="symbol-display" class="symbol-badge">LOADING...</div>
+
+            <div class="control-group">
+                <label>Institutional Metrics</label>
+                <div class="metric-card">
+                    <div class="label">MID PRICE</div>
+                    <div id="price-val" class="value">$0.00</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">NET DELTA (2H)</div>
+                    <div id="delta-val" class="value" style="color: var(--muted)">$0k</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">WHALE PROTECTION</div>
+                    <div id="status-val" class="value" style="font-size: 11px; color: var(--success)">ACTIVE 🛡️</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Legend</label>
+                <div style="font-size: 11px; color: var(--muted); line-height: 1.6;">
+                    <span style="color: #ff3300">■</span> Massive Sell Walls<br>
+                    <span style="color: #00cc66">■</span> Massive Buy Walls<br>
+                    <span style="color: #3b82f6">■</span> Price Mean Zone
+                </div>
+            </div>
+
+            <button onclick="window.location.href='/institutional-scanner.html'" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 40px;">← Back to Scanner</button>
+        </div>
+
+        <div class="viewport">
+            <canvas id="heatmap"></canvas>
+            <div id="price-scale" class="price-overlay"></div>
+        </div>
+    </div>
+
+    <script>
+        const symbol = window.location.hash.slice(1) || 'BTCUSDT';
+        document.getElementById('symbol-display').textContent = symbol.replace('USDT','');
+
+        const canvas = document.getElementById('heatmap');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        let history = []; // Each entry: { time: Date, bids: [], asks: [], price: number }
+        const MAX_HISTORY = 200;
+
+        function resize() {
+            width = canvas.parentElement.clientWidth;
+            height = canvas.parentElement.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.onresize = resize;
+        resize();
+
+        async function fetchDepth() {
+            try {
+                const res = await fetch(`https://api.binance.com/api/v3/depth?symbol=${symbol}&limit=100`);
+                const data = await res.json();
+                
+                const bids = data.bids.map(b => ({ p: parseFloat(b[0]), q: parseFloat(b[1]) }));
+                const asks = data.asks.map(a => ({ p: parseFloat(a[0]), q: parseFloat(a[1]) }));
+                const mid = (bids[0].p + asks[0].p) / 2;
+
+                history.push({ time: new Date(), bids, asks, price: mid });
+                if (history.length > MAX_HISTORY) history.shift();
+
+                updateUI(mid);
+                document.getElementById('loader').style.opacity = '0';
+                setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+
+                render();
+            } catch (e) {
+                console.error("Depth fetch failed:", e);
+            }
+        }
+
+        function updateUI(price) {
+            document.getElementById('price-val').textContent = `$${price.toFixed(price < 1 ? 5 : 2)}`;
+        }
+
+        function render() {
+            if (history.length < 2) return;
+            ctx.clearRect(0, 0, width, height);
+
+            const lastEntry = history[history.length - 1];
+            const minPrice = lastEntry.price * 0.985;
+            const maxPrice = lastEntry.price * 1.015;
+            const priceRange = maxPrice - minPrice;
+
+            function getY(p) {
+                return height - ((p - minPrice) / priceRange * height);
+            }
+
+            // Draw Heatmap
+            const colWidth = width / MAX_HISTORY;
+            history.forEach((entry, i) => {
+                const x = i * colWidth;
+
+                // Bids (Green)
+                entry.bids.forEach(b => {
+                    const y = getY(b.p);
+                    const opacity = Math.min(1, b.q / 10); // Simplified intensity
+                    ctx.fillStyle = `rgba(16, 185, 129, ${opacity * 0.5})`;
+                    ctx.fillRect(x, y, colWidth + 1, 2);
+                });
+
+                // Asks (Red)
+                entry.asks.forEach(a => {
+                    const y = getY(a.p);
+                    const opacity = Math.min(1, a.q / 10);
+                    ctx.fillStyle = `rgba(239, 68, 68, ${opacity * 0.5})`;
+                    ctx.fillRect(x, y, colWidth + 1, 2);
+                });
+
+                // Price Line (Blue)
+                ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+                ctx.lineWidth = 1;
+                if (i > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo((i-1) * colWidth, getY(history[i-1].price));
+                    ctx.lineTo(x, getY(entry.price));
+                    ctx.stroke();
+                }
+            });
+
+            // Update Side Scale
+            const scale = document.getElementById('price-scale');
+            scale.innerHTML = '';
+            for (let i = 0; i <= 10; i++) {
+                const p = maxPrice - (i / 10 * priceRange);
+                const tick = document.createElement('div');
+                tick.className = 'price-tick';
+                tick.textContent = p.toFixed(p < 1 ? 4 : 2);
+                scale.appendChild(tick);
+            }
+        }
+
+        setInterval(fetchDepth, 2000);
+    </script>
+</body>
+</html>
