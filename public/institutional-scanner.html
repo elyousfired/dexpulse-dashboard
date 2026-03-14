@@ -247,13 +247,22 @@
 
         let currentTab = 'market';
         let marketData = [];
+        let deltaData = {};
 
         async function fetchMarketData() {
             try {
                 document.getElementById('clock').textContent = new Date().toLocaleTimeString();
-                const res = await fetch(`${BASE}/api/market/institutional`);
-                const data = await res.json();
-                marketData = data.marketAudit || [];
+                
+                // Fetch Global Audit
+                const resAudit = await fetch(`${BASE}/api/market/institutional`);
+                const dataAudit = await resAudit.json();
+                marketData = dataAudit.marketAudit || [];
+
+                // Fetch Live Delta Flow
+                const resDelta = await fetch(`${BASE}/api/market/delta`);
+                const dataDelta = await resDelta.json();
+                deltaData = dataDelta.data || {};
+
                 render();
             } catch (e) {
                 console.error("Fetch failed:", e);
@@ -288,6 +297,11 @@
                 const ratio = m.ratio || 1;
                 const bidPct = (ratio / (ratio + 1)) * 100;
                 
+                // Merge Delta Info
+                const deltaInfo = deltaData[m.symbol] || { delta: 0, buyVol: 0, sellVol: 0, whaleEvents: [] };
+                const netDelta = (deltaInfo.delta / 1000).toFixed(1); // In $k
+                const deltaColor = deltaInfo.delta > 0 ? 'var(--success)' : (deltaInfo.delta < 0 ? 'var(--danger)' : 'var(--muted)');
+
                 let scoreColor = 'rgba(255, 255, 255, 0.05)';
                 if (m.score > 70) scoreColor = 'rgba(16, 185, 129, 0.2)';
                 else if (m.score > 40) scoreColor = 'rgba(245, 158, 11, 0.2)';
@@ -311,16 +325,23 @@
                             <div class="score-pill" style="background: ${scoreColor}">${m.score}/100</div>
                         </td>
                         <td>
-                            <div style="display:flex; align-items:center; gap:8px">
-                                <div class="pressure-bar">
-                                    <div class="bid-p" style="width:${bidPct}%"></div>
-                                    <div class="ask-p" style="width:${100 - bidPct}%"></div>
+                            <div style="display:flex; flex-direction:column; gap:4px">
+                                <div style="display:flex; align-items:center; gap:8px">
+                                    <div class="pressure-bar">
+                                        <div class="bid-p" style="width:${bidPct}%"></div>
+                                        <div class="ask-p" style="width:${100 - bidPct}%"></div>
+                                    </div>
+                                    <span style="font-size:10px; font-weight:800; color:var(--muted)">${ratio.toFixed(2)}x</span>
                                 </div>
-                                <span style="font-size:10px; font-weight:800; color:var(--muted)">${ratio.toFixed(2)}x</span>
+                                <div style="font-size:10px; font-weight:900; color:${deltaColor}; font-family:var(--font-mono)">
+                                    LIVE DELTA: ${deltaInfo.delta > 0 ? '+' : ''}${netDelta}k
+                                </div>
                             </div>
                         </td>
                         <td>
-                            ${m.isTrap ? '<span class="trap-badge">⚠️ LIQUIDITY TRAP</span>' : (m.score > 75 ? '<span class="whale-safeguard">🐋 WHALE BACKED</span>' : '<span style="color:var(--muted); font-size:10px">NORMALIZED</span>')}
+                            ${m.isTrap ? '<span class="trap-badge">⚠️ LIQUIDITY TRAP</span>' : 
+                             (deltaInfo.whaleEvents.length > 0 ? '<span class="whale-safeguard" style="border-color:var(--accent); color:var(--accent)">🐋 LIVE WHALE ACTIVITY</span>' : 
+                             (m.score > 75 ? '<span class="whale-safeguard">🐋 WHALE BACKED</span>' : '<span style="color:var(--muted); font-size:10px">NORMALIZED</span>'))}
                         </td>
                         <td>
                             <button class="btn-inspect" onclick="window.open('/liquidity-guard.html#${m.symbol}')">Inspect Depth</button>
@@ -331,7 +352,7 @@
         }
 
         fetchMarketData();
-        setInterval(fetchMarketData, 20000);
+        setInterval(fetchMarketData, 5000); // Faster refresh for live delta
     </script>
 </body>
 </html>

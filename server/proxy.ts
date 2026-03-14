@@ -27,6 +27,7 @@ const CACHE_DURATION = 30 * 1000; // 30 seconds
 const CONFIG_FILE = path.join(process.cwd(), 'server', 'bot_config.json');
 const HUNTS_FILE = path.join(process.cwd(), 'server', 'data', 'active_hunts.json');
 const MARKET_AUDIT_FILE = path.join(process.cwd(), 'server', 'data', 'institutional_market.json');
+const LIVE_ORDER_FLOW_FILE = path.join(process.cwd(), 'server', 'data', 'live_order_flow.json');
 
 // ─── Existing: Birdeye OHLCV Proxy ──────────────────────────
 
@@ -242,6 +243,19 @@ app.get('/api/market/institutional', (req, res) => {
         res.json(JSON.parse(content));
     } catch (error) {
         res.status(500).json({ error: 'Failed to read market audit data' });
+    }
+});
+
+app.get('/api/market/delta', (req, res) => {
+    try {
+        if (!fs.existsSync(LIVE_ORDER_FLOW_FILE)) {
+            return res.json({ timestamp: 0, data: {} });
+        }
+        const content = fs.readFileSync(LIVE_ORDER_FLOW_FILE, 'utf8').trim();
+        if (!content) return res.json({ timestamp: 0, data: {} });
+        res.json(JSON.parse(content));
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to read order flow data' });
     }
 });
 
