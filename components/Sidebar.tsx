@@ -45,6 +45,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeStrategy, onSelectStrate
                 ))}
 
                 <RotationMiniMonitor activeHunts={activeHunts} />
+
+                <div className="pt-4 mt-4 border-t border-white/5 space-y-1">
+                    <div className="px-4 mb-2">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Standalone Scientific Tools</span>
+                    </div>
+                    <a
+                        href="/liquidity-guard.html"
+                        target="_blank"
+                        className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all text-sm group"
+                    >
+                        <span className="text-xl group-hover:rotate-12 transition-transform">🛡️</span>
+                        <span>Liquidity Guard Audit</span>
+                    </a>
+                    <a
+                        href="/shadow-dashboard.html"
+                        target="_blank"
+                        className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all text-sm group"
+                    >
+                        <span className="text-xl group-hover:scale-110 transition-transform">👻</span>
+                        <span>Shadow Analysis</span>
+                    </a>
+                </div>
             </nav>
 
             <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/5">

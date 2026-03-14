@@ -19,6 +19,7 @@ const PORT = 3001;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(process.cwd())));
 
 // Simple memory cache
 const cache = new Map();
@@ -211,6 +212,21 @@ app.get('/api/hunts', (req, res) => {
     } catch (error) {
         console.error('[Proxy] Error reading hunts file:', (error as Error).message);
         res.json([]); // Return empty list instead of 500 to keep UI "Online"
+    }
+});
+
+// Shadow Portfolio API
+app.get('/api/shadow', (req, res) => {
+    try {
+        const shadowFile = path.join(process.cwd(), 'density-entree', 'shadow_positions.json');
+        if (!fs.existsSync(shadowFile)) {
+            return res.json([]);
+        }
+        const content = fs.readFileSync(shadowFile, 'utf8').trim();
+        if (!content) return res.json([]);
+        res.json(JSON.parse(content));
+    } catch (error) {
+        res.json([]);
     }
 });
 

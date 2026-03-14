@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Density Entry Tracker — Shadow Portfolio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0e17;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f59e0b, #ef4444, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+        .header p { color: #64748b; font-size: 13px; }
+        .live-dot {
+            display: inline-block; width: 8px; height: 8px;
+            border-radius: 50%; background: #22c55e;
+            animation: pulse 2s infinite; margin-right: 6px;
+        }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* Tabs */
+        .tabs {
+            display: flex; gap: 8px; justify-content: center; margin-bottom: 20px;
+        }
+        .tab {
+            background: #131a2b;
+            border: 1px solid #1e293b;
+            color: #94a3b8;
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tab:hover, .tab.active {
+            background: linear-gradient(135deg, #1e293b, #131a2b);
+            color: #e2e8f0;
+            border-color: #f59e0b;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center;
+        }
+        .stat {
+            background: #131a2b;
+            border: 1px solid #1e293b;
+            border-radius: 10px;
+            padding: 14px 20px;
+            text-align: center;
+            min-width: 140px;
+        }
+        .stat .label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+        .stat .value { font-size: 24px; font-weight: 800; margin-top: 4px; }
+
+        /* Sort bar */
+        .sort-bar {
+            display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center;
+        }
+        .sort-btn {
+            background: #131a2b;
+            border: 1px solid #1e293b;
+            color: #94a3b8;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .sort-btn:hover, .sort-btn.active {
+            background: #1e293b;
+            color: #e2e8f0;
+            border-color: #60a5fa;
+        }
+        .refresh-btn {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* Token Cards */
+        .token-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 14px;
+        }
+        .token-card {
+            background: linear-gradient(145deg, #131a2b, #0f1525);
+            border: 1px solid #1e293b;
+            border-radius: 14px;
+            padding: 16px;
+            transition: transform 0.2s, border-color 0.3s;
+        }
+        .token-card:hover { transform: translateY(-2px); }
+        .token-card.positive { border-color: #22c55e33; }
+        .token-card.negative { border-color: #ef444433; }
+
+        .token-top {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px;
+        }
+        .token-symbol { font-size: 18px; font-weight: 800; color: #60a5fa; }
+        .token-pnl {
+            font-size: 20px; font-weight: 800;
+            padding: 2px 10px; border-radius: 8px;
+        }
+        .token-pnl.green { background: #22c55e22; color: #22c55e; }
+        .token-pnl.red { background: #ef444422; color: #ef4444; }
+
+        .token-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        .token-details .item { display: flex; justify-content: space-between; }
+        .token-details .val { color: #e2e8f0; font-weight: 600; }
+
+        .price-bar {
+            margin-top: 10px;
+            height: 6px;
+            background: #1e293b;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .price-bar .fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s;
+        }
+        .price-bar .fill.green { background: linear-gradient(90deg, #22c55e, #4ade80); }
+        .price-bar .fill.red { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+        .density-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .density-badge.high { background: #f59e0b33; color: #f59e0b; }
+        .density-badge.medium { background: #3b82f633; color: #3b82f6; }
+        .density-badge.low { background: #64748b33; color: #94a3b8; }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            padding: 6px 0;
+            border-top: 1px solid #1e293b33;
+        }
+        .price-current { font-size: 16px; font-weight: 700; }
+        .price-entry { font-size: 12px; color: #64748b; }
+
+        /* Peak PnL highlight */
+        .peak-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #f59e0b33, #ef444433);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #f59e0b;
+            margin-top: 6px;
+        }
+
+        .section-title {
+            font-size: 18px; font-weight: 700; margin: 24px 0 14px;
+            color: #e2e8f0;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .loader { text-align: center; padding: 40px; color: #64748b; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔥 Density Entry Tracker</h1>
+        <p><span class="live-dot"></span>Multiple Strategies Live Tracking | <span id="lastUpdate">Loading...</span></p>
+    </div>
+
+    <div class="tabs">
+        <button class="tab" data-tab="tsl" onclick="switchTab('tsl')">🚀 Turbo TSL</button>
+        <button class="tab active" data-tab="shadow" onclick="switchTab('shadow')">👻 Shadow Portfolio</button>
+        <button class="tab" data-tab="rotation" onclick="switchTab('rotation')">🔄 VWAP Rotation</button>
+    </div>
+
+    <!-- ═══ SHADOW TAB ═══ -->
+    <div id="shadowTab">
+        <div class="stats-bar" id="shadowStats"><div class="loader">Loading...</div></div>
+        <div class="sort-bar" id="shadowSort">
+            <button class="sort-btn active" data-sort="peakPnl" onclick="setShadowSort('peakPnl')">🏔️ Peak PnL</button>
+            <button class="sort-btn" data-sort="currentPnl" onclick="setShadowSort('currentPnl')">📈 Current PnL</button>
+            <button class="sort-btn" data-sort="time" onclick="setShadowSort('time')">🕐 Recent</button>
+            <button class="sort-btn" data-sort="density" onclick="setShadowSort('density')">🎯 Density</button>
+            <button class="refresh-btn" onclick="loadAll()">🔄 Refresh</button>
+        </div>
+        <div class="token-grid" id="shadowGrid"><div class="loader">Loading shadow data...</div></div>
+    </div>
+
+    <!-- ═══ ROTATION TAB ═══ -->
+    <div id="rotationTab" class="hidden">
+        <div class="stats-bar" id="rotationStats"><div class="loader">Loading...</div></div>
+        <div class="sort-bar" id="rotationSort">
+            <button class="sort-btn active" data-sort="time" onclick="setRotationSort('time')">🕐 Recent</button>
+            <button class="sort-btn" data-sort="pnl" onclick="setRotationSort('pnl')">📈 Best PnL</button>
+            <button class="sort-btn" data-sort="density" onclick="setRotationSort('density')">🎯 Density</button>
+            <button class="sort-btn" data-sort="active" onclick="setRotationSort('active')">🟢 Active</button>
+            <button class="refresh-btn" onclick="loadAll()">🔄 Refresh</button>
+        </div>
+        <div class="token-grid" id="rotationGrid"><div class="loader">Loading...</div></div>
+    </div>
+
+    <!-- ═══ TSL TAB ═══ -->
+    <div id="tslTab" class="hidden">
+        <div class="stats-bar" id="tslStats"><div class="loader">Loading...</div></div>
+        <div class="sort-bar" id="tslSort">
+            <button class="sort-btn active" data-sort="time" onclick="setTslSort('time')">🕐 Recent</button>
+            <button class="sort-btn" data-sort="pnl" onclick="setTslSort('pnl')">📈 Best PnL</button>
+            <button class="sort-btn" data-sort="density" onclick="setTslSort('density')">🎯 Density</button>
+            <button class="sort-btn" data-sort="active" onclick="setTslSort('active')">🟢 Active</button>
+            <button class="refresh-btn" onclick="loadAll()">🔄 Refresh</button>
+        </div>
+        <div class="token-grid" id="tslGrid"><div class="loader">Loading...</div></div>
+    </div>
+
+    <script>
+        const BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://187.124.33.159:3001' : `http://${window.location.hostname}:3001`;
+
+        let shadowData = [];
+        let rotationData = [];
+        let tslData = [];
+        let shadowSort = 'peakPnl';
+        let rotationSort = 'time';
+        let tslSort = 'time';
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            document.getElementById('shadowTab').classList.toggle('hidden', tab !== 'shadow');
+            document.getElementById('rotationTab').classList.toggle('hidden', tab !== 'rotation');
+            document.getElementById('tslTab').classList.toggle('hidden', tab !== 'tsl');
+        }
+
+        function setShadowSort(s) {
+            shadowSort = s;
+            document.querySelectorAll('#shadowSort .sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === s));
+            renderShadow();
+        }
+        function setRotationSort(s) {
+            rotationSort = s;
+            document.querySelectorAll('#rotationSort .sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === s));
+            renderRotation();
+        }
+        function setTslSort(s) {
+            tslSort = s;
+            document.querySelectorAll('#tslSort .sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === s));
+            renderTsl();
+        }
+
+        async function loadAll() {
+            try {
+                const [shadowRes, huntsRes] = await Promise.all([
+                    fetch(`${BASE}/api/shadow`),
+                    fetch(`${BASE}/api/hunts`)
+                ]);
+                shadowData = await shadowRes.json();
+                const hunts = await huntsRes.json();
+                rotationData = hunts.filter(h => h.strategyId === 'golden_rotation');
+                tslData = hunts.filter(h => h.strategyId === 'vwap_tsl');
+                renderShadow();
+                renderRotation();
+                renderTsl();
+                document.getElementById('lastUpdate').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+            } catch (e) {
+                document.getElementById('shadowGrid').innerHTML = `<div class="loader">❌ ${e.message}</div>`;
+            }
+        }
+
+        // ═══ SHADOW RENDER ═══
+        function renderShadow() {
+            if (shadowData.length === 0) {
+                document.getElementById('shadowStats').innerHTML = '<div class="loader">No shadow positions yet — waiting for tracker...</div>';
+                document.getElementById('shadowGrid').innerHTML = '<div class="loader">👻 Shadow tracker not started yet. Run: pm2 start density-entree/shadow-tracker.mjs --name shadow-tracker</div>';
+                return;
+            }
+
+            const totalCurrent = shadowData.reduce((s, p) => s + (p.currentPnl || 0), 0);
+            const totalPeak = shadowData.reduce((s, p) => s + (p.peakPnl || 0), 0);
+            const avgPeak = totalPeak / shadowData.length;
+            const positive = shadowData.filter(p => (p.currentPnl || 0) > 0).length;
+            const bestPeak = shadowData.reduce((b, p) => (p.peakPnl || 0) > (b.peakPnl || 0) ? p : b, shadowData[0]);
+
+            document.getElementById('shadowStats').innerHTML = `
+                <div class="stat">
+                    <div class="label">Positions</div>
+                    <div class="value" style="color:#a78bfa">${shadowData.length}</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Current Sum PnL</div>
+                    <div class="value" style="color:${totalCurrent >= 0 ? '#22c55e' : '#ef4444'}">${totalCurrent >= 0 ? '+' : ''}${totalCurrent.toFixed(2)}%</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Peak Sum PnL</div>
+                    <div class="value" style="color:#f59e0b">+${totalPeak.toFixed(2)}%</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Avg Peak</div>
+                    <div class="value" style="color:#f59e0b">+${avgPeak.toFixed(2)}%</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Best Peak</div>
+                    <div class="value" style="color:#22c55e">${bestPeak.symbol?.replace('USDT', '')} +${(bestPeak.peakPnl || 0).toFixed(1)}%</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Now Positive</div>
+                    <div class="value" style="color:#22c55e">${positive}/${shadowData.length}</div>
+                </div>
+            `;
+
+            let sorted = [...shadowData];
+            switch (shadowSort) {
+                case 'peakPnl': sorted.sort((a, b) => (b.peakPnl || 0) - (a.peakPnl || 0)); break;
+                case 'currentPnl': sorted.sort((a, b) => (b.currentPnl || 0) - (a.currentPnl || 0)); break;
+                case 'time': sorted.sort((a, b) => new Date(b.entryTime) - new Date(a.entryTime)); break;
+                case 'density': sorted.sort((a, b) => (b.density || 0) - (a.density || 0)); break;
+            }
+
+            document.getElementById('shadowGrid').innerHTML = sorted.map(p => {
+                const cur = p.currentPnl || 0;
+                const peak = p.peakPnl || 0;
+                const cls = cur >= 0 ? 'positive' : 'negative';
+                const pnlCls = cur >= 0 ? 'green' : 'red';
+                const d = p.density || 0;
+                let dCls = 'low';
+                if (d >= 60) dCls = 'high';
+                else if (d >= 30) dCls = 'medium';
+                const barW = Math.min(Math.abs(peak) / 10 * 100, 100);
+                const dur = Math.round((Date.now() - new Date(p.entryTime)) / 60000);
+                const durStr = dur >= 1440 ? `${Math.floor(dur/1440)}d${Math.floor((dur%1440)/60)}h` :
+                    dur >= 60 ? `${Math.floor(dur/60)}h${dur%60}m` : `${dur}m`;
+
+                return `
+                    <div class="token-card ${cls}">
+                        <div class="token-top">
+                            <div>
+                                <span class="token-symbol">${p.symbol.replace('USDT', '')}</span>
+                                <span class="density-badge ${dCls}">D: ${d}%</span>
+                            </div>
+                            <span class="token-pnl ${pnlCls}">${cur >= 0 ? '+' : ''}${cur.toFixed(2)}%</span>
+                        </div>
+                        <div class="peak-badge">🏔️ Peak: +${peak.toFixed(2)}% ($${p.peakPrice || '—'})</div>
+                        <div class="price-row">
+                            <div>
+                                <div class="price-current" style="color:${cur >= 0 ? '#22c55e' : '#ef4444'}">$${p.currentPrice || '—'}</div>
+                                <div class="price-entry">Entry: $${p.entryPrice}</div>
+                            </div>
+                            <span style="font-size:11px;color:#64748b">${durStr} ago</span>
+                        </div>
+                        <div class="price-bar"><div class="fill ${peak > 0 ? 'green' : 'red'}" style="width:${barW}%"></div></div>
+                        <div class="token-details" style="margin-top:8px;">
+                            <div class="item"><span>RSI</span><span class="val">${p.entryRsi || '—'}</span></div>
+                            <div class="item"><span>Distance</span><span class="val">${p.entryDistance || '—'}</span></div>
+                            ${p.entryReason ? `<div class="item" style="grid-column:1/3"><span>Entry</span><span class="val" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.entryReason}">${p.entryReason}</span></div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<div class="loader">No data</div>';
+        }
+
+        // ═══ ROTATION RENDER ═══
+        function renderRotation() {
+            const active = rotationData.filter(h => h.status === 'active');
+            const closed = rotationData.filter(h => h.status === 'closed');
+            const withPnl = closed.filter(h => h.pnl !== undefined);
+            const totalPnl = withPnl.reduce((s, h) => s + h.pnl, 0);
+            const activePnl = active.reduce((s, h) => {
+                const p = h.currentPrice ? ((h.currentPrice - h.entryPrice) / h.entryPrice) * 100 : 0;
+                return s + p;
+            }, 0);
+
+            document.getElementById('rotationStats').innerHTML = `
+                <div class="stat">
+                    <div class="label">Active</div>
+                    <div class="value" style="color:#22c55e">${active.length}</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Total Trades</div>
+                    <div class="value" style="color:#a78bfa">${rotationData.length}</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Closed PnL</div>
+                    <div class="value" style="color:${totalPnl >= 0 ? '#22c55e' : '#ef4444'}">${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}%</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Active PnL</div>
+                    <div class="value" style="color:${activePnl >= 0 ? '#22c55e' : '#ef4444'}">${activePnl >= 0 ? '+' : ''}${activePnl.toFixed(2)}%</div>
+                </div>
+            `;
+
+            let sorted = [...rotationData];
+            switch (rotationSort) {
+                case 'time': sorted.sort((a, b) => new Date(b.entryTime) - new Date(a.entryTime)); break;
+                case 'pnl': sorted.sort((a, b) => {
+                    const ap = a.pnl ?? ((a.currentPrice - a.entryPrice) / a.entryPrice * 100);
+                    const bp = b.pnl ?? ((b.currentPrice - b.entryPrice) / b.entryPrice * 100);
+                    return bp - ap;
+                }); break;
+                case 'density': sorted.sort((a, b) => (b.density || 0) - (a.density || 0)); break;
+                case 'active': sorted.sort((a, b) => (b.status === 'active' ? 1 : 0) - (a.status === 'active' ? 1 : 0)); break;
+            }
+
+            document.getElementById('rotationGrid').innerHTML = sorted.slice(0, 100).map(h => {
+                const pnl = h.pnl ?? (h.currentPrice ? ((h.currentPrice - h.entryPrice) / h.entryPrice) * 100 : 0);
+                const cls = pnl >= 0 ? 'positive' : 'negative';
+                const pnlCls = pnl >= 0 ? 'green' : 'red';
+                const isActive = h.status === 'active';
+                const d = h.density || 0;
+                let dCls = 'low'; if (d >= 60) dCls = 'high'; else if (d >= 30) dCls = 'medium';
+                const barW = Math.min(Math.abs(pnl) / 5 * 100, 100);
+
+                return `
+                    <div class="token-card ${cls}">
+                        <div class="token-top">
+                            <div>
+                                <span class="token-symbol">${h.symbol.replace('USDT', '')}</span>
+                                <span style="font-size:10px;padding:2px 6px;border-radius:6px;font-weight:700;text-transform:uppercase;${isActive ? 'background:#22c55e22;color:#22c55e' : 'background:#64748b22;color:#64748b'}">${isActive ? '● LIVE' : 'CLOSED'}</span>
+                            </div>
+                            <span class="token-pnl ${pnlCls}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%</span>
+                        </div>
+                        <div class="price-row">
+                            <div>
+                                <div class="price-current" style="color:${pnl >= 0 ? '#22c55e' : '#ef4444'}">$${h.currentPrice || h.exitPrice || h.entryPrice}</div>
+                                <div class="price-entry">Entry: $${h.entryPrice}</div>
+                            </div>
+                            <span class="density-badge ${dCls}">D: ${d}%</span>
+                        </div>
+                        <div class="price-bar"><div class="fill ${pnlCls}" style="width:${barW}%"></div></div>
+                        <div class="token-details" style="margin-top:8px;">
+                            ${h.reason ? `<div class="item" style="grid-column:1/3"><span>Exit</span><span class="val" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${h.reason}">${h.reason}</span></div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<div class="loader">No data</div>';
+        }
+
+        // ═══ TSL RENDER ═══
+        function renderTsl() {
+            const active = tslData.filter(h => h.status === 'active');
+            const closed = tslData.filter(h => h.status === 'closed');
+            const withPnl = closed.filter(h => h.pnl !== undefined);
+            const totalPnl = withPnl.reduce((s, h) => s + h.pnl, 0);
+            const activePnl = active.reduce((s, h) => {
+                const p = h.currentPrice ? ((h.currentPrice - h.entryPrice) / h.entryPrice) * 100 : 0;
+                return s + p;
+            }, 0);
+
+            document.getElementById('tslStats').innerHTML = `
+                <div class="stat">
+                    <div class="label">Live Active Slots</div>
+                    <div class="value" style="color:#22c55e">${active.length}</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Total Trades Tracked</div>
+                    <div class="value" style="color:#a78bfa">${tslData.length}</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Total Closed PnL</div>
+                    <div class="value" style="color:${totalPnl >= 0 ? '#22c55e' : '#ef4444'}">${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}%</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Unrealized PnL (Net)</div>
+                    <div class="value" style="color:${activePnl >= 0 ? '#22c55e' : '#ef4444'}">${activePnl >= 0 ? '+' : ''}${activePnl.toFixed(2)}%</div>
+                </div>
+            `;
+
+            let sorted = [...tslData];
+            switch (tslSort) {
+                case 'time': sorted.sort((a, b) => new Date(b.entryTime) - new Date(a.entryTime)); break;
+                case 'pnl': sorted.sort((a, b) => {
+                    const ap = a.pnl ?? ((a.currentPrice - a.entryPrice) / a.entryPrice * 100);
+                    const bp = b.pnl ?? ((b.currentPrice - b.entryPrice) / b.entryPrice * 100);
+                    return bp - ap;
+                }); break;
+                case 'density': sorted.sort((a, b) => (b.density || 0) - (a.density || 0)); break;
+                case 'active': sorted.sort((a, b) => (b.status === 'active' ? 1 : 0) - (a.status === 'active' ? 1 : 0)); break;
+            }
+
+            document.getElementById('tslGrid').innerHTML = sorted.slice(0, 100).map(h => {
+                const pnl = h.pnl ?? (h.currentPrice ? ((h.currentPrice - h.entryPrice) / h.entryPrice) * 100 : 0);
+                const cls = pnl >= 0 ? 'positive' : 'negative';
+                const pnlCls = pnl >= 0 ? 'green' : 'red';
+                const isActive = h.status === 'active';
+                const d = h.density || 0;
+                let dCls = 'low'; if (d >= 60) dCls = 'high'; else if (d >= 30) dCls = 'medium';
+                const barW = Math.min(Math.abs(pnl) / 5 * 100, 100);
+
+                let badgeHtml = '';
+                if (isActive) {
+                     badgeHtml = h.tier > 1 ? `<span style="font-size:10px;padding:2px 6px;border-radius:6px;font-weight:700;text-transform:uppercase;background:#a78bfa44;color:#a78bfa">🚀 TIER ${h.tier} TSL</span>` : `<span style="font-size:10px;padding:2px 6px;border-radius:6px;font-weight:700;text-transform:uppercase;background:#22c55e22;color:#22c55e">● LIVE</span>`;
+                } else {
+                     badgeHtml = '<span style="font-size:10px;padding:2px 6px;border-radius:6px;font-weight:700;text-transform:uppercase;background:#64748b22;color:#64748b">CLOSED</span>';
+                }
+
+                return `
+                    <div class="token-card ${cls}">
+                        <div class="token-top">
+                            <div>
+                                <span class="token-symbol">${h.symbol.replace('USDT', '')}</span>
+                                ${badgeHtml}
+                            </div>
+                            <span class="token-pnl ${pnlCls}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%</span>
+                        </div>
+                        <div class="price-row">
+                            <div>
+                                <div class="price-current" style="color:${pnl >= 0 ? '#22c55e' : '#ef4444'}">$${h.currentPrice || h.exitPrice || h.entryPrice}</div>
+                                <div class="price-entry">Entry: $${h.entryPrice}</div>
+                            </div>
+                            <span class="density-badge ${dCls}">D: ${d}%</span>
+                        </div>
+                        <div class="price-bar"><div class="fill ${pnlCls}" style="width:${barW}%"></div></div>
+                        <div class="token-details" style="margin-top:8px;">
+                            <div class="item"><span>Risk Type</span><span class="val">SL -5% / Trail 5-15%</span></div>
+                            ${h.reason ? `<div class="item" style="grid-column:1/3"><span>Exit</span><span class="val" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${h.reason}">${h.reason}</span></div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<div class="loader">Waiting for TSL Scanner to find entries...</div>';
+        }
+
+        // Auto-refresh
+        loadAll();
+        setInterval(loadAll, 15000);
+    </script>
+</body>
+</html>
