@@ -55,7 +55,7 @@ async function fetchDepth(symbol) {
 
 function calculateInstitutionalMetric(ticker, depth) {
     if (!depth || !depth.bids || !depth.bids.length || !depth.asks || !depth.asks.length) {
-        return { score: 0, isTrap: true, spread: 1, ratio: 0, depth1: 0 };
+        return { score: 0, isTrap: true, spread: 1, ratio: 0, depth1: 0, clusters: [] };
     }
 
     const bids = depth.bids.map(b => ({ p: parseFloat(b[0]), q: parseFloat(b[1]) }));
@@ -70,6 +70,18 @@ function calculateInstitutionalMetric(ticker, depth) {
     const bidDepth1 = bids.filter(b => b.p >= mid * 0.99).reduce((s, x) => s + (x.p * x.q), 0);
     const askDepth1 = asks.filter(a => a.p <= mid * 1.01).reduce((s, x) => s + (x.p * x.q), 0);
     const totalDepth1 = bidDepth1 + askDepth1;
+
+    // Detect Clusters (Walls > 3x average depth in its side)
+    const avgBidQ = bids.reduce((s, x) => s + x.q, 0) / bids.length;
+    const avgAskQ = asks.reduce((s, x) => s + x.q, 0) / asks.length;
+    
+    const clusters = [];
+    bids.slice(0, 50).forEach(b => {
+        if (b.q > avgBidQ * 4) clusters.push({ side: 'BUY', price: b.p, qty: b.q, strength: (b.q / avgBidQ).toFixed(1) });
+    });
+    asks.slice(0, 50).forEach(a => {
+        if (a.q > avgAskQ * 4) clusters.push({ side: 'SELL', price: a.p, qty: a.q, strength: (a.q / avgAskQ).toFixed(1) });
+    });
 
     const pressureRatio = askDepth1 > 0 ? bidDepth1 / askDepth1 : 1;
     const vol24h = parseFloat(ticker.quoteVolume);
@@ -96,7 +108,8 @@ function calculateInstitutionalMetric(ticker, depth) {
         ratio: pressureRatio,
         depth1: totalDepth1,
         bidDepth1,
-        askDepth1
+        askDepth1,
+        clusters: clusters.slice(0, 5) // Top 5 strongest clusters
     };
 }
 

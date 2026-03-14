@@ -173,6 +173,18 @@
             padding: 4px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.05);
         }
 
+        .cluster-tag {
+            font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 4px;
+            display: inline-block; margin: 2px; font-family: var(--font-mono);
+        }
+        .cluster-tag.buy { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .cluster-tag.sell { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+
+        .conflict-alert {
+            animation: flash red 1s infinite alternate; font-weight: 900; color: var(--danger);
+        }
+        @keyframes flash-red { from { opacity: 1; } to { opacity: 0.3; } }
+
         /* Order Book Preview Bar */
         .pressure-bar {
             width: 100px; height: 6px; background: rgba(255,255,255,0.05);
@@ -223,9 +235,9 @@
                         <th>Asset</th>
                         <th>Price</th>
                         <th>24h Change</th>
-                        <th>24h Volume</th>
                         <th>Institutional Score</th>
-                        <th>Order Flow Pressure</th>
+                        <th>Live Order Flow Delta</th>
+                        <th>Liquidity Clusters (Walls)</th>
                         <th>Risk Audit</th>
                         <th>Action</th>
                     </tr>
@@ -302,13 +314,18 @@
                 const netDelta = (deltaInfo.delta / 1000).toFixed(1); // In $k
                 const deltaColor = deltaInfo.delta > 0 ? 'var(--success)' : (deltaInfo.delta < 0 ? 'var(--danger)' : 'var(--muted)');
 
+                // Detect Conflict: Aggressive Selling hitting massive Buy Wall, or vice versa
+                const buyClusters = (m.clusters || []).filter(c => c.side === 'BUY');
+                const sellClusters = (m.clusters || []).filter(c => c.side === 'SELL');
+                const isConflict = (deltaInfo.delta < -50000 && buyClusters.length > 0) || (deltaInfo.delta > 50000 && sellClusters.length > 0);
+
                 let scoreColor = 'rgba(255, 255, 255, 0.05)';
                 if (m.score > 70) scoreColor = 'rgba(16, 185, 129, 0.2)';
                 else if (m.score > 40) scoreColor = 'rgba(245, 158, 11, 0.2)';
                 else scoreColor = 'rgba(239, 68, 68, 0.2)';
 
                 return `
-                    <tr>
+                    <tr class="${isConflict ? 'whale-conflict-detected' : ''}">
                         <td>
                             <div class="sym-block">
                                 <div class="sym-icon">${m.symbol[0]}</div>
@@ -320,28 +337,34 @@
                         </td>
                         <td style="font-family: var(--font-mono)">$${parseFloat(m.price).toFixed(m.price < 1 ? 5 : 2)}</td>
                         <td class="change-val ${parseFloat(m.change) >= 0 ? 'up' : 'down'}">${parseFloat(m.change).toFixed(2)}%</td>
-                        <td style="font-family: var(--font-mono)">$${vol.toFixed(2)}M</td>
                         <td>
-                            <div class="score-pill" style="background: ${scoreColor}">${m.score}/100</div>
+                            <div class="score-pill" style="background: ${scoreColor}">${m.score}/100${m.score > 80 ? ' ⭐' : ''}</div>
                         </td>
                         <td>
                             <div style="display:flex; flex-direction:column; gap:4px">
-                                <div style="display:flex; align-items:center; gap:8px">
-                                    <div class="pressure-bar">
-                                        <div class="bid-p" style="width:${bidPct}%"></div>
-                                        <div class="ask-p" style="width:${100 - bidPct}%"></div>
-                                    </div>
-                                    <span style="font-size:10px; font-weight:800; color:var(--muted)">${ratio.toFixed(2)}x</span>
+                                <div style="font-size:12px; font-weight:900; color:${deltaColor}; font-family:var(--font-mono)">
+                                    ${deltaInfo.delta > 0 ? '▲' : '▼'} ${netDelta}k
                                 </div>
-                                <div style="font-size:10px; font-weight:900; color:${deltaColor}; font-family:var(--font-mono)">
-                                    LIVE DELTA: ${deltaInfo.delta > 0 ? '+' : ''}${netDelta}k
+                                <div class="pressure-bar">
+                                    <div class="bid-p" style="width:${bidPct}%"></div>
+                                    <div class="ask-p" style="width:${100 - bidPct}%"></div>
                                 </div>
                             </div>
                         </td>
                         <td>
-                            ${m.isTrap ? '<span class="trap-badge">⚠️ LIQUIDITY TRAP</span>' : 
+                            <div style="max-width: 180px">
+                                ${(m.clusters || []).map(c => `
+                                    <span class="cluster-tag ${c.side.toLowerCase()}">
+                                        ${c.side === 'BUY' ? 'B' : 'S'} $${parseFloat(c.price).toFixed(c.price < 1 ? 4 : 2)} (${c.strength}x)
+                                    </span>
+                                `).join('') || '<span style="color:var(--muted); font-size:10px">NO MAJOR WALLS</span>'}
+                            </div>
+                        </td>
+                        <td>
+                            ${isConflict ? '<span class="trap-badge" style="background:var(--danger); color:#fff; animation: pulse 0.5s infinite">💣 WHALE CONFLICT</span>' : 
+                             (m.isTrap ? '<span class="trap-badge">⚠️ LIQUIDITY TRAP</span>' : 
                              (deltaInfo.whaleEvents.length > 0 ? '<span class="whale-safeguard" style="border-color:var(--accent); color:var(--accent)">🐋 LIVE WHALE ACTIVITY</span>' : 
-                             (m.score > 75 ? '<span class="whale-safeguard">🐋 WHALE BACKED</span>' : '<span style="color:var(--muted); font-size:10px">NORMALIZED</span>'))}
+                             (m.score > 75 ? '<span class="whale-safeguard">🐋 WHALE BACKED</span>' : '<span style="color:var(--muted); font-size:10px">NORMALIZED</span>')))}
                         </td>
                         <td>
                             <button class="btn-inspect" onclick="window.open('/liquidity-guard.html#${m.symbol}')">Inspect Depth</button>
