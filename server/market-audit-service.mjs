@@ -54,7 +54,9 @@ async function fetchDepth(symbol) {
 }
 
 function calculateInstitutionalMetric(ticker, depth) {
-    if (!depth) return { score: 0, trap: true, spread: 1, ratio: 0, depth1: 0 };
+    if (!depth || !depth.bids || !depth.bids.length || !depth.asks || !depth.asks.length) {
+        return { score: 0, isTrap: true, spread: 1, ratio: 0, depth1: 0 };
+    }
 
     const bids = depth.bids.map(b => ({ p: parseFloat(b[0]), q: parseFloat(b[1]) }));
     const asks = depth.asks.map(a => ({ p: parseFloat(a[0]), q: parseFloat(a[1]) }));
