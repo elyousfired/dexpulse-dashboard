@@ -66,7 +66,7 @@ function calculateInstitutionalMetric(ticker, depth) {
 
     // Depth in 1%
     const bidDepth1 = bids.filter(b => b.p >= mid * 0.99).reduce((s, x) => s + (x.p * x.q), 0);
-    const askDepth1 = asks.filter(a => a.p <= mid * 1.01).reduce((s, x) => s + (a.p * a.q), 0);
+    const askDepth1 = asks.filter(a => a.p <= mid * 1.01).reduce((s, x) => s + (x.p * x.q), 0);
     const totalDepth1 = bidDepth1 + askDepth1;
 
     const pressureRatio = askDepth1 > 0 ? bidDepth1 / askDepth1 : 1;
