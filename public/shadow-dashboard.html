@@ -478,11 +478,22 @@
             const active = tslData.filter(h => h.status === 'active');
             const closed = tslData.filter(h => h.status === 'closed');
             const withPnl = closed.filter(h => h.pnl !== undefined);
+            
             const HISTORICAL_PNL = 39.78; // Locked in pre-v59 reset
             const HISTORICAL_TRADES = 33;
 
-            const todayPnl = withPnl.reduce((s, h) => s + h.pnl, 0);
+            // The user wants to see "Yesterday (4 trades)" which are carryovers in active_hunts.json
+            // If they closed before 2026-03-14T23:59:59Z, their PnL is ALREADY in HISTORICAL_PNL.
+            const cutoffDate = new Date('2026-03-14T23:59:59Z');
+            const yesterdayHunts = withPnl.filter(h => new Date(h.exitTime || h.entryTime) <= cutoffDate);
+            const todayHunts = withPnl.filter(h => new Date(h.exitTime || h.entryTime) > cutoffDate);
+
+            const yesterdayPnl = yesterdayHunts.reduce((s, h) => s + h.pnl, 0);
+            const todayPnl = todayHunts.reduce((s, h) => s + h.pnl, 0);
+            
+            // Total PnL adds only Today's PnL because Yesterday's is already rolled into HISTORICAL_PNL
             const totalPnl = HISTORICAL_PNL + todayPnl;
+            
             const activePnl = active.reduce((s, h) => {
                 const p = h.currentPrice ? ((h.currentPrice - h.entryPrice) / h.entryPrice) * 100 : 0;
                 return s + p;
@@ -490,20 +501,24 @@
 
             document.getElementById('tslStats').innerHTML = `
                 <div class="stat">
-                    <div class="label">Live Active Slots</div>
+                    <div class="label" style="color:#64748b; font-size:9px">Live Active Slots</div>
                     <div class="value" style="color:#22c55e">${active.length}</div>
                 </div>
                 <div class="stat" style="border-color:#f59e0b44">
-                    <div class="label" style="color:#f59e0b">History (${HISTORICAL_TRADES} Trades)</div>
+                    <div class="label" style="color:#f59e0b; font-size:9px">History (${HISTORICAL_TRADES} Trades)</div>
                     <div class="value" style="color:#22c55e">+${HISTORICAL_PNL.toFixed(2)}%</div>
                 </div>
+                <div class="stat" style="border-color:#a78bfa44">
+                    <div class="label" style="color:#a78bfa; font-size:9px">Yesterday (${yesterdayHunts.length} Trades)</div>
+                    <div class="value" style="color:${yesterdayPnl >= 0 ? '#22c55e' : '#ef4444'}">${yesterdayPnl >= 0 ? '+' : ''}${yesterdayPnl.toFixed(2)}%</div>
+                </div>
                 <div class="stat" style="border-color:#60a5fa44">
-                    <div class="label" style="color:#60a5fa">Today (${closed.length} Trades)</div>
+                    <div class="label" style="color:#60a5fa; font-size:9px">Today (${todayHunts.length} Trades)</div>
                     <div class="value" style="color:${todayPnl >= 0 ? '#22c55e' : '#ef4444'}">${todayPnl >= 0 ? '+' : ''}${todayPnl.toFixed(2)}%</div>
                 </div>
-                <div class="stat" style="background:#1e293bcc; border-color:#8b5cf666">
-                    <div class="label" style="color:#e2e8f0; font-weight:700">All-Time Net PnL</div>
-                    <div class="value" style="color:${totalPnl >= 0 ? '#22c55e' : '#ef4444'}">${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}%</div>
+                <div class="stat" style="background:#1e293bcc; border-color:#8b5cf666; padding: 14px 24px">
+                    <div class="label" style="color:#e2e8f0; font-weight:800; font-size:10px">All-Time Net PnL</div>
+                    <div class="value" style="color:${totalPnl >= 0 ? '#22c55e' : '#ef4444'}; font-size: 28px">${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}%</div>
                 </div>
             `;
 
