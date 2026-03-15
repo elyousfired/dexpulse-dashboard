@@ -479,7 +479,10 @@
             const closed = tslData.filter(h => h.status === 'closed');
             const withPnl = closed.filter(h => h.pnl !== undefined);
             const HISTORICAL_PNL = 39.78; // Locked in pre-v59 reset
-            const totalPnl = HISTORICAL_PNL + withPnl.reduce((s, h) => s + h.pnl, 0);
+            const HISTORICAL_TRADES = 33;
+
+            const todayPnl = withPnl.reduce((s, h) => s + h.pnl, 0);
+            const totalPnl = HISTORICAL_PNL + todayPnl;
             const activePnl = active.reduce((s, h) => {
                 const p = h.currentPrice ? ((h.currentPrice - h.entryPrice) / h.entryPrice) * 100 : 0;
                 return s + p;
@@ -490,17 +493,17 @@
                     <div class="label">Live Active Slots</div>
                     <div class="value" style="color:#22c55e">${active.length}</div>
                 </div>
-                <div class="stat">
-                    <div class="label">Total Trades Tracked</div>
-                    <div class="value" style="color:#a78bfa">${tslData.length}</div>
+                <div class="stat" style="border-color:#f59e0b44">
+                    <div class="label" style="color:#f59e0b">History (${HISTORICAL_TRADES} Trades)</div>
+                    <div class="value" style="color:#22c55e">+${HISTORICAL_PNL.toFixed(2)}%</div>
                 </div>
-                <div class="stat">
-                    <div class="label" title="Includes +39.78% from pre-v59 Reset" style="cursor:help; border-bottom: 2px dotted #64748b; padding-bottom: 2px;">Total Closed PNL ℹ️</div>
+                <div class="stat" style="border-color:#60a5fa44">
+                    <div class="label" style="color:#60a5fa">Today (${closed.length} Trades)</div>
+                    <div class="value" style="color:${todayPnl >= 0 ? '#22c55e' : '#ef4444'}">${todayPnl >= 0 ? '+' : ''}${todayPnl.toFixed(2)}%</div>
+                </div>
+                <div class="stat" style="background:#1e293bcc; border-color:#8b5cf666">
+                    <div class="label" style="color:#e2e8f0; font-weight:700">All-Time Net PnL</div>
                     <div class="value" style="color:${totalPnl >= 0 ? '#22c55e' : '#ef4444'}">${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}%</div>
-                </div>
-                <div class="stat">
-                    <div class="label">Unrealized PnL (Net)</div>
-                    <div class="value" style="color:${activePnl >= 0 ? '#22c55e' : '#ef4444'}">${activePnl >= 0 ? '+' : ''}${activePnl.toFixed(2)}%</div>
                 </div>
             `;
 
