@@ -478,7 +478,8 @@
             const active = tslData.filter(h => h.status === 'active');
             const closed = tslData.filter(h => h.status === 'closed');
             const withPnl = closed.filter(h => h.pnl !== undefined);
-            const totalPnl = withPnl.reduce((s, h) => s + h.pnl, 0);
+            const HISTORICAL_PNL = 39.78; // Locked in pre-v59 reset
+            const totalPnl = HISTORICAL_PNL + withPnl.reduce((s, h) => s + h.pnl, 0);
             const activePnl = active.reduce((s, h) => {
                 const p = h.currentPrice ? ((h.currentPrice - h.entryPrice) / h.entryPrice) * 100 : 0;
                 return s + p;
@@ -494,7 +495,7 @@
                     <div class="value" style="color:#a78bfa">${tslData.length}</div>
                 </div>
                 <div class="stat">
-                    <div class="label">Total Closed PnL</div>
+                    <div class="label" title="Includes +39.78% from pre-v59 Reset" style="cursor:help; border-bottom: 2px dotted #64748b; padding-bottom: 2px;">Total Closed PNL ℹ️</div>
                     <div class="value" style="color:${totalPnl >= 0 ? '#22c55e' : '#ef4444'}">${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}%</div>
                 </div>
                 <div class="stat">
