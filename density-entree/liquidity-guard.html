@@ -358,8 +358,7 @@
     </div>
 
     <script>
-        const BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? 'http://187.124.33.159:3001' : `http://${window.location.hostname}:3001`;
+        const BASE = `http://${window.location.hostname}:3001`;
 
         async function fetchDepth(symbol) {
             try {

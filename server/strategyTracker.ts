@@ -30,6 +30,7 @@ export interface ActiveHunt {
     strategyId?: string;
     density?: number;
     lastVwapAnchor?: number;
+    reason?: string;
 }
 
 
@@ -45,16 +46,18 @@ export interface ActiveHunt {
         }
 
         const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-        // Check for special reset flag or missing totalBalance
-        if (config.totalBalance === undefined || config.forceResetV50) {
-            console.log("[StrategyTracker] 🛠️ v5.0 Reset Triggered: Initializing balance ($100) and wiping history...");
+        if (config.totalBalance === undefined) {
+            console.log("[StrategyTracker] 🛠️ Balance missing. Initializing to $100.0 without wiping hunts...");
             config.totalBalance = 100.0;
-            delete config.forceResetV50; // Remove flag if present
             fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+        }
 
-            // Hard Wipe Hunts
+        if (config.forceResetV50) {
+            console.log("[StrategyTracker] 🛠️ v5.0 Hard Reset Triggered: Wiping history...");
+            delete config.forceResetV50;
+            fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
             fs.writeFileSync(HUNTS_FILE, JSON.stringify([], null, 2));
-            console.log("[StrategyTracker] ✅ Reset Complete. Starting fresh from $100.");
+            console.log("[StrategyTracker] ✅ Reset Complete.");
         } else {
             console.log(`[StrategyTracker] 🛰️ V5.0 Active. Current Balance: $${config.totalBalance}`);
         }
@@ -132,6 +135,11 @@ export async function processActiveHunts() {
         let modified = false;
 
         for (const hunt of active) {
+            // v60: Skip exit logic for Turbo TSL (managed by its own standalone script)
+            if (hunt.strategyId === 'vwap_tsl') {
+                continue;
+            }
+
             try {
                 // Fetch the last 2 candles (current open and last closed)
                 const url = `https://api.binance.com/api/v3/klines?symbol=${hunt.symbol}&interval=15m&limit=2`;
@@ -205,18 +213,19 @@ export async function processActiveHunts() {
                     continue;
                 }
 
-                // --- EMERGENCY HARD STOP (LIVE PRICE CHECK) ---
+                // --- EMERGANCY HARD STOP (LIVE PRICE CHECK) ---
                 // If livePrice (5s update) hits stop level, exit IMMEDIATELY without waiting for candle close
                 if (livePrice <= stopPrice) {
                     console.log(`[StrategyTracker] 🚨 EMERGENCY STOP TRIGGERED: ${hunt.symbol} at $${livePrice} (Stop: $${stopPrice})`);
+
+                    const reason = stopPrice > hunt.entryPrice ? 'Take Profit/BE (Emergency)' : 'Hard Stop-Loss (Emergency)';
 
                     hunt.status = 'closed';
                     hunt.exitPrice = livePrice;
                     hunt.exitTime = new Date().toISOString();
                     const finalPnl = ((hunt.exitPrice - hunt.entryPrice) / hunt.entryPrice) * 100;
                     hunt.pnl = finalPnl;
-
-                    const reason = stopPrice > hunt.entryPrice ? 'Take Profit/BE (Emergency)' : 'Hard Stop-Loss (Emergency)';
+                    hunt.reason = reason; // v60: Ensure reason is ALWAYS set
 
                     await sendTelegram([
                         `🚨 <b>${strategyName.toUpperCase()} EMERGENCY EXIT: #${hunt.symbol}</b>`,

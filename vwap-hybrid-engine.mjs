@@ -2,8 +2,8 @@
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- *  🛰️  VWAP TSL — STANDALONE AUTONOMOUS BOT (Turbo Edition)
- *  📊  Performance Baseline: +40.22% Realized PnL (March 14)
+ *  🛰️  VWAP HYBRID ENGINE — UNIFIED SNIPER & TURBO (Turbo V2)
+ *  📊  Logic: High Density (>=85%) = Sniper (30% Cap) | Else = Turbo (2% Cap)
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
@@ -29,36 +29,29 @@ const CONFIG = {
     trackerIntervalMs: 10 * 1000,    
     apiDelayMs:        60,           
 
-    // Rotation Slots
-    maxSlots: 50,                     // 50 concurrent positions (Saturday Fleet)
+    // Fleet Architecture (Total 50 Slots)
+    maxTotalSlots: 50,
+    maxSniperSlots: 3,  // Heavy Capital slots (Condition A)
+
+    // Capital Allocation %
+    sniperAllocationPct: 0.30, // 30% of total balance per Sniper
+    turboAllocationPct:  0.02, // 2% of total balance per Turbo
 
     // Entry Filters
-    maxDistancePct:    0.015,        
-    minVolume24h:      1_000_000,    
-    entryRsiMin:       45,           
+    maxDistancePct:    0.015,
+    minVolume24h:      1_000_000,
+    entryRsiMin:       45,
     entryRsiMax:       65,
-    volatilityMinPct:  0.005,        
+    sniperDensityTrigger: 85, // Density >= 85 triggers Sniper Mode
 
-    // Exit: Stop Loss
-    hardStopPct: 0.05,               // -5% Hard Stop Loss
-    
-    // Exit: Trailing Tiers (Saturday Logic)
-    tier2TriggerPct:   0.08,         // +8% peak → Lock 5% trail
-    tier3TriggerPct:   0.20,         // +20% peak → Lock 10% trail
-    tier4TriggerPct:   0.40,         // +40% peak → Lock 15% trail
+    // Exit: Stop Loss & Trailing (Proven Saturday Logic)
+    hardStopPct: 0.05,
+    tier2TriggerPct:   0.08, // +8% peak -> Lock 5% trail
+    tier3TriggerPct:   0.20, // +20% peak -> Lock 10% trail
+    tier4TriggerPct:   0.40, // +40% peak -> Lock 15% trail
 
-    // Stagnation Swap
-    stagnationAgeMs:   60 * 60 * 1000,  
-    stagnationMinPnl:  0.1,             
-    stagnationMaxPnl:  1.0,              
-
-    // Cooldown & Cache
-    cooldownMs:        4 * 60 * 60 * 1000,
-    vwapCacheDurationMs: 15 * 60 * 1000,
-
-    stablecoins: [
-        'USDT', 'USDC', 'DAI', 'FDUSD', 'BUSD', 'TUSD', 'EUR', 'GBP'
-    ]
+    cooldownMs: 4 * 60 * 60 * 1000,
+    vwapCacheDurationMs: 15 * 60 * 1000
 };
 
 // ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -131,27 +124,8 @@ async function fetchTopSymbols(topN = 300) {
         .slice(0, topN).map(t => t.symbol);
 }
 
-async function fetchLivePrice(symbol) {
-    const klines = await fetchKlines(symbol, '15m', 2);
-    if (!klines || klines.length < 2) return null;
-    return { candleClose: klines[0].close, livePrice: klines[1].close };
-}
-
-async function fetchRSI5m(symbol) {
-    const klines = await fetchKlines(symbol, '5m', 20);
-    if (klines.length < 15) return { rsi: 50 };
-    const closes = klines.map(k => k.close);
-    let gains = 0, losses = 0;
-    for (let i = closes.length - 14; i < closes.length; i++) {
-        const diff = closes[i] - closes[i - 1];
-        if (diff >= 0) gains += diff; else losses -= diff;
-    }
-    const rsi = losses === 0 ? 100 : 100 - (100 / (1 + (gains / losses)));
-    return { rsi };
-}
-
 // ╔═══════════════════════════════════════════════════════════════════════════════╗
-// ║  SECTION 4: VWAP CALCULATIONS                                                 ║
+// ║  SECTION 4: VWAP & DENSITY                                                    ║
 // ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 function getMondayTimestamp(ts) {
@@ -200,24 +174,44 @@ function calculateDensity(max, mid, min) {
     return Math.max(0, Math.round(100 * (1 - (diff / (avg * 0.02)))));
 }
 
+async function fetchRSI5m(symbol) {
+    const klines = await fetchKlines(symbol, '5m', 20);
+    if (klines.length < 15) return { rsi: 50 };
+    const closes = klines.map(k => k.close);
+    let gains = 0, losses = 0;
+    for (let i = closes.length - 14; i < closes.length; i++) {
+        const diff = closes[i] - closes[i - 1];
+        if (diff >= 0) gains += diff; else losses -= diff;
+    }
+    const rsi = losses === 0 ? 100 : 100 - (100 / (1 + (gains / losses)));
+    return { rsi };
+}
+
 // ╔═══════════════════════════════════════════════════════════════════════════════╗
-// ║  SECTION 5: SCANNER & TRACKER LOOPS                                           ║
+// ║  SECTION 5: HYBRID LOGIC & LOOPS                                               ║
 // ╚═══════════════════════════════════════════════════════════════════════════════╝
 
-async function runScanner() {
+async function runHybridScanner() {
     if (isScannerRunning) return;
     isScannerRunning = true;
     try {
-        const topSymbols = await fetchTopSymbols(300);
+        const config = loadConfig();
+        const balance = config.totalBalance || 100.0;
         const allHunts = loadHunts();
-        let active = allHunts.filter(h => h.status === 'active' && h.strategyId === 'vwap_tsl');
+        let activeHunts = allHunts.filter(h => h.status === 'active');
         
-        for (const symbol of topSymbols) {
-            if (active.length >= CONFIG.maxSlots) break;
+        let sniperCount = activeHunts.filter(h => h.mode === 'Sniper').length;
+        let turboCount = activeHunts.filter(h => h.mode === 'Turbo' || !h.mode).length;
+
+        if (activeHunts.length >= CONFIG.maxTotalSlots) return;
+
+        const symbols = await fetchTopSymbols(300);
+        for (const symbol of symbols) {
+            if (activeHunts.length >= CONFIG.maxTotalSlots) break;
             if (allHunts.find(h => h.symbol === symbol && h.status === 'active')) continue;
 
             const vwap = await calculateVwapChannel(symbol);
-            if (!vwap || vwap.mid <= vwap.max) continue; // Must be Mid > Max (Breakout)
+            if (!vwap || vwap.mid <= vwap.max) continue;
             
             const dist = (vwap.last15mClose - vwap.mid) / vwap.mid;
             if (dist > CONFIG.maxDistancePct) continue;
@@ -226,35 +220,53 @@ async function runScanner() {
             if (rsi < CONFIG.entryRsiMin || rsi > CONFIG.entryRsiMax) continue;
 
             const density = calculateDensity(vwap.max, vwap.mid, vwap.min);
+            
+            // DUAL-MODE LOGIC
+            let mode = 'Turbo';
+            let allocation = CONFIG.turboAllocationPct;
+            
+            if (density >= CONFIG.sniperDensityTrigger && sniperCount < CONFIG.maxSniperSlots) {
+                mode = 'Sniper';
+                allocation = CONFIG.sniperAllocationPct;
+                sniperCount++;
+            } else {
+                turboCount++;
+            }
+
+            const capital = Math.floor((balance * allocation) * 100) / 100;
             const entryPrice = vwap.last15mClose;
             
             const newHunt = {
                 symbol, entryPrice, entryTime: new Date().toISOString(),
-                peakPrice: entryPrice, status: 'active', strategyId: 'vwap_tsl',
-                tier: 1, density, capital: 10.0
+                peakPrice: entryPrice, status: 'active', strategyId: 'vwap_hybrid',
+                mode, density, capital, tier: 1
             };
             
             allHunts.push(newHunt);
             saveHunts(allHunts);
-            active.push(newHunt);
-            log('Entry', '🔥', `ENTERED ${symbol} at $${entryPrice} | Density: ${density}%`);
-            await sendTelegram(`🚀 <b>VWAP TSL ENTRY: #${symbol}</b>\nPrice: $${entryPrice}\nDensity: ${density}%`);
+            activeHunts.push(newHunt);
+            
+            log('Entry', mode === 'Sniper' ? '🎯' : '🚀', `${mode.toUpperCase()} ENTRY: ${symbol} at $${entryPrice} | Density: ${density}% | Cap: $${capital}`);
+            await sendTelegram(`${mode === 'Sniper' ? '🎯' : '🚀'} <b>VWAP HYBRID ${mode.toUpperCase()}: #${symbol}</b>\nPrice: $${entryPrice}\nDensity: ${density}%\nCapital: $${capital}`);
+            
             await new Promise(r => setTimeout(r, CONFIG.apiDelayMs));
         }
     } finally { isScannerRunning = false; }
 }
 
-async function runTracker() {
+async function runHybridTracker() {
     if (isTrackerRunning) return;
     isTrackerRunning = true;
     try {
         const hunts = loadHunts();
-        const active = hunts.filter(h => h.status === 'active' && h.strategyId === 'vwap_tsl');
+        const active = hunts.filter(h => h.status === 'active' && h.strategyId === 'vwap_hybrid');
         for (const hunt of active) {
-            const priceData = await fetchLivePrice(hunt.symbol);
-            if (!priceData) continue;
+            const res = await axios.get(`https://api.binance.com/api/v3/klines?symbol=${hunt.symbol}&interval=15m&limit=2`);
+            if (!res.data[1]) continue;
             
-            const { candleClose, livePrice } = priceData;
+            const candleClose = parseFloat(res.data[0][4]);
+            const livePrice = parseFloat(res.data[1][4]);
+            
             hunt.currentPrice = livePrice;
             if (candleClose > hunt.peakPrice) hunt.peakPrice = candleClose;
 
@@ -276,22 +288,30 @@ async function runTracker() {
                 hunt.exitPrice = livePrice;
                 hunt.exitTime = new Date().toISOString();
                 const pnl = ((livePrice - hunt.entryPrice) / hunt.entryPrice) * 100;
-                log('Exit', '💸', `CLOSED ${hunt.symbol} | PnL: ${pnl.toFixed(2)}%`);
-                await sendTelegram(`🔴 <b>VWAP TSL EXIT: #${hunt.symbol}</b>\nPnL: ${pnl.toFixed(2)}%\nReason: TSL/Stop`);
+                
+                // Update Balance
+                const config = loadConfig();
+                const profitAmount = hunt.capital * (pnl / 100);
+                config.totalBalance = (config.totalBalance || 100.0) + profitAmount;
+                fs.writeFileSync(CONFIG.configFile, JSON.stringify(config, null, 2));
+
+                log('Exit', '💸', `CLOSED ${hunt.symbol} | PnL: ${pnl.toFixed(2)}% | Net: $${profitAmount.toFixed(2)}`);
+                await sendTelegram(`🔴 <b>HYBRID EXIT: #${hunt.symbol}</b>\nMode: ${hunt.mode || 'Turbo'}\nPnL: ${pnl.toFixed(2)}%\nBalance: $${config.totalBalance.toFixed(2)}`);
             } else if (tier > hunt.tier) {
                 hunt.tier = tier;
                 await sendTelegram(`💎 <b>TIER ${tier} UPGRADE: #${hunt.symbol}</b>`);
             }
         }
         saveHunts(hunts);
-    } finally { isTrackerRunning = false; }
+    } catch (err) { log('Tracker', '❌', err.message); }
+    finally { isTrackerRunning = false; }
 }
 
 // ╔═══════════════════════════════════════════════════════════════════════════════╗
 // ║  BOOT                                                                         ║
 // ╚═══════════════════════════════════════════════════════════════════════════════╝
 
-log('Boot', '🚀', 'Turbo TSL Saturday Edition Starting...');
-setInterval(runScanner, CONFIG.scanIntervalMs);
-setInterval(runTracker, CONFIG.trackerIntervalMs);
-runScanner(); runTracker();
+log('Boot', '⚔️', 'Hybrid Double-Engine V2 Starting...');
+setInterval(runHybridScanner, CONFIG.scanIntervalMs);
+setInterval(runHybridTracker, CONFIG.trackerIntervalMs);
+runHybridScanner(); runHybridTracker();

@@ -1,0 +1,137 @@
+[
+  {
+    "group": "LOSERS",
+    "symbol": "RUNEUSDT",
+    "pnl": -0.44247787610619504,
+    "density": 0,
+    "vol24h": 1095914.2704,
+    "entryDistance": "0.46%",
+    "entryRsi": 50
+  },
+  {
+    "group": "LOSERS",
+    "symbol": "DUSKUSDT",
+    "pnl": -1.626898047722344,
+    "density": 17,
+    "vol24h": 2673766.8779,
+    "entryDistance": "0.75%",
+    "entryRsi": 60
+  },
+  {
+    "group": "LOSERS",
+    "symbol": "BERAUSDT",
+    "pnl": -5.580693815987938,
+    "density": 0,
+    "vol24h": 10399378.290661,
+    "entryDistance": "0.63%",
+    "entryRsi": 55
+  },
+  {
+    "group": "LOSERS",
+    "symbol": "XTZUSDT",
+    "pnl": -1.0114453021027336,
+    "density": 39,
+    "vol24h": 506229.89127,
+    "entryDistance": "0.58%",
+    "entryRsi": 52
+  },
+  {
+    "group": "LOSERS",
+    "symbol": "XLMUSDT",
+    "pnl": -0.9068923821039911,
+    "density": 0,
+    "vol24h": 5218060.9202,
+    "entryDistance": "0.26%",
+    "entryRsi": 51
+  },
+  {
+    "group": "LOSERS",
+    "symbol": "ZAMAUSDT",
+    "pnl": -0.4516711833784977,
+    "density": 0,
+    "vol24h": 3435728.39452,
+    "entryDistance": "0.90%",
+    "entryRsi": 57
+  },
+  {
+    "group": "LOSERS",
+    "symbol": "1000CHEEMSUSDT",
+    "pnl": -5.029013539651834,
+    "density": 0,
+    "vol24h": 662295.182802,
+    "entryDistance": "0.00%",
+    "entryRsi": 47
+  },
+  {
+    "group": "LOSERS",
+    "symbol": "RSRUSDT",
+    "pnl": -0.9315068493150733,
+    "density": 0,
+    "vol24h": 3322722.672461,
+    "entryDistance": "1.10%",
+    "entryRsi": 61
+  },
+  {
+    "group": "LOSERS",
+    "symbol": "STOUSDT",
+    "pnl": -0.41724617524340546,
+    "density": 0,
+    "vol24h": 704339.24407,
+    "entryDistance": "0.12%",
+    "entryRsi": 53
+  },
+  {
+    "group": "LOSERS",
+    "symbol": "SCRUSDT",
+    "pnl": -0.9788654060066652,
+    "density": 0,
+    "vol24h": 1702980.726794,
+    "entryDistance": "0.37%",
+    "entryRsi": 64
+  },
+  {
+    "group": "LOSERS",
+    "symbol": "AXSUSDT",
+    "pnl": -2.019386106623579,
+    "density": 0,
+    "vol24h": 16068791.36386,
+    "entryDistance": "1.13%",
+    "entryRsi": 59
+  },
+  {
+    "group": "LOSERS",
+    "symbol": "EDENUSDT",
+    "pnl": -5.741626794258372,
+    "density": 0,
+    "vol24h": 1431348.89459,
+    "entryDistance": "0.21%",
+    "entryRsi": 53
+  },
+  {
+    "group": "WINNERS",
+    "symbol": "DEGOUSDT",
+    "pnl": 5.949008498583586,
+    "density": 0,
+    "vol24h": 9189651.54609,
+    "entryDistance": "0.16%",
+    "entryRsi": 54
+  },
+  {
+    "group": "WINNERS",
+    "symbol": "TRUMPUSDT",
+    "pnl": 7.245263696876597,
+    "density": 0,
+    "vol24h": 102691192.676765,
+    "entryDistance": "0.32%",
+    "entryRsi": 63
+  },
+  {
+    "group": "WINNERS",
+    "symbol": "CUSDT",
+    "pnl": 21.48760330578512,
+    "density": 0,
+    "vol24h": 15998007.87486,
+    "entryDistance": "0.20%",
+    "entryRsi": 50
+  }
+]

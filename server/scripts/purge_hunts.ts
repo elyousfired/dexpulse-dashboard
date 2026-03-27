@@ -27,9 +27,9 @@ function purgeHunts() {
         const isRotation = h.strategyId === 'golden_rotation';
         const isStable = STABLECOINS.some(s => h.symbol.includes(s));
 
-        // If it's a rotation stablecoin, or if we want a TOTAL reset of rotation:
-        if (isRotation && (isStable || h.status === 'active')) {
-            console.log(`🗑️ Purging: ${h.symbol} (${isStable ? 'Stablecoin' : 'Reset'})`);
+        // If it's a rotation stablecoin:
+        if (isRotation && isStable) {
+            console.log(`🗑️ Purging: ${h.symbol} (Stablecoin)`);
             return false;
         }
         return true;

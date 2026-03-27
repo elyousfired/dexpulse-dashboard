@@ -10,10 +10,12 @@ module.exports = {
             }
         },
         {
-            name: 'monitor-live',
+            name: 'vwap-tsl',
             script: 'node',
-            args: 'monitor-live.mjs',
-            watch: false
+            args: 'vwap-tsl-standalone.mjs',
+            watch: false,
+            autorestart: true,
+            restart_delay: 10000
         }
     ]
 };

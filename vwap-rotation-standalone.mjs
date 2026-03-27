@@ -477,8 +477,8 @@ function shouldSkipSymbol(symbol, allHunts) {
         baseAsset.includes('USD') || baseAsset.includes('DAI') || baseAsset.includes('EUR');
     if (isStable) return 'Stablecoin';
 
-    // Already active in Rotation?
-    if (allHunts.find(h => h.symbol === symbol && h.status === 'active' && h.strategyId === 'golden_rotation')) {
+    // Already active in ANY strategy?
+    if (allHunts.find(h => h.symbol === symbol && h.status === 'active')) {
         return 'Already active';
     }
 

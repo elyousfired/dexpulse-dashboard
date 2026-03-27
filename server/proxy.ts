@@ -29,6 +29,11 @@ const HUNTS_FILE = path.join(process.cwd(), 'server', 'data', 'active_hunts.json
 const MARKET_AUDIT_FILE = path.join(process.cwd(), 'server', 'data', 'institutional_market.json');
 const LIVE_ORDER_FLOW_FILE = path.join(process.cwd(), 'server', 'data', 'live_order_flow.json');
 
+// --- FUTURES V3 PATHS ---
+const CONFIG_FILE_FUTURES = path.join(process.cwd(), 'server', 'bot_config_futures.json');
+const HUNTS_FILE_FUTURES = path.join(process.cwd(), 'server', 'data', 'active_hunts_futures.json');
+const HISTORY_FILE_FUTURES = path.join(process.cwd(), 'server', 'data', 'trades_history_futures.json');
+
 // ─── Existing: Birdeye OHLCV Proxy ──────────────────────────
 
 app.get('/api/ohlcv', async (req, res) => {
@@ -201,6 +206,31 @@ app.post('/api/config/telegram', (req, res) => {
     }
 });
 
+// ─── Futures V3 Configuration Sync ────────────────────────
+app.get('/api/config/futures', (req, res) => {
+    try {
+        if (fs.existsSync(CONFIG_FILE_FUTURES)) {
+            const config = JSON.parse(fs.readFileSync(CONFIG_FILE_FUTURES, 'utf8'));
+            res.json(config);
+        } else {
+            res.json({ enabled: true, totalBalance: 100, botToken: '', chatId: '' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to read futures config' });
+    }
+});
+
+app.post('/api/config/futures', (req, res) => {
+    try {
+        const config = req.body;
+        fs.writeFileSync(CONFIG_FILE_FUTURES, JSON.stringify(config, null, 2));
+        console.log('[Proxy] Futures Bot config updated.');
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to save futures config' });
+    }
+});
+
 app.get('/api/hunts', (req, res) => {
     try {
         if (!fs.existsSync(HUNTS_FILE)) {
@@ -213,9 +243,107 @@ app.get('/api/hunts', (req, res) => {
         res.json(hunts);
     } catch (error) {
         console.error('[Proxy] Error reading hunts file:', (error as Error).message);
-        res.json([]); // Return empty list instead of 500 to keep UI "Online"
+        res.json([]); 
     }
 });
+
+app.get('/api/hunts/futures', (req, res) => {
+    try {
+        let hunts = [];
+        let history = [];
+        if (fs.existsSync(HUNTS_FILE_FUTURES)) hunts = JSON.parse(fs.readFileSync(HUNTS_FILE_FUTURES, 'utf8'));
+        if (fs.existsSync(HISTORY_FILE_FUTURES)) history = JSON.parse(fs.readFileSync(HISTORY_FILE_FUTURES, 'utf8'));
+        
+        // Combine active and history for the dashboard view
+        res.json([...hunts, ...history]);
+    } catch (error) {
+        console.error('[Proxy] Error reading futures hunts:', (error as Error).message);
+        res.json([]);
+    }
+});
+
+app.get('/api/hunts/html', (req, res) => {
+    try {
+        const HISTORY_FILE = path.join(process.cwd(), 'server', 'data', 'trades_history.json');
+        let hunts = [];
+        let history = [];
+        if (fs.existsSync(HUNTS_FILE)) hunts = JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8'));
+        if (fs.existsSync(HISTORY_FILE)) history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
+        
+        // Combine and dedup
+        const combined = [...hunts, ...history];
+        const unique = new Map();
+        combined.forEach(h => {
+            const id = `${h.symbol}-${h.entryTime}`;
+            if (!unique.has(id) || h.status === 'closed') unique.set(id, h);
+        });
+
+        const all = Array.from(unique.values()).sort((a, b) => new Date(b.entryTime).getTime() - new Date(a.entryTime).getTime());
+        
+        const rows = all.map((h: any) => {
+
+            const pnl = h.status === 'active' 
+                ? (h.currentPrice ? ((h.currentPrice - h.entryPrice) / h.entryPrice * 100) : 0)
+                : (h.pnl || 0);
+            const pnlClass = pnl >= 0 ? 'pos' : 'neg';
+            return `
+                <tr>
+                    <td style="font-weight:bold">${h.symbol}</td>
+                    <td>$${h.entryPrice >= 1 ? h.entryPrice.toFixed(4) : h.entryPrice.toFixed(8)}</td>
+                    <td class="${pnlClass}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%</td>
+                    <td><span style="padding:4px 8px; border-radius:4px; font-size:11px; background:${h.status === 'active' ? '#1e40af' : '#334155'}">${h.status.toUpperCase()}</span></td>
+                    <td>${h.mode || 'Turbo'}</td>
+                    <td style="color:#94a3b8; font-size:12px">${new Date(h.entryTime).toLocaleString()}</td>
+                </tr>`;
+        }).join('');
+
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Live Hunts API - HTML View</title>
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px; margin: 0; }
+                    .container { max-width: 1000px; margin: 0 auto; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #1e293b; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+                    th, td { padding: 16px; text-align: left; border-bottom: 1px solid #334155; }
+                    th { background: #334155; color: #94a3b8; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em; }
+                    tr:hover { background: rgba(255,255,255,0.02); }
+                    .pos { color: #22c55e; }
+                    .neg { color: #ef4444; }
+                    h1 { color: #38bdf8; font-size: 24px; margin-bottom: 8px; }
+                    p { color: #94a3b8; margin-bottom: 24px; }
+                    .refresh { font-size: 12px; color: #64748b; margin-top: 20px; text-align: center; }
+                </style>
+                <script>setInterval(() => window.location.reload(), 10000);</script>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>🎯 Institutional Hunt Activity (HTML)</h1>
+                    <p>Live endpoint for direct browser monitoring of the Hybrid Bot V2.</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Entry factor</th>
+                                <th>PnL %</th>
+                                <th>Status</th>
+                                <th>Mode</th>
+                                <th>Timestamp (UTC)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    <div class="refresh">Auto-refreshing every 10 seconds...</div>
+                </div>
+            </body>
+            </html>`;
+
+        res.send(html);
+    } catch (e: any) { res.status(500).send('Error generating report: ' + e.message); }
+});
+
 
 // Shadow Portfolio API
 app.get('/api/shadow', (req, res) => {
@@ -299,15 +427,16 @@ function pruneCache() {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Proxy server running on http://localhost:${PORT}`);
 
-    // Start 24/7 background processes
+    // [Isolating Turbo TSL] Legacy processes disabled to prevent conflicts.
+    // Standalone TSL bot (vwap-tsl-standalone.mjs) now handles all logic.
     console.log('[Proxy] Initializing 24/7 background processes...');
 
-    // 1. Signal Scanner (Every 2 minutes for faster live detection)
+    // 1. Signal Scanner
     setInterval(async () => {
         try { await runSignalScanner(); } catch (e) { console.error('[Proxy] Scanner Error:', e); }
     }, 2 * 60 * 1000);
 
-    // 2. Strategy Tracker (Every 5 seconds)
+    // 2. Strategy Tracker
     setInterval(async () => {
         try {
             console.log('[Heartbeat] Tracker & Rotation Active...');
@@ -315,7 +444,7 @@ app.listen(PORT, '0.0.0.0', () => {
         } catch (e) { console.error('[Proxy] Tracker Error:', e); }
     }, 5 * 1000);
 
-    // 3. Rotation Engine (Every 5 seconds for hyper-fast response)
+    // 3. Rotation Engine
     setInterval(async () => {
         try { await runRotationEngine(); } catch (e) { console.error('[Proxy] Rotation Error:', e); }
     }, 5 * 1000);
