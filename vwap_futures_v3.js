@@ -191,11 +191,11 @@ async function calculateVwapChannel(symbol) {
 }
 
 /**
- * Entry Utility: RSI5m, Volume Spike, and Momentum Filter
+ * Entry Utility: Directional Momentum & RSI Filter
  */
-async function fetchRSI5m(symbol) {
+async function fetchSignal5m(symbol, direction) {
     const k5 = await fetchKlines(symbol, '5m', 20);
-    if (k5.length < 15) return { rsi: 50, passedFilters: false };
+    if (k5.length < 15) return { rsi: 50, passed: false };
 
     // --- VOLUME SPIKE ---
     const volumes = k5.map(k => k.volume);
@@ -207,8 +207,15 @@ async function fetchRSI5m(symbol) {
     const lastClose = k5[k5.length - 1].close;
     const prevClose = k5[k5.length - 2].close;
 
-    if (volRatio < 1.5 || lastVol < 100000 || lastClose <= prevClose) {
-        return { rsi: 50, passedFilters: false };
+    // 🧠 Directional momentum: Ensure candle matches entry direction
+    if (direction === 'LONG') {
+        if (lastClose <= prevClose) return { rsi: 50, passed: false };
+    } else {
+        if (lastClose >= prevClose) return { rsi: 50, passed: false };
+    }
+
+    if (volRatio < 1.5 || lastVol < 100000) {
+        return { rsi: 50, passed: false };
     }
 
     let gains = 0, losses = 0;
@@ -217,7 +224,7 @@ async function fetchRSI5m(symbol) {
         if (diff >= 0) gains += diff; else losses -= diff;
     }
     const rsi = losses === 0 ? 100 : 100 - (100 / (1 + (gains / losses)));
-    return { rsi: Math.round(rsi), passedFilters: true };
+    return { rsi: Math.round(rsi), passed: true };
 }
 
 /**
@@ -249,6 +256,33 @@ async function runHybridScanner() {
 
         log('Scan', '📡', `Avail: $${avail.toFixed(2)} | Slots: ${activeHunts.length}/10`);
 
+        // --- BTC TREND FILTER ---
+        const btc = await calculateVwapChannel('BTCUSDT');
+        let btcMode = 'RANGE';
+        if (btc.last > btc.max) btcMode = 'BULLISH';
+        else if (btc.last < btc.min) btcMode = 'BEARISH';
+        
+        log('Market', '₿', `BTC Status: ${btcMode} (Price: $${btc.last})`);
+        
+        // --- 🧪 BTC PRECISION CONFIRMATION (15m Close) ---
+        const btcCandles = await fetchKlines('BTCUSDT', '15m', 2);
+        if (btcCandles.length < 2) return;
+        const btcPrevClose = btcCandles[0].close;
+
+        if (btcMode === 'BULLISH' && btcPrevClose <= btc.max) {
+            log('Market', '⏳', 'BTC Price > MAX but 15m Close was BELOW. Waiting for confirmation.');
+            return;
+        }
+        if (btcMode === 'BEARISH' && btcPrevClose >= btc.min) {
+            log('Market', '⏳', 'BTC Price < MIN but 15m Close was ABOVE. Waiting for confirmation.');
+            return;
+        }
+
+        if (btcMode === 'RANGE') {
+            log('Market', '⏳', 'BTC in Range. Skipping Altcoin entries for safety.');
+            return;
+        }
+
         const symbols = await fetchTopSymbols(200);
 
         for (const symbol of symbols) {
@@ -259,24 +293,43 @@ async function runHybridScanner() {
             const v = await calculateVwapChannel(symbol);
             if (!v) continue;
 
-            // DUAL-MODE LOGIC
+            // DUAL-MODE LOGIC: TREND BREAKOUT
             let direction = null;
-            const dist = (v.last - v.mid) / v.mid;
 
-            if (dist >= CONFIG.noiseBufferPct && dist <= CONFIG.maxDistancePct) {
+            // 🟢 LONG → breakout فوق VWAP MAX
+            if (v.last > v.max * (1 + CONFIG.noiseBufferPct)) {
                 direction = 'LONG';
-            } else if (dist <= -CONFIG.noiseBufferPct && dist >= -CONFIG.maxDistancePct) {
+            }
+            // 🔴 SHORT → breakdown تحت VWAP MIN
+            else if (v.last < v.min * (1 - CONFIG.noiseBufferPct)) {
                 direction = 'SHORT';
             }
 
             if (!direction) continue;
 
-            const { rsi, passedFilters } = await fetchRSI5m(symbol);
-            if (!passedFilters) continue;
+            // --- ⚡ BREAKOUT STRENGTH FILTER (Min 0.3%) ---
+            const breakoutStrength = (v.last - (direction === 'LONG' ? v.max : v.min)) / (direction === 'LONG' ? v.max : v.min);
+            if (direction === 'LONG' && breakoutStrength < 0.003) continue;
+            if (direction === 'SHORT' && breakoutStrength > -0.003) continue;
+
+            // --- BTC SYNC FILTER ---
+            if (direction === 'LONG' && btcMode !== 'BULLISH') continue;
+            if (direction === 'SHORT' && btcMode !== 'BEARISH') continue;
+
+            // --- 15m CONFIRMATION (NO WICKS) ---
+            const candles15m = await fetchKlines(symbol, '15m', 2);
+            if (candles15m.length < 2) continue;
+            const prevClose = candles15m[0].close;
+
+            if (direction === 'LONG' && prevClose <= v.max) continue;
+            if (direction === 'SHORT' && prevClose >= v.min) continue;
+
+            const { rsi, passed } = await fetchSignal5m(symbol, direction);
+            if (!passed) continue;
             
-            // ADAPTIVE RSI FILTERS
-            if (direction === 'LONG' && (rsi < 45 || rsi > 65)) continue;
-            if (direction === 'SHORT' && (rsi > 55 || rsi < 35)) continue;
+            // ADAPTIVE RSI FILTERS: Strength for Longs, Pressure for Shorts
+            if (direction === 'LONG' && (rsi < 50 || rsi > 70)) continue;
+            if (direction === 'SHORT' && (rsi > 50 || rsi < 30)) continue;
 
             // Density calculation
             const avg = (v.max + v.mid + v.min) / 3;
@@ -315,7 +368,7 @@ async function runHybridTracker() {
         const config = loadConfig();
         const hunts = loadHunts();
         let changed = false;
-        const active = hunts.filter(h => h.status === 'active' && h.strategyId === 'vwap_hybrid');
+        const active = hunts.filter(h => h.status === 'active' && h.strategyId === 'vwap_futures_v3');
         
         let basket = [];
         let basketProfitUSD = 0;
@@ -388,7 +441,10 @@ async function runHybridTracker() {
                     hunt.status = 'closed'; 
                     hunt.exitPrice = live; 
                     hunt.exitTime = new Date().toISOString();
+                    hunt.pnlPercent = pnl; // --- PERSIST PNL% ---
                     const profit = hunt.capital * (pnl / 100) * (hunt.leverage || 1);
+                    hunt.pnlUSD = profit; // --- PERSIST USD ---
+                    
                     config.totalBalance = (config.totalBalance || 120.81) + profit;
                     fs.writeFileSync(CONFIG.configFile, JSON.stringify(config, null, 2));
                     
@@ -425,12 +481,15 @@ async function runHybridTracker() {
                     
                     let pnlPercent = 0;
                     if (target.direction === 'LONG') {
-                        pnlPercent = (target.currentPrice - target.entryPrice) / target.entryPrice;
+                        pnlPercent = ((target.currentPrice - target.entryPrice) / target.entryPrice) * 100;
                     } else {
-                        pnlPercent = (target.entryPrice - target.currentPrice) / target.entryPrice;
+                        pnlPercent = ((target.entryPrice - target.currentPrice) / target.entryPrice) * 100;
                     }
 
-                    const profit = target.capital * pnlPercent * (target.leverage || 1);
+                    target.pnlPercent = pnlPercent; // --- PERSIST PNL% ---
+                    const profit = target.capital * (pnlPercent / 100) * (target.leverage || 1);
+                    target.pnlUSD = profit; // --- PERSIST USD ---
+
                     config.totalBalance = (config.totalBalance || 120.81) + profit;
                     saveToHistory(target); 
                 }
