@@ -292,15 +292,15 @@ async function runHybridScanner() {
             const v = await calculateVwapChannel(symbol);
             if (!v) continue;
 
-            // DUAL-MODE LOGIC: TREND BREAKOUT
+            // DUAL-MODE LOGIC: TREND BREAKOUT (MID vs RANGE)
             let direction = null;
 
-            // 🟢 LONG → breakout فوق VWAP MAX
-            if (v.last > v.max * (1 + CONFIG.noiseBufferPct)) {
+            // 🟢 LONG → mid > max + last > mid
+            if (v.mid > v.max && v.last > v.mid) {
                 direction = 'LONG';
             }
-            // 🔴 SHORT → breakdown تحت VWAP MIN
-            else if (v.last < v.min * (1 - CONFIG.noiseBufferPct)) {
+            // 🔴 SHORT → mid < min + last < mid
+            else if (v.mid < v.min && v.last < v.mid) {
                 direction = 'SHORT';
             }
 
