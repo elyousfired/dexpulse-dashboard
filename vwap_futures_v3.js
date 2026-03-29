@@ -25,7 +25,7 @@ const CONFIG = {
     historyFile: path.join(__dirname, 'server', 'data', 'history_futures.json'),
 
     // Timing
-    scanIntervalMs:    15 * 1000,    
+    scanIntervalMs:    60 * 1000,    
     trackerIntervalMs: 10 * 1000,    
     apiDelayMs:        60,           
 
@@ -263,7 +263,7 @@ async function runHybridScanner() {
 
         log('Market', '₿', `BTC Status: ${btcMode} (Price: $${btc.last})`);
 
-        /* --- BTC SAFETY DISABLED (AGGRESSIVE MODE) ---
+        // --- 🧪 BTC PRECISION CONFIRMATION (15m Close) ---
         const btcCandles = await fetchKlines('BTCUSDT', '15m', 2);
         if (btcCandles.length < 2) return;
         const btcPrevClose = btcCandles[0].close;
@@ -281,8 +281,6 @@ async function runHybridScanner() {
             log('Market', '⏳', 'BTC in Range. Skipping Altcoin entries for safety.');
             return;
         }
-        */
-        log('Market', '🚀', `Aggressive Mode: Proceeding regardless of BTC Status (${btcMode})`);
 
         const symbols = await fetchTopSymbols(200);
 

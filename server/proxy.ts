@@ -15,11 +15,14 @@ import { runRotationEngine, lastConfirmedCandidates } from './rotationEngine';
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = 3005;
 
 app.use(cors());
 app.use(express.json());
+// Serve both root and v3-standalone for dashboard access
 app.use(express.static(path.join(process.cwd())));
+app.use(express.static(path.join(process.cwd(), 'v3-standalone')));
+app.use(express.static(path.join(process.cwd(), 'public')));
 
 // Simple memory cache
 const cache = new Map();
