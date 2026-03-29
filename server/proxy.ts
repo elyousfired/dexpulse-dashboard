@@ -29,10 +29,10 @@ const HUNTS_FILE = path.join(process.cwd(), 'server', 'data', 'active_hunts.json
 const MARKET_AUDIT_FILE = path.join(process.cwd(), 'server', 'data', 'institutional_market.json');
 const LIVE_ORDER_FLOW_FILE = path.join(process.cwd(), 'server', 'data', 'live_order_flow.json');
 
-// --- FUTURES V3 PATHS ---
-const CONFIG_FILE_FUTURES = path.join(process.cwd(), 'server', 'bot_config_futures.json');
-const HUNTS_FILE_FUTURES = path.join(process.cwd(), 'server', 'data', 'active_hunts_futures.json');
-const HISTORY_FILE_FUTURES = path.join(process.cwd(), 'server', 'data', 'trades_history_futures.json');
+// --- FUTURES V3 PATHS (SYNCED WITH BOT) ---
+const CONFIG_FILE_FUTURES = path.join(process.cwd(), 'server', 'data', 'bot_config_futures.json');
+const HUNTS_FILE_FUTURES = path.join(process.cwd(), 'server', 'data', 'active_futures.json');
+const HISTORY_FILE_FUTURES = path.join(process.cwd(), 'server', 'data', 'history_futures.json');
 
 // ─── Existing: Birdeye OHLCV Proxy ──────────────────────────
 
@@ -243,7 +243,7 @@ app.get('/api/hunts', (req, res) => {
         res.json(hunts);
     } catch (error) {
         console.error('[Proxy] Error reading hunts file:', (error as Error).message);
-        res.json([]); 
+        res.json([]);
     }
 });
 
@@ -253,7 +253,7 @@ app.get('/api/hunts/futures', (req, res) => {
         let history = [];
         if (fs.existsSync(HUNTS_FILE_FUTURES)) hunts = JSON.parse(fs.readFileSync(HUNTS_FILE_FUTURES, 'utf8'));
         if (fs.existsSync(HISTORY_FILE_FUTURES)) history = JSON.parse(fs.readFileSync(HISTORY_FILE_FUTURES, 'utf8'));
-        
+
         // Combine active and history for the dashboard view
         res.json([...hunts, ...history]);
     } catch (error) {
@@ -269,7 +269,7 @@ app.get('/api/hunts/html', (req, res) => {
         let history = [];
         if (fs.existsSync(HUNTS_FILE)) hunts = JSON.parse(fs.readFileSync(HUNTS_FILE, 'utf8'));
         if (fs.existsSync(HISTORY_FILE)) history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
-        
+
         // Combine and dedup
         const combined = [...hunts, ...history];
         const unique = new Map();
@@ -279,10 +279,10 @@ app.get('/api/hunts/html', (req, res) => {
         });
 
         const all = Array.from(unique.values()).sort((a, b) => new Date(b.entryTime).getTime() - new Date(a.entryTime).getTime());
-        
+
         const rows = all.map((h: any) => {
 
-            const pnl = h.status === 'active' 
+            const pnl = h.status === 'active'
                 ? (h.currentPrice ? ((h.currentPrice - h.entryPrice) / h.entryPrice * 100) : 0)
                 : (h.pnl || 0);
             const pnlClass = pnl >= 0 ? 'pos' : 'neg';
