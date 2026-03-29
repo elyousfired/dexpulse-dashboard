@@ -341,7 +341,8 @@
         async function updateDashboard() {
             try {
                 const endpoint = currentMode === 'solana' ? '/api/hunts' : '/api/hunts/futures';
-                const res = await fetch(`http://${window.location.hostname}:3001${endpoint}`);
+                const port = window.location.port || '3000';
+                const res = await fetch(`http://${window.location.hostname}:${port}${endpoint}`);
                 const data = await res.json();
 
             closed;
