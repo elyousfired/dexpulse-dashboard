@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top 200 Reversion Execution Engine | DEXpulse</title>
+    <meta name="description" content="Execution Engine for Mean Reversion to EMA 20. Strict 5-trade concurrency limit.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo-box">
+                <h1>DEX<span class="highlight">PULSE</span> EXECUTION</h1>
+                <p class="subtitle" id="lbl-subtitle">Strict Concurrency Engine: Max 5 Trades (Bracket Reversal EMA 20)</p>
+            </div>
+            
+            <div class="header-stats">
+                <div class="stat-box" style="border-color: #ffaa00;">
+                    <span class="stat-label" style="color: #ffaa00;">BTC MACRO (50)</span>
+                    <span class="stat-value text-neutral" id="btc-macro" style="font-size: 1.2rem;">--</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">WIN RATE</span>
+                    <span class="stat-value text-neutral" id="win-rate">0%</span>
+                    <span class="stat-label" id="win-losses" style="font-size: 0.65rem; font-weight: 500;">0W - 0L</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">BEST TOKEN</span>
+                    <span class="stat-value text-long" id="best-token" style="font-size: 1.2rem;">--</span>
+                </div>
+                <div class="stat-box" style="align-items: flex-start;">
+                    <span class="stat-label">WORST TOKEN</span>
+                    <span class="stat-value text-short" id="worst-token" style="font-size: 1.2rem;">--</span>
+                </div>
+                <div class="stat-box" style="border-color: rgba(255, 0, 255, 0.4);">
+                    <span class="stat-label">NET PNL</span>
+                    <span class="stat-value text-neutral" id="session-pnl">0.00%</span>
+                </div>
+            </div>
+
+            <div class="market-status" id="market-status">
+                <span class="status-dot"></span> 
+                <span id="status-text">Connecting to Node...</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- Control Panel -->
+            <section class="control-panel">
+                <div class="cp-header">⚙️ Engine Configuration Parameters</div>
+                <div class="cp-inputs">
+                    <div class="input-group">
+                        <label>Entry Gap Distance (%)</label>
+                        <input type="number" id="inp-distance" step="0.05" value="0.45">
+                    </div>
+                    <div class="input-group">
+                        <label>Take Profit (%)</label>
+                        <input type="number" id="inp-tp" step="0.10" value="1.50">
+                    </div>
+                    <div class="input-group">
+                        <label>Stop Loss (%)</label>
+                        <input type="number" id="inp-sl" step="0.10" value="-2.00">
+                    </div>
+                    <div class="input-group">
+                        <label>Max Trades</label>
+                        <input type="number" id="inp-max" step="1" value="5">
+                    </div>
+                    <div class="input-group">
+                        <label style="color: #ff3e3e;">Max Hold Time (s)</label>
+                        <input type="number" id="inp-max-time" step="10" value="300">
+                    </div>
+                    <div class="input-group" style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 1.5rem;">
+                        <label style="color: #ffaa00">Leverage (x)</label>
+                        <input type="number" id="inp-leverage" step="1" value="10" style="color: #ffaa00; border-color: rgba(255, 170, 0, 0.3);">
+                    </div>
+                    <button id="btn-update-config" class="btn-primary">Apply Config</button>
+                </div>
+            </section>
+
+            <!-- Active Trades Section -->
+            <section class="active-trades-section">
+                <div class="section-title">
+                    <span class="pulse-indicator"></span> 
+                    <span id="lbl-active-title">LIVE ACTIVE TRADES (Max 5)</span>
+                </div>
+                <div class="active-grid" id="active-grid">
+                    <!-- 2 Trades injected here -->
+                </div>
+            </section>
+
+            <!-- PnL Chart Section -->
+            <section class="chart-section">
+                <div class="section-title">PnL Evolution Engine</div>
+                <div class="chart-container">
+                    <canvas id="pnl-chart"></canvas>
+                </div>
+            </section>
+
+            <!-- Opportunities Pool Section -->
+            <div class="opportunities-container">
+                <section class="opp-column short-opps">
+                    <div class="opp-header">
+                        <span class="opp-badge short" id="lbl-short-pool">SHORT POOL (Dist > 0.45%)</span>
+                        <p>Waiting for an open execution slot</p>
+                    </div>
+                    <div class="opp-grid" id="short-grid">
+                        <!-- Top 3 Short pool injected here -->
+                    </div>
+                </section>
+
+                <section class="opp-column long-opps">
+                    <div class="opp-header">
+                        <span class="opp-badge long" id="lbl-long-pool">LONG POOL (Dist < -0.45%)</span>
+                        <p>Waiting for an open execution slot</p>
+                    </div>
+                    <div class="opp-grid" id="long-grid">
+                        <!-- Top 3 Long pool injected here -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- History Section -->
+            <section class="history-section">
+                <div class="history-badge">Closed Trade Results</div>
+                <div class="history-list" id="history-grid">
+                    <!-- History cards injected here -->
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="debug-panel">
+                <span id="last-update">Last Tick: --:--:--</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
