@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VWAP Golden Sniper</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+</head>
+<body>
+
+    <header>
+        <div class="brand">VWAP <span>GOLDEN SNIPER</span><br><span style="font-size:0.8rem; font-weight:400; color:#888;">Momentum Breakout Cross Engine</span></div>
+        <div class="btc-master">
+            <div class="label">BTC Trend Tracker</div>
+            <div class="price" id="btc-price">LOADING...</div>
+            <div class="trends" id="btc-trends">VWAP / EMA</div>
+        </div>
+    </header>
+
+    <div class="macro-stats-bar">
+        <div class="macro-stat" style="border-color: var(--accent-main);">
+            <label>ENGINE NET PNL</label>
+            <div id="stat-pnl" class="text-accent">0.00%</div>
+        </div>
+        <div class="macro-stat">
+            <label>ON RADAR (Approaching)</label>
+            <div id="stat-radar">--</div>
+        </div>
+        <div class="macro-stat">
+            <label>TOTAL SCANNED</label>
+            <div id="stat-total">--</div>
+        </div>
+    </div>
+    
+    <div class="chart-container" style="position: relative; height:200px; width:100%; margin-bottom: 2rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1rem;">
+        <canvas id="pnlChart"></canvas>
+    </div>
+
+    <div class="control-panel">
+        <div class="cp-header">⚙️ Breakout Configuration</div>
+        <div class="cp-inputs">
+            <div class="input-group">
+                <label>Max Cross Dist (%)</label>
+                <input type="number" id="inp-distance" step="0.5" value="2.0">
+            </div>
+            <div class="input-group">
+                <label>Max Daily Pump (%)</label>
+                <input type="number" id="inp-max-pump" step="1.0" value="10.0">
+            </div>
+            <div class="input-group">
+                <label>Take Profit (%)</label>
+                <input type="number" id="inp-tp" step="0.5" value="1.5">
+            </div>
+            <div class="input-group">
+                <label>Stop Loss (%)</label>
+                <input type="number" id="inp-sl" step="0.5" value="-2.0">
+            </div>
+            <div class="input-group">
+                <label>Max Trades</label>
+                <input type="number" id="inp-max" step="1" value="5">
+            </div>
+            <div class="input-group">
+                <label style="color: #ff3e3e;">Time Bailout (s)</label>
+                <input type="number" id="inp-max-time" step="10" value="300">
+            </div>
+            <div class="input-group">
+                <label style="color: var(--accent-main);">Leverage (x)</label>
+                <input type="number" id="inp-leverage" step="1" value="10">
+            </div>
+            <button class="btn-primary" id="btn-update-config">Apply Target Config</button>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Sidebar: Radar of approaching crosses -->
+        <div class="radar-column">
+            <div class="section-title">
+                <span>🎯 Golden Breakout Radar</span>
+            </div>
+            <div class="radar-list" id="radar-list">
+                <!-- Watchlist loaded here -->
+            </div>
+        </div>
+
+        <!-- Main Execution -->
+        <div class="execution-column">
+            <div class="active-trades-section">
+                <div class="section-title">🔥 LIVE BREAKOUT SNIPES (Max <span id="lbl-max-trades">5</span>)</div>
+                <div class="active-grid" id="active-grid">
+                    <!-- Active trades here -->
+                </div>
+            </div>
+
+            <div class="history-section">
+                <div class="section-title" style="margin-top: 1rem;">Closed Breakout Scalps</div>
+                <div class="history-list" id="history-grid">
+                    <!-- History loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC Correlation Scanner</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@500;700;900&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        
+        <header>
+            <div class="header-left">
+                <h1>BTC<span class="highlight"> CORRELATOR</span></h1>
+                <p>Tracking the "Footprint" of the King across the Top 200 Altcoins.</p>
+            </div>
+            <div class="header-right">
+                <div class="stat-box" id="btc-card">
+                    <span class="stat-label">BTC MASTER TARGET</span>
+                    <span id="btc-price" class="stat-value text-neutral">LOADING...</span>
+                    <div class="btc-indicators" id="btc-indicators">
+                        <span class="badge neutral" id="btc-ema">EMA 20/50: --</span>
+                        <span class="badge neutral" id="btc-vwap">VWAP: --</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Bar -->
+        <div class="macro-stats-bar">
+            <!-- stats ... -->
+            <div class="macro-stat" style="border-color: rgba(255, 0, 255, 0.4);">
+                <label>ENGINE NET PNL</label>
+                <div id="stat-pnl" class="text-neutral">0.00%</div>
+            </div>
+            <div class="macro-stat">
+                <label>TOTAL SCANNED</label>
+                <div id="stat-total">--</div>
+            </div>
+            <div class="macro-stat">
+                <label>WIN RATE</label>
+                <div id="stat-winrate" class="text-neutral">0% <span style="font-size:0.5em" id="stat-wl">0W 0L</span></div>
+            </div>
+            <div class="macro-stat synced">
+                <label>SYNCED W/ BTC</label>
+                <div id="stat-synced">--</div>
+            </div>
+            <div class="macro-stat inverse">
+                <label>INVERSE TO BTC</label>
+                <div id="stat-inverse">--</div>
+            </div>
+            <div class="macro-stat no-sync">
+                <label>UNALIGNED</label>
+                <div id="stat-unaligned">--</div>
+            </div>
+        </div>
+
+        <main class="trading-dashboard">
+            <!-- Control Panel -->
+            <section class="control-panel">
+                <div class="cp-header">⚙️ Engine Configuration Parameters</div>
+                <div class="cp-inputs">
+                    <div class="input-group">
+                        <label>Entry Gap Distance (%)</label>
+                        <input type="number" id="inp-distance" step="0.05" value="0.45">
+                    </div>
+                    <div class="input-group">
+                        <label>Take Profit (%)</label>
+                        <input type="number" id="inp-tp" step="0.10" value="1.50">
+                    </div>
+                    <div class="input-group">
+                        <label>Stop Loss (%)</label>
+                        <input type="number" id="inp-sl" step="0.10" value="-2.00">
+                    </div>
+                    <div class="input-group">
+                        <label>Max Trades</label>
+                        <input type="number" id="inp-max" step="1" value="5">
+                    </div>
+                    <div class="input-group">
+                        <label style="color: #ff3e3e;">Max Hold Time (s)</label>
+                        <input type="number" id="inp-max-time" step="10" value="300">
+                    </div>
+                    <div class="input-group" style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 1.5rem;">
+                        <label style="color: #ffaa00">Leverage (x)</label>
+                        <input type="number" id="inp-leverage" step="1" value="10" style="color: #ffaa00; border-color: rgba(255, 170, 0, 0.3);">
+                    </div>
+                    <button id="btn-update-config" class="btn-primary">Apply Config</button>
+                </div>
+            </section>
+
+            <!-- Active Trades Section -->
+            <section class="active-trades-section">
+                <div class="section-title">
+                    <span class="pulse-indicator"></span> 
+                    <span id="lbl-active-title">LIVE ACTIVE TARGETS (Max 5)</span>
+                </div>
+                <div class="active-grid" id="active-grid">
+                    <!-- Trades injected here -->
+                </div>
+            </section>
+        </main>
+
+        <main class="correlation-split">
+            
+            <!-- Left Column: Synced -->
+            <section class="split-col synced-col">
+                <div class="col-header">
+                    <h2>🟢 BTC SYNCED (Correlated)</h2>
+                    <p>Tokens doing exactly what BTC is doing.</p>
+                </div>
+                <div class="card-list" id="list-synced">
+                    <!-- Synced Tokens -->
+                </div>
+            </section>
+
+            <!-- Right Column: Inverse -->
+            <section class="split-col inverse-col">
+                <div class="col-header">
+                    <h2>🔴 BTC INVERSE (Divergent Targets)</h2>
+                    <p>Swimming against the current. These are prime scaling triggers.</p>
+                </div>
+                <div class="card-list" id="list-inverse">
+                    <!-- Inverse Tokens -->
+                </div>
+            </section>
+        </main>
+
+        <!-- History Section -->
+        <section class="history-section" style="margin-top: 1.5rem;">
+            <div class="history-badge" style="color: white; font-weight: bold; background: rgba(255,255,255,0.1); padding: 0.5rem; display: inline-block; border-radius: 4px;">Closed Trade Results</div>
+            <div class="history-list" id="history-grid" style="margin-top: 1rem;">
+                <!-- History cards injected here -->
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

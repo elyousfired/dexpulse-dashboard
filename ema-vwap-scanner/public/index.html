@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMA-VWAP Crypto Scanner | Top 20 Real-time Trends</title>
+    <meta name="description" content="Real-time scanner tracking EMA 9/20 distance and VWAP trends for the Top 20 crypto assets.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@500;700;900&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo-box">
+                <h1>DEX<span class="highlight">PULSE</span> SCANNER</h1>
+                <p class="subtitle">Top 20 EMA 9/20 & VWAP Engine</p>
+            </div>
+            <div class="market-status" id="market-status">
+                <span class="status-dot"></span> 
+                <span id="status-text">Connecting to Node...</span>
+            </div>
+        </header>
+
+        <main>
+            <section class="hunts-section">
+                <div class="section-badge">Live Arbitrage Hunts</div>
+                <div class="hunts-grid" id="hunts-grid">
+                    <!-- Active Hunts injected here -->
+                </div>
+            </section>
+
+            <section class="hunts-section history-section">
+                <div class="section-badge history-badge">Closed Hunt Results</div>
+                <div class="history-list" id="history-list">
+                    <!-- Closed Hunts injected here -->
+                </div>
+            </section>
+
+            <div class="scanner-grid" id="scanner-grid">
+                <!-- Cards will be injected here -->
+            </div>
+
+            <div class="table-container">
+                <table id="scanner-table">
+                    <thead>
+                        <tr>
+                            <th>Token</th>
+                            <th>Price</th>
+                            <th>VWAP</th>
+                            <th>EMA Distance</th>
+                            <th>Signal</th>
+                            <th>Gap (Arbitrage)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scanner-body">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <footer>
+            <div class="debug-panel">
+                <span>Update Interval: Real-time</span>
+                <span id="last-update">Last Tick: --:--:--</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

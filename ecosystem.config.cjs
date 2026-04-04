@@ -16,6 +16,23 @@ module.exports = {
             watch: false,
             autorestart: true,
             restart_delay: 10000
+        },
+        {
+            name: 'vwap-gap-analyzer',
+            script: 'node',
+            args: 'server.js',
+            cwd: './vwap-gap-analyzer',
+            watch: false,
+            autorestart: true,
+            restart_delay: 10000
+        },
+        {
+            name: 'dexpulse-proxy',
+            script: 'npx',
+            args: 'tsx server/proxy.ts',
+            watch: false,
+            autorestart: true,
+            restart_delay: 10000
         }
     ]
 };
